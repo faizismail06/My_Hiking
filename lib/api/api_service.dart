@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:http/http.dart';
 import 'package:myhiking/models/bookingModel.dart';
@@ -11,7 +12,19 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../presentation/tata_tertib_screen/models/tata_tertib_model.dart';
 
-const String baseUrl = 'http://myhiking.my.id/api';
+// Gunakan URL yang sesuai dengan platform
+// Untuk development lokal, gunakan localhost
+// Untuk production, ganti ke domain yang sebenarnya
+String get baseUrl {
+  // Jika menjalankan di web browser (Flutter Web)
+  if (kIsWeb) {
+    return 'http://127.0.0.1:8000/api';
+  }
+  // Jika menjalankan di Android Emulator, gunakan 10.0.2.2
+  // Jika menjalankan di device fisik, gunakan IP komputer Anda
+  // return 'http://10.0.2.2:8000/api'; // Untuk Android Emulator
+  return 'http://127.0.0.1:8000/api'; // Untuk testing lokal / iOS Simulator
+}
 
 class ApiService {
   Future<String?> getToken() async {
@@ -20,7 +33,6 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> getUser(String token) async {
-
     final url = Uri.parse('$baseUrl/user');
     final response = await http.get(
       url,
