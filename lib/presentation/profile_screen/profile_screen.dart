@@ -354,7 +354,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void onTapTransaction(BuildContext context) {
-    NavigatorService.pushNamed(AppRoutes.transaksiPage);
+    NavigatorService.pushNamed(AppRoutes.transactionPage);
   }
 
   void onLogout(BuildContext context) {

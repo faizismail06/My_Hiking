@@ -5,7 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:myhiking/api/api_service.dart';
 import 'package:myhiking/models/bookingModel.dart';
-import 'package:myhiking/models/jalurmodel.dart';
+import 'package:myhiking/models/trail_model.dart';
 import '../../../core/app_export.dart';
 
 part 'booking_event.dart';
@@ -20,11 +20,14 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
     on<UpdateBookingDateEvent>(_onUpdateBookingDate);
     on<CreateBookingEvent>(_onCreateBooking); // Add the handler here
     on<UpdateMemberIdField>(_onUpdateAnggotaID);
+    on<UpdateSelectedMembers>(_onUpdateSelectedMembers);
+    on<AddSelectedMember>(_onAddSelectedMember);
+    on<RemoveSelectedMember>(_onRemoveSelectedMember);
   }
 
   // Method to fetch route centres
   Future<void> fetchRouteCentres(
-      int idGunung, int jalurId, Emitter<BookingState> emit) async {
+      int mountainId, int trailId, Emitter<BookingState> emit) async {
     emit(state.copyWith(isLoading: true, error: '')); // Set loading state
 
     try {
@@ -36,7 +39,7 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
 
       // Make the API call to fetch route centres
       final response = await http.get(
-        Uri.parse('$baseUrl/gunung/$idGunung/jalur/$jalurId/jalurbooking'),
+        Uri.parse('$baseUrl/mountains/$mountainId/trails/$trailId/booking'),
         headers: {'Authorization': 'Bearer $token'}, // Use the actual token
       );
 
@@ -44,13 +47,13 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
         // Handle successful response
         final responseData = jsonDecode(response.body);
         print('Response Data: $responseData');
-        final detailRouteCentres = ResJalurModel.fromJson(responseData);
+        final detailRouteCentres = ResTrailModel.fromJson(responseData);
 
         // Emit state with updated data
         emit(state.copyWith(
           isLoading: false,
-          jalur: detailRouteCentres.jalur, // List<JalurModel>
-          gunung: detailRouteCentres.jalur.gunung, // Gunung data from API
+          trail: detailRouteCentres.trail, // TrailModel
+          mountain: detailRouteCentres.trail.gunung, // Mountain data from API
           error: '', // Clear previous errors
         ));
       } else {
@@ -111,20 +114,29 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
 
   Future<void> _onUpdateAnggotaID(
       UpdateMemberIdField event, Emitter<BookingState> emit) async {
-    // Periksa apakah controller sudah ada
-    final controller = state.memberIdFieldController;
+    // Controller text already updated by TextField, no need to emit state
+  }
 
-    if (controller != null) {
-      // Perbarui teks di controller yang ada
-      controller.text = event.anggotaIds;
+  Future<void> _onUpdateSelectedMembers(
+      UpdateSelectedMembers event, Emitter<BookingState> emit) async {
+    emit(state.copyWith(selectedMembers: event.selectedMembers));
+  }
 
-      // Emit state tanpa mengganti controller yang sudah ada
-      emit(state.copyWith(memberIdFieldController: controller));
-    } else {
-      // Jika controller belum ada, buat baru
-      emit(state.copyWith(
-        memberIdFieldController: TextEditingController(text: event.anggotaIds),
-      ));
+  Future<void> _onAddSelectedMember(
+      AddSelectedMember event, Emitter<BookingState> emit) async {
+    final currentMembers = List<SelectedMember>.from(state.selectedMembers ?? []);
+    
+    // Check if member already exists
+    if (!currentMembers.any((m) => m.id == event.member.id)) {
+      currentMembers.add(event.member);
+      emit(state.copyWith(selectedMembers: currentMembers));
     }
+  }
+
+  Future<void> _onRemoveSelectedMember(
+      RemoveSelectedMember event, Emitter<BookingState> emit) async {
+    final currentMembers = List<SelectedMember>.from(state.selectedMembers ?? []);
+    currentMembers.removeWhere((m) => m.id == event.memberId);
+    emit(state.copyWith(selectedMembers: currentMembers));
   }
 }

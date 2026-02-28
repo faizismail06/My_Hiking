@@ -130,7 +130,7 @@ class PopUpCheckoutDialog extends StatelessWidget {
   onTapBarcode(BuildContext context, int pesananId) {
     Navigator.pushNamed(
       context,
-      AppRoutes.tiketScreen,
+      AppRoutes.ticketScreen,
       arguments: pesananId,
     );
   }

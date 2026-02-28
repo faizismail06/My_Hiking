@@ -100,5 +100,5 @@ class ImageConstant {
   static String imgFavoriteBlueGray10002 =
       '$imagePath/img_favorite_blue_gray_100_02.svg';
   static String imgLockPrimary = '$imagePath/img_lock_primary.svg';
-  static String imageNotFound = 'assets/images/image_not_found.png';
+  static String imageNotFound = 'assets/images/img_error.png';
 }

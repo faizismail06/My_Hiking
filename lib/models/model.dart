@@ -15,9 +15,9 @@ class ResRouteCentres {
     return ResRouteCentres(
       status: json['status'] ?? false,
       message: json['message'] ?? '',
-      gunung: Gunung.fromJson(json['gunung']),
+      gunung: Gunung.fromJson(json['mountain']),
       data: List<Jalur>.from(
-          json['gunung']['data'].map((x) => Jalur.fromJson(x))),
+          json['mountain']['data'].map((x) => Jalur.fromJson(x))),
     );
   }
 
@@ -25,7 +25,7 @@ class ResRouteCentres {
     return {
       'status': status,
       'message': message,
-      'gunung': gunung.toJson(),
+      'mountain': gunung.toJson(),
       'data': List<dynamic>.from(data.map((x) => x.toJson())),
     };
   }
@@ -37,6 +37,8 @@ class Gunung {
   final int ketinggian;
   final String province;
   String? gambar;
+  final double? latitude;
+  final double? longitude;
   final List<Jalur> data; // Tambahkan data sebagai List<Jalur>
 
   Gunung({
@@ -46,6 +48,8 @@ class Gunung {
     required this.province,
     required this.data,
     this.gambar,
+    this.latitude,
+    this.longitude,
   });
 
   factory Gunung.fromJson(Map<String, dynamic> json) {
@@ -55,6 +59,8 @@ class Gunung {
       ketinggian: json['ketinggian'] ?? 0,
       province: json['province'] ?? '',
       gambar: json['gambar'] ?? 'URL Gambar Tidak Tersedia',
+      latitude: json['latitude'] != null ? double.tryParse(json['latitude'].toString()) : null,
+      longitude: json['longitude'] != null ? double.tryParse(json['longitude'].toString()) : null,
       data: json['data'] != null
           ? List<Jalur>.from(json['data'].map((x) => Jalur.fromJson(x)))
           : [],
@@ -90,9 +96,9 @@ class ResDetailRouteCentres {
     return ResDetailRouteCentres(
       status: json['status'] ?? false,
       message: json['message'] ?? '',
-      jalur: Jalur.fromJson(json['jalur']),
+      jalur: Jalur.fromJson(json['trail']),
       gunung: Gunung.fromJson(
-          json['jalur']['gunung']), // Ambil gunung dari dalam jalur
+          json['trail']['mountain']), // Ambil mountain dari dalam trail
     );
   }
 
@@ -100,8 +106,8 @@ class ResDetailRouteCentres {
     return {
       'status': status,
       'message': message,
-      'jalur': jalur.toJson(),
-      'gunung': gunung.toJson(),
+      'trail': jalur.toJson(),
+      'mountain': gunung.toJson(),
     };
   }
 }
@@ -118,6 +124,8 @@ class Jalur {
   final int jarak;
   final String? gambar;
   final int biaya;
+  final double? latitude;
+  final double? longitude;
 
   Jalur({
     required this.id,
@@ -131,6 +139,8 @@ class Jalur {
     required this.jarak,
     this.gambar,
     required this.biaya,
+    this.latitude,
+    this.longitude,
   });
 
   factory Jalur.fromJson(Map<String, dynamic> json) {
@@ -146,6 +156,8 @@ class Jalur {
       jarak: json['jarak'] ?? 0,
       gambar: json['gambar']?? "Gambar tidak tersedia",
       biaya: json['biaya'] ?? 0,
+      latitude: json['latitude'] != null ? double.tryParse(json['latitude'].toString()) : null,
+      longitude: json['longitude'] != null ? double.tryParse(json['longitude'].toString()) : null,
     );
   }
 

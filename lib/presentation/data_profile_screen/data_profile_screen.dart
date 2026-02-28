@@ -356,7 +356,7 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
                 ElevatedButton(
                   onPressed: () {
                     Navigator.of(context).pop();
-                    Navigator.pushNamed(context, AppRoutes.berandaScreen);
+                    Navigator.pushNamed(context, AppRoutes.homeScreen);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color.fromARGB(255, 33, 117, 84),

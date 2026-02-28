@@ -9,9 +9,9 @@ import 'package:myhiking/presentation/data_profile_screen/models/res_user.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../presentation/tata_tertib_screen/models/tata_tertib_model.dart';
+import '../presentation/rules_screen/models/rule_model.dart';
 
-const String baseUrl = 'http://myhiking.my.id/api';
+const String baseUrl = 'http://127.0.0.1:8000/api';
 
 class ApiService {
   Future<String?> getToken() async {
@@ -43,7 +43,7 @@ class ApiService {
   }
 
   Future<List<Gunung>> fetchGunung() async {
-    final response = await http.get(Uri.parse('$baseUrl/gunung'));
+    final response = await http.get(Uri.parse('$baseUrl/mountains'));
 
     if (response.statusCode == 200) {
       List jsonResponse = json.decode(response.body);
@@ -109,7 +109,7 @@ class ApiService {
       }
       print("Anggota Ids: {$anggotaIds}");
       final response = await http.post(
-        Uri.parse("$baseUrl/pesanan"),
+        Uri.parse("$baseUrl/orders"),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -124,27 +124,27 @@ class ApiService {
 
       if (response.statusCode == 201) {
         final jsonResponse = jsonDecode(response.body);
-        final pesananId = jsonResponse['pesanan']
-            ['id']; // Menggunakan jsonResponse, bukan response
-        // Cek apakah anggota ada atau tidak dalam response
+        final orderId = jsonResponse['order']
+            ['id']; // Using jsonResponse, not response
+        // Check if members exist in response
 
-        if (jsonResponse['pesanan']['anggota'] != null) {
-          // Pastikan anggota berupa List
-          if (jsonResponse['pesanan']['anggota'] is List) {
-            List anggotaData = jsonResponse['pesanan']['anggota'];
-            print("Data Anggota: $anggotaData");
+        if (jsonResponse['order']['members'] != null) {
+          // Ensure members is a List
+          if (jsonResponse['order']['members'] is List) {
+            List membersData = jsonResponse['order']['members'];
+            print("Members Data: $membersData");
           } else {
-            print("Data anggota tidak dalam format List yang diharapkan.");
+            print("Members data not in expected List format.");
           }
         } else {
-          print("Anggota tidak ditemukan");
+          print("Members not found");
         }
 
         print(
-            "Pesanan berhasil dibuat! Pesanan ID: ${jsonResponse['pesanan']['id']}");
+            "Order created successfully! Order ID: ${jsonResponse['order']['id']}");
 
-        getPesananDetail(pesananId);
-        return ModelBooking.fromJson(jsonResponse['pesanan']);
+        getOrderDetail(orderId);
+        return ModelBooking.fromJson(jsonResponse['order']);
       } else if (response.statusCode == 302) {
         throw Exception('Redirect terjadi. Periksa konfigurasi backend.');
       } else {
@@ -157,9 +157,9 @@ class ApiService {
     }
   }
 
-  Future<void> getPesananDetail(int pesananId) async {
+  Future<void> getOrderDetail(int orderId) async {
     final response = await http.get(
-      Uri.parse('$baseUrl/pesanan/$pesananId'),
+      Uri.parse('$baseUrl/orders/$orderId'),
       headers: {
         'Authorization': 'Bearer YOUR_TOKEN',
       },
@@ -167,16 +167,16 @@ class ApiService {
 
     if (response.statusCode == 200) {
       final Map<String, dynamic> responseJson = jsonDecode(response.body);
-      final anggota = responseJson['pesanan']['anggota'];
+      final members = responseJson['order']['members'];
 
-      print('Data Anggota: $anggota');
+      print('Members Data: $members');
 
-      // Lakukan sesuatu dengan data anggota
-      if (anggota != null && anggota.isNotEmpty) {
-        // Anggota ada, proses sesuai kebutuhan
+      // Process members data
+      if (members != null && members.isNotEmpty) {
+        // Members exist, process as needed
       }
     } else {
-      print('Gagal mendapatkan detail pesanan');
+      print('Failed to get order detail');
     }
   }
 
@@ -191,8 +191,8 @@ class ApiService {
   }
 
   // Fungsi untuk mengambil data Pesanan berdasarkan ID
-  Future<Map<String, dynamic>> fetchPesanan(int pesananId) async {
-    final response = await http.get(Uri.parse('$baseUrl/pesanan/$pesananId'));
+  Future<Map<String, dynamic>> fetchPesanan(int orderId) async {
+    final response = await http.get(Uri.parse('$baseUrl/orders/$orderId'));
     print(response);
     if (response.statusCode == 200) {
       // Debug: Print the response body to check
@@ -318,20 +318,20 @@ class ApiService {
   }
 
   Future<TransactionResponseModel> createTransaction(
-    int pesananId,
+    int orderId,
     int id,
   ) async {
     try {
-      print("Api pesanan id, payment id: $pesananId, $id");
+      print("Api order id, payment id: $orderId, $id");
       final response = await http.post(
-        Uri.parse('$baseUrl/transaksi/store'),
+        Uri.parse('$baseUrl/transactions/store'),
         headers: {
           'Content-Type': 'application/json',
           // Tambahkan header Authorization jika diperlukan:
           // 'Authorization': 'Bearer your_token_here',
         },
         body: json.encode({
-          'id_pesanan': pesananId,
+          'id_pesanan': orderId,
           'payment_id': id,
         }),
       );
@@ -358,11 +358,11 @@ class ApiService {
   }
 
   Future<void> uploadBuktiPembayaran(
-      String idTransaksi, String filePath) async {
+      String transactionId, String filePath) async {
     try {
       // Endpoint API
       final url =
-          Uri.parse('$baseUrl/transaksi/update-pembayaran/$idTransaksi');
+          Uri.parse('$baseUrl/transactions/update-payment/$transactionId');
 
       // Buat request multipart
       final request = http.MultipartRequest('POST', url);
@@ -403,6 +403,216 @@ class ApiService {
       }
     } catch (e) {
       print("Exception: $e");
+    }
+  }
+
+  // ==================== FRIEND API METHODS ====================
+
+  /// Get all friends for a user
+  Future<Map<String, dynamic>> getFriends(int userId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/friends?user_id=$userId'),
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        return responseData;
+      } else {
+        return {
+          'success': false,
+          'message': 'Failed to fetch friends',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': e.toString(),
+      };
+    }
+  }
+
+  /// Get pending friend requests
+  Future<Map<String, dynamic>> getPendingRequests(int userId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/friends/pending?user_id=$userId'),
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        return responseData;
+      } else {
+        return {
+          'success': false,
+          'message': 'Failed to fetch pending requests',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': e.toString(),
+      };
+    }
+  }
+
+  /// Search users
+  Future<Map<String, dynamic>> searchUsers(String query, int currentUserId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/friends/search?query=$query&user_id=$currentUserId'),
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        return responseData;
+      } else {
+        return {
+          'success': false,
+          'message': 'Failed to search users',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': e.toString(),
+      };
+    }
+  }
+
+  /// Send friend request
+  Future<Map<String, dynamic>> addFriend(int userId, int friendId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/friends/add'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': userId,
+          'friend_id': friendId,
+        }),
+      );
+
+      final responseData = jsonDecode(response.body);
+      return responseData;
+    } catch (e) {
+      return {
+        'success': false,
+        'message': e.toString(),
+      };
+    }
+  }
+
+  /// Accept friend request
+  Future<Map<String, dynamic>> acceptFriend(int friendshipId, int userId) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/friends/$friendshipId/accept'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_id': userId}),
+      );
+
+      final responseData = jsonDecode(response.body);
+      return responseData;
+    } catch (e) {
+      return {
+        'success': false,
+        'message': e.toString(),
+      };
+    }
+  }
+
+  /// Reject friend request
+  Future<Map<String, dynamic>> rejectFriend(int friendshipId, int userId) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/friends/$friendshipId/reject'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_id': userId}),
+      );
+
+      final responseData = jsonDecode(response.body);
+      return responseData;
+    } catch (e) {
+      return {
+        'success': false,
+        'message': e.toString(),
+      };
+    }
+  }
+
+  /// Remove friend
+  Future<Map<String, dynamic>> removeFriend(int friendshipId, int userId) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl/friends/$friendshipId?user_id=$userId'),
+      );
+
+      final responseData = jsonDecode(response.body);
+      return responseData;
+    } catch (e) {
+      return {
+        'success': false,
+        'message': e.toString(),
+      };
+    }
+  }
+
+  /// Get current weather from Open-Meteo API
+  Future<Map<String, dynamic>> getCurrentWeather(double latitude, double longitude) async {
+    try {
+      final url = Uri.parse(
+        'https://api.open-meteo.com/v1/forecast?latitude=$latitude&longitude=$longitude&current=temperature_2m,weather_code&timezone=auto'
+      );
+      
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'data': jsonDecode(response.body),
+        };
+      } else {
+        return {
+          'success': false,
+          'message': 'Failed to fetch weather data',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': e.toString(),
+      };
+    }
+  }
+
+  /// Get weather forecast from Open-Meteo API (7 days with hourly data)
+  Future<Map<String, dynamic>> getWeatherForecast(double latitude, double longitude) async {
+    try {
+      final url = Uri.parse(
+        'https://api.open-meteo.com/v1/forecast?latitude=$latitude&longitude=$longitude'
+        '&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max,sunrise,sunset'
+        '&hourly=temperature_2m,weather_code,relative_humidity_2m,precipitation_probability,wind_speed_10m'
+        '&timezone=auto&forecast_days=7'
+      );
+      
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'data': jsonDecode(response.body),
+        };
+      } else {
+        return {
+          'success': false,
+          'message': 'Failed to fetch weather forecast',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': e.toString(),
+      };
     }
   }
 }

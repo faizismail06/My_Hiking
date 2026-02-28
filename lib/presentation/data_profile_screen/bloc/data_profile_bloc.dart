@@ -93,87 +93,32 @@ class DataProfileBloc extends Bloc<DataProfileEvent, DataProfileState> {
 
   Future<void> _onFullNameChanged(
       FullNameChangedEvent event, Emitter<DataProfileState> emit) async {
-    final controller = state.fullNameInputController;
-
-    if (controller != null) {
-      controller.text = event.value;
-      emit(state.copyWith(fullNameInputController: controller));
-    } else {
-      emit(state.copyWith(
-        fullNameInputController: TextEditingController(text: event.value),
-      ));
-    }
+    // Controller text already updated by TextField, no need to emit state
   }
 
   Future<void> _onNikChanged(
       NikChangedEvent event, Emitter<DataProfileState> emit) async {
-    final controller = state.nikInputController;
-
-    if (controller != null) {
-      controller.text = event.value;
-      emit(state.copyWith(nikInputController: controller));
-    } else {
-      emit(state.copyWith(
-        nikInputController: TextEditingController(text: event.value),
-      ));
-    }
+    // Controller text already updated by TextField, no need to emit state
   }
 
   Future<void> _onPhoneNumberChanged(
       PhoneNumberChangedEvent event, Emitter<DataProfileState> emit) async {
-    final controller = state.phoneNumberInputController;
-
-    if (controller != null) {
-      controller.text = event.value;
-      emit(state.copyWith(phoneNumberInputController: controller));
-    } else {
-      emit(state.copyWith(
-        phoneNumberInputController: TextEditingController(text: event.value),
-      ));
-    }
+    // Controller text already updated by TextField, no need to emit state
   }
 
   Future<void> _onEmergencyContactChanged(EmergencyContactChangedEvent event,
       Emitter<DataProfileState> emit) async {
-    final controller = state.emergencyContactInputController;
-
-    if (controller != null) {
-      controller.text = event.value;
-      emit(state.copyWith(emergencyContactInputController: controller));
-    } else {
-      emit(state.copyWith(
-        emergencyContactInputController:
-            TextEditingController(text: event.value),
-      ));
-    }
+    // Controller text already updated by TextField, no need to emit state
   }
 
   Future<void> _onAddressChanged(
       AddressChangedEvent event, Emitter<DataProfileState> emit) async {
-    final controller = state.addressInputController;
-
-    if (controller != null) {
-      controller.text = event.value;
-      emit(state.copyWith(addressInputController: controller));
-    } else {
-      emit(state.copyWith(
-        addressInputController: TextEditingController(text: event.value),
-      ));
-    }
+    // Controller text already updated by TextField, no need to emit state
   }
 
   Future<void> _onEmailChanged(
       EmailChangedEvent event, Emitter<DataProfileState> emit) async {
-    final controller = state.emailInputController;
-
-    if (controller != null) {
-      controller.text = event.value;
-      emit(state.copyWith(emailInputController: controller));
-    } else {
-      emit(state.copyWith(
-        emailInputController: TextEditingController(text: event.value),
-      ));
-    }
+    // Controller text already updated by TextField, no need to emit state
   }
 
   void _onSaveData(SaveDataEvent event, Emitter<DataProfileState> emit) {

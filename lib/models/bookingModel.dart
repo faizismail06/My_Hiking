@@ -20,14 +20,14 @@ class Booking {
       success: json["success"],
       message: json["message"],
       data:
-          ModelBooking.fromJson(json["pesanan"]), // Directly passing 'pesanan'
+          ModelBooking.fromJson(json["order"]), // Directly passing 'order'
     );
   }
 
   Map<String, dynamic> toJson() => {
         "success": success,
         "message": message,
-        "pesanan": data.toJson(),
+        "order": data.toJson(),
       };
 }
 
@@ -70,8 +70,8 @@ class ModelBooking {
       createdAt: json['created_at'] ?? '',
       updatedAt: json['updated_at'] ?? '',
       totalHargaTiket: json['total_harga_tiket'],
-      anggotaIds: json['anggota_ids'] != null
-          ? (json['anggota_ids'] as List)
+      anggotaIds: json['members'] != null
+          ? (json['members'] as List)
               .map((item) => Anggota.fromJson(item))
               .toList()
           : [],
@@ -90,7 +90,7 @@ class ModelBooking {
       'created_at': createdAt,
       'updated_at': updatedAt,
       'total_harga_tiket': totalHargaTiket,
-      'anggota_ids': anggotaIds != null
+      'members': anggotaIds != null
           ? anggotaIds!.map((anggota) => anggota.toJson()).toList()
           : [],
     };
@@ -137,7 +137,7 @@ class TransactionResponseModel {
   factory TransactionResponseModel.fromJson(Map<String, dynamic> json) {
     return TransactionResponseModel(
       message: json['message'],
-      transaction: TransactionModel.fromJson(json['transaksi']),
+      transaction: TransactionModel.fromJson(json['transaction']),
     );
   }
 }

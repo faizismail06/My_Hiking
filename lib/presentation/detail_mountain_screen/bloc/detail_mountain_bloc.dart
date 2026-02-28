@@ -19,12 +19,12 @@ class DetailMountainBloc
 
   /// Fungsi untuk mengambil data dari API dan mengubah state
   Future<void> fetchRouteCentres(
-      int idGunung, Emitter<DetailMountainState> emit) async {
+      int mountainId, Emitter<DetailMountainState> emit) async {
     emit(state.copyWith(isLoading: true));
 
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/gunung/$idGunung'),
+        Uri.parse('$baseUrl/mountains/$mountainId'),
         headers: {'Authorization': 'Bearer your_token'},
       );
 

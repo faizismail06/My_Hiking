@@ -65,7 +65,7 @@ Widget build(BuildContext context) {
 
 onTapContinueButton(BuildContext context) {
   NavigatorService.pushNamed(
-    AppRoutes.berandaScreen,
+    AppRoutes.homeScreen,
   );
 }
 }

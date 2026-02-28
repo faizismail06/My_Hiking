@@ -4,13 +4,13 @@ import 'package:myhiking/api/api_service.dart';
 import 'package:myhiking/models/model.dart';
 import 'package:myhiking/presentation/booking_screen/bloc/booking_bloc.dart';
 import 'package:myhiking/presentation/booking_screen/booking_screen.dart';
-import 'package:myhiking/presentation/tata_tertib_screen/bloc/tata_tertib_bloc.dart';
+import 'package:myhiking/presentation/rules_screen/bloc/rules_bloc.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/app_export.dart';
 import '../../theme/custom_button_style.dart';
 import '../../widgets/custom_elevated_button.dart';
 import '../../widgets/custom_icon_button.dart';
-import '../tata_tertib_screen/tata_tertib_screen.dart';
+import '../rules_screen/rules_screen.dart';
 import 'bloc/route_bloc.dart';
 import 'models/route_model.dart';
 
@@ -494,13 +494,13 @@ class _RouteScreenState extends State<RouteScreen> {
             context,
             MaterialPageRoute(
               builder: (context) => BlocProvider(
-                create: (context) => TataTertibBloc(
+                create: (context) => RulesBloc(
                   apiService:
                       ApiService(), // Pastikan ApiService terinisialisasi dengan benar
                 ), // Memulai event Bloc
-                child: TataTertibScreen(
+                child: RulesScreen(
                     jalurId: widget
-                        .jalurId), // Memastikan jalurId dikirim ke TataTertibScreen
+                        .jalurId), // Memastikan jalurId dikirim ke RulesScreen
               ),
             ),
           );

@@ -258,7 +258,7 @@ class LoginScreen extends StatelessWidget {
     );
   }
 
-  /// Navigates to the berandaScreen when the action is triggered.
+  /// Navigates to the homeScreen when the action is triggered.
   void onTapMasuk(BuildContext context) async {
     final emailController = context.read<LoginBloc>().state.lockoneController;
     final passwordController =
@@ -269,7 +269,7 @@ class LoginScreen extends StatelessWidget {
       final password = passwordController.text;
 
       // Endpoint URL
-      final url = Uri.parse("http://myhiking.my.id/api/login");
+      final url = Uri.parse("http://127.0.0.1:8000/api/login");
 
       try {
         // Mengirim request ke server
@@ -290,8 +290,8 @@ class LoginScreen extends StatelessWidget {
           SharedPreferences prefs = await SharedPreferences.getInstance();
           await prefs.setString('token', responseData['token']);
 
-          // Navigate to berandaScreen after successful login
-          NavigatorService.pushNamed(AppRoutes.berandaScreen);
+          // Navigate to homeScreen after successful login
+          NavigatorService.pushNamed(AppRoutes.homeScreen);
         } else {
           // Jika login gagal, tampilkan pop-up error
           final errorData = jsonDecode(response.body);

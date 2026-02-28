@@ -198,7 +198,7 @@ class RegistScreen extends StatelessWidget {
   if (password == confirmPassword) {
     // Kirim data ke server
     final response = await http.post(
-      Uri.parse('http://myhiking.my.id/api/register'),
+      Uri.parse('http://127.0.0.1:8000/api/register'),
       headers: <String, String>{
         'Content-Type': 'application/json; charset=UTF-8',
       },

@@ -1,5 +1,13 @@
 part of 'booking_bloc.dart';
 
+/// Model for selected member
+class SelectedMember {
+  final int id;
+  final String name;
+
+  SelectedMember({required this.id, required this.name});
+}
+
 /// Represents the state of Booking in the application.
 class BookingState extends Equatable {
   // Field controllers
@@ -8,9 +16,12 @@ class BookingState extends Equatable {
   final TextEditingController? memberNameFieldController;
 
   // Data models
-  final JalurModel? jalur;
-  final Gunung? gunung;
+  final TrailModel? trail;
+  final Mountain? mountain;
   final ModelBooking? modelBooking;
+
+  // Selected members list
+  final List<SelectedMember>? selectedMembers;
 
   // Loading & Error state
   final bool isLoading;
@@ -23,9 +34,10 @@ class BookingState extends Equatable {
     this.bookingDateFieldController,
     this.memberIdFieldController,
     this.memberNameFieldController,
-    this.jalur,
-    this.gunung,
+    this.trail,
+    this.mountain,
     this.modelBooking,
+    this.selectedMembers,
     this.isLoading = false,
     this.error = '',
     this.isBookingSuccessful = false,
@@ -36,9 +48,10 @@ class BookingState extends Equatable {
         bookingDateFieldController,
         memberIdFieldController,
         memberNameFieldController,
-        jalur,
-        gunung,
+        trail,
+        mountain,
         modelBooking,
+        selectedMembers,
         isLoading,
         error,
         isBookingSuccessful,
@@ -47,9 +60,10 @@ class BookingState extends Equatable {
   BookingState copyWith({
     TextEditingController? bookingDateFieldController,
     TextEditingController? memberIdFieldController,
-    JalurModel? jalur,
-    Gunung? gunung,
+    TrailModel? trail,
+    Mountain? mountain,
     ModelBooking? modelBooking,
+    List<SelectedMember>? selectedMembers,
     bool? isLoading,
     String? error,
     bool? isBookingSuccessful,
@@ -61,9 +75,10 @@ class BookingState extends Equatable {
           memberIdFieldController ?? this.memberIdFieldController,
       memberNameFieldController:
           memberNameFieldController ?? this.memberNameFieldController,
-      jalur: jalur ?? this.jalur,
-      gunung: gunung ?? this.gunung,
+      trail: trail ?? this.trail,
+      mountain: mountain ?? this.mountain,
       modelBooking: modelBooking ?? this.modelBooking,
+      selectedMembers: selectedMembers ?? this.selectedMembers,
       isLoading: isLoading ?? this.isLoading,
       error: error ?? this.error,
       isBookingSuccessful: isBookingSuccessful ?? this.isBookingSuccessful,

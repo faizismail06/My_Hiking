@@ -6,9 +6,9 @@ import 'package:another_stepper/widgets/another_stepper.dart';
 import 'package:intl/intl.dart';
 import 'package:myhiking/api/api_service.dart';
 import 'package:myhiking/models/bookingModel.dart';
-import 'package:myhiking/models/jalurmodel.dart';
-import 'package:myhiking/presentation/pilihan_bank_pembayaran_screen/bloc/pilihan_bank_pembayaran_bloc.dart';
-import 'package:myhiking/presentation/pilihan_bank_pembayaran_screen/pilihan_bank_pembayaran_screen.dart';
+import 'package:myhiking/models/trail_model.dart';
+import 'package:myhiking/presentation/payment_method_screen/bloc/payment_method_bloc.dart';
+import 'package:myhiking/presentation/payment_method_screen/payment_method_screen.dart';
 import '../../core/app_export.dart';
 import '../../theme/custom_button_style.dart';
 import '../../widgets/app_bar/appbar_subtitle.dart';
@@ -77,20 +77,19 @@ class _BookingScreenState extends State<BookingScreen> {
               if (state.isLoading) {
                 return Center(child: CircularProgressIndicator());
               }
-              if (state.jalur == null || state.gunung == null) {
+              if (state.trail == null || state.mountain == null) {
                 return Center(
                     child: Text('Data jalur atau gunung tidak tersedia.'));
               }
 
-              final resDetailRouteCentres = ResJalurModel(
+              final resDetailRouteCentres = ResTrailModel(
                 status: true,
                 message: "Success",
-                //error disini
-                jalur: state.jalur!,
+                trail: state.trail!,
               );
 
-              final jalurModel =
-                  BookingModel.resJalurModelFromJson(resDetailRouteCentres);
+              final trailModel =
+                  BookingModel.resTrailModelFromJson(resDetailRouteCentres);
 
               return SizedBox(
                 width: double.maxFinite,
@@ -103,7 +102,7 @@ class _BookingScreenState extends State<BookingScreen> {
                         SizedBox(height: 4.h),
                         _buildProgressSection(context),
                         SizedBox(height: 28.h),
-                        _buildHotelCard(context, jalurModel),
+                        _buildHotelCard(context, trailModel),
                         SizedBox(height: 28.h),
                         Container(
                           width: double.maxFinite,
@@ -396,26 +395,242 @@ class _BookingScreenState extends State<BookingScreen> {
   /// Section Widget
   Widget _buildMemberIdField(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(left: 24.h),
-      child: BlocSelector<BookingBloc, BookingState, TextEditingController?>(
-        selector: (state) => state.memberIdFieldController,
-        builder: (context, memberIdFieldController) {
-          return CustomTextFormField(
-            width: 280.h,
-            controller: memberIdFieldController,
-            hintText: "Masukkan ID anggota".tr,
-            textInputAction: TextInputAction.done,
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: 16.h,
-              vertical: 12.h,
-            ),
-            onChanged: (value) {
-              // Mengupdate state dengan ID anggota yang baru
-              context.read<BookingBloc>().add(UpdateMemberIdField(value));
+      padding: EdgeInsets.only(left: 24.h, right: 24.h),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Selected members display
+          BlocSelector<BookingBloc, BookingState, List<SelectedMember>>(
+            selector: (state) => state.selectedMembers ?? [],
+            builder: (context, selectedMembers) {
+              if (selectedMembers.isEmpty) {
+                return SizedBox.shrink();
+              }
+              return Container(
+                margin: EdgeInsets.only(bottom: 12.h),
+                child: Wrap(
+                  spacing: 8.h,
+                  runSpacing: 8.h,
+                  children: selectedMembers.map((member) {
+                    return Chip(
+                      label: Text(member.name),
+                      deleteIcon: Icon(Icons.close, size: 16.h),
+                      onDeleted: () {
+                        context.read<BookingBloc>().add(
+                          RemoveSelectedMember(member.id),
+                        );
+                      },
+                    );
+                  }).toList(),
+                ),
+              );
             },
-          );
-        },
+          ),
+          // Buttons row
+          Row(
+            children: [
+              // Select from friends button
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => _showFriendSelectionDialog(context),
+                  icon: Icon(Icons.people, size: 18, color: Colors.white),
+                  label: Text('Pilih dari Teman',  style: TextStyle(color: Colors.white),),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary,
+                    padding: EdgeInsets.symmetric(vertical: 12.h),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14.h),
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(width: 12.h),
+              // Manual ID input button
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _showManualIdDialog(context),
+                  icon: Icon(Icons.edit, size: 18.h),
+                  label: Text('Input ID Manual'),
+                  style: OutlinedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(vertical: 12.h),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14.h),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
+    );
+  }
+
+  void _showFriendSelectionDialog(BuildContext context) async {
+    if (userId.isEmpty) return;
+    
+    final userIdInt = int.tryParse(userId);
+    if (userIdInt == null) return;
+
+    // Fetch friends
+    final response = await ApiService().getFriends(userIdInt);
+    
+    if (response['success'] != true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal memuat daftar teman')),
+      );
+      return;
+    }
+
+    final friends = (response['data'] as List)
+        .map((json) => SelectedMember(
+              id: json['id'],
+              name: json['name'] ?? '',
+            ))
+        .toList();
+
+    if (friends.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Anda belum memiliki teman. Tambahkan teman terlebih dahulu!')),
+      );
+      return;
+    }
+
+    final currentSelected = context.read<BookingBloc>().state.selectedMembers ?? [];
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text('Pilih Teman'),
+              content: SizedBox(
+                width: double.maxFinite,
+                height: 300.h,
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: friends.length,
+                  itemBuilder: (context, index) {
+                    final friend = friends[index];
+                    final isSelected = currentSelected.any((m) => m.id == friend.id);
+                    
+                    return CheckboxListTile(
+                      title: Text(friend.name),
+                      subtitle: Text('ID: ${friend.id}'),
+                      value: isSelected,
+                      onChanged: (value) {
+                        setDialogState(() {
+                          if (value == true) {
+                            if (!currentSelected.any((m) => m.id == friend.id)) {
+                              currentSelected.add(friend);
+                            }
+                          } else {
+                            currentSelected.removeWhere((m) => m.id == friend.id);
+                          }
+                        });
+                      },
+                    );
+                  },
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: Text('Batal'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    // Update bloc with selected members
+                    BlocProvider.of<BookingBloc>(this.context).add(
+                      UpdateSelectedMembers(List.from(currentSelected)),
+                    );
+                    Navigator.pop(dialogContext);
+                  },
+                  child: Text('Simpan'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showManualIdDialog(BuildContext context) {
+    final controller = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text('Masukkan ID Anggota'),
+          content: TextField(
+            controller: controller,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              hintText: 'Contoh: 123456789',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text('Batal'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final idText = controller.text.trim();
+                if (idText.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('ID tidak boleh kosong')),
+                  );
+                  return;
+                }
+                
+                final id = int.tryParse(idText);
+                if (id == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('ID harus berupa angka')),
+                  );
+                  return;
+                }
+
+                // Verify user exists by searching
+                final response = await ApiService().searchUsers(idText, int.tryParse(userId) ?? 0);
+                
+                if (response['success'] == true && (response['data'] as List).isNotEmpty) {
+                  final userData = (response['data'] as List).firstWhere(
+                    (u) => u['id'] == id,
+                    orElse: () => null,
+                  );
+                  
+                  if (userData != null) {
+                    final member = SelectedMember(
+                      id: userData['id'],
+                      name: userData['name'] ?? 'User $id',
+                    );
+                    
+                    BlocProvider.of<BookingBloc>(this.context).add(
+                      AddSelectedMember(member),
+                    );
+                    Navigator.pop(dialogContext);
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Pengguna dengan ID tersebut tidak ditemukan')),
+                    );
+                  }
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Pengguna tidak ditemukan')),
+                  );
+                }
+              },
+              child: Text('Tambah'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -445,14 +660,13 @@ class _BookingScreenState extends State<BookingScreen> {
           // Mengambil state dari BookingBloc
           final bookingBloc = BlocProvider.of<BookingBloc>(context);
           final state = bookingBloc.state;
-          print('${state.memberIdFieldController}');
 
           // Ambil data dari state
-          final anggotaBooking = state.memberIdFieldController?.text;
+          final selectedMembers = state.selectedMembers ?? [];
           final bookingDate = state.bookingDateFieldController?.text;
-          final idGunung = state.gunung?.id;
-          final jalurId = state.jalur?.id;
-          final biaya = state.jalur?.biaya;
+          final idGunung = state.mountain?.id;
+          final jalurId = state.trail?.id;
+          final biaya = state.trail?.biaya;
           final userIdInt = int.tryParse(userId);
 
           // Format tanggal sebelum digunakan
@@ -473,33 +687,13 @@ class _BookingScreenState extends State<BookingScreen> {
                   .add(Duration(days: 1))
                   .toString() // Tanggal turun 1 hari setelah tanggal naik
               : null;
-          print(
-              "Tanggal naik : {$formattedDate, $biaya, $jalurId, $idGunung, $anggotaBooking, $userIdInt, $tanggalTurun}");
+          
+          // Get member IDs from selected members
+          List<int>? anggotaIds = selectedMembers.isNotEmpty
+              ? selectedMembers.map((m) => m.id).toList()
+              : null;
 
-          // Menangani anggotaBooking yang berupa string dan mengonversinya menjadi List<int> jika valid
-          List<int>? anggotaIds;
-
-          if (anggotaBooking != null && anggotaBooking.isNotEmpty) {
-            try {
-              anggotaIds = anggotaBooking
-                  .split(
-                      ',') // Memisahkan ID anggota jika berupa daftar yang dipisahkan koma
-                  .map((id) => int.tryParse(
-                      id.trim())) // Mengubah setiap item menjadi integer
-                  .where(
-                      (id) => id != null) // Menghilangkan ID yang tidak valid
-                  .cast<int>() // Memastikan menjadi List<int>
-                  .toList();
-            } catch (e) {
-              // Jika terjadi kesalahan saat parsing, bisa menampilkan error atau menggunakan list kosong
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text("Format anggota tidak valid.")),
-              );
-              anggotaIds =
-                  []; // Menetapkan list kosong jika terjadi kesalahan parsing
-            }
-          }
-
+          print("Selected Members: ${selectedMembers.map((m) => '${m.name} (${m.id})').toList()}");
           print("anggota Ids {$anggotaIds}");
 
           // Jika anggotaIds kosong, biarkan null atau kosongkan list
@@ -532,9 +726,9 @@ class _BookingScreenState extends State<BookingScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => BlocProvider<PilihanBankPembayaranBloc>(
-                    create: (context) => PilihanBankPembayaranBloc(),
-                    child: PilihanBankPembayaranScreen(pesananId: booking.id),
+                  builder: (context) => BlocProvider<PaymentMethodBloc>(
+                    create: (context) => PaymentMethodBloc(),
+                    child: PaymentMethodScreen(orderId: booking.id),
                   ),
                 ),
               ).then((_) {

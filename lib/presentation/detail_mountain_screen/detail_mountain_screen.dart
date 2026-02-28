@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:myhiking/api/api_service.dart';
 import 'package:myhiking/models/model.dart';
-import 'package:myhiking/presentation/route_screen/route_screen.dart';
+import 'package:myhiking/presentation/trail_screen/trail_screen.dart';
 import '../../core/app_export.dart';
 import '../../theme/custom_button_style.dart';
 import '../../widgets/app_bar/appbar_leading_iconbutton.dart';
 import '../../widgets/app_bar/custom_app_bar.dart';
 import '../../widgets/custom_elevated_button.dart';
-import '../route_screen/bloc/route_bloc.dart';
+import '../../widgets/weather_widget.dart' show WeatherBadge;
+import '../trail_screen/bloc/trail_bloc.dart';
 import 'bloc/detail_mountain_bloc.dart';
 import 'models/detail_mountain_model.dart';
 
@@ -116,7 +117,7 @@ class _DetailMountainScreenState extends State<DetailMountainScreen> {
               width: double.maxFinite,
               child: Column(
                 children: [
-                  _buildHeader(context, detailMountain),
+                  _buildHeader(context, detailMountain, state.gunung),
                   SizedBox(height: 16.h),
                   if (detailMountain != null)
                     _buildElevationColumn(context, detailMountain),
@@ -136,14 +137,14 @@ class _DetailMountainScreenState extends State<DetailMountainScreen> {
   }
 
   Widget _buildHeader(
-      BuildContext context, DetailMountainModel? detailMountain) {
+      BuildContext context, DetailMountainModel? detailMountain, Gunung? gunung) {
     return SizedBox(
       height: 396.h,
       width: double.maxFinite,
       child: Stack(
         alignment: Alignment.bottomCenter,
         children: [
-          _buildBackgroundStack(context),
+          _buildBackgroundStack(context, gunung),
           Text(
             detailMountain?.name ?? "Loading...",
             style: CustomTextStyles.headlineSmall_1,
@@ -178,13 +179,13 @@ class _DetailMountainScreenState extends State<DetailMountainScreen> {
 
             return GestureDetector(
               onTap: () {
-                // Navigasi ke RouteScreen jika ID valid
+                // Navigasi ke TrailScreen jika ID valid
                 Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => BlocProvider(
-                      create: (context) => RouteBloc(apiService: ApiService()),
-                      child: RouteScreen(
+                      create: (context) => TrailBloc(apiService: ApiService()),
+                      child: TrailScreen(
                         jalurId: route.id,
                         idGunung: widget.idGunung,
 
@@ -193,7 +194,7 @@ class _DetailMountainScreenState extends State<DetailMountainScreen> {
                   ),
                 );
                 print(
-                    "Navigating to RouteScreen with idGunung: ${widget.idGunung}, jalurId: ${route.id}, ${userId.toString()}");
+                    "Navigating to TrailScreen with idGunung: ${widget.idGunung}, jalurId: ${route.id}, ${userId.toString()}");
               },
               child: Container(
                 margin: EdgeInsets.only(bottom: 8.h),
@@ -283,7 +284,7 @@ class _DetailMountainScreenState extends State<DetailMountainScreen> {
     );
   }
 
-  Widget _buildBackgroundStack(BuildContext context) {
+  Widget _buildBackgroundStack(BuildContext context, Gunung? gunung) {
     return Align(
       alignment: Alignment.topCenter,
       child: SizedBox(
@@ -304,13 +305,29 @@ class _DetailMountainScreenState extends State<DetailMountainScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  CustomAppBar(
-                    height: 40.h,
-                    leadingWidth: 64.h,
-                    leading: AppbarLeadingIconbutton(
-                      imagePath: ImageConstant.imgIconArrow,
-                      margin: EdgeInsets.only(left: 24.h),
-                      onTap: () => onTapIconarrowone(context),
+                  // Custom header with back button and weather badge
+                  Container(
+                    height: 56.h,
+                    padding: EdgeInsets.symmetric(horizontal: 24.h),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        // Back button
+                        AppbarLeadingIconbutton(
+                          imagePath: ImageConstant.imgIconArrow,
+                          onTap: () => onTapIconarrowone(context),
+                        ),
+                        // Weather badge on the right
+                        if (gunung != null && 
+                            gunung.latitude != null && 
+                            gunung.longitude != null)
+                          WeatherBadge(
+                            latitude: gunung.latitude,
+                            longitude: gunung.longitude,
+                            locationName: gunung.nama,
+                          ),
+                      ],
                     ),
                   ),
                   const Spacer(),
@@ -378,7 +395,7 @@ class _DetailMountainScreenState extends State<DetailMountainScreen> {
 
   onTapIconarrowone(BuildContext context) {
     NavigatorService.pushNamed(
-      AppRoutes.berandaScreen,
+      AppRoutes.homeScreen,
     );
   }
 }
