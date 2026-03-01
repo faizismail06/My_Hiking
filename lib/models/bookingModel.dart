@@ -145,11 +145,12 @@ class TransactionResponseModel {
 class TransactionModel {
   final int id;
   final int idPesanan;
-  final int paymentId;
   final int totalBayar;
   final String statusPesanan;
   final String? waktuPembayaran;
   final String? bukti;
+  final String? paymentType; // Midtrans payment type
+  final String? paymentMethodName; // Human-readable payment method name
   String? gunung;
   String? jalur;
   String? userId;
@@ -157,11 +158,12 @@ class TransactionModel {
   TransactionModel({
     required this.id,
     required this.idPesanan,
-    required this.paymentId,
     required this.totalBayar,
     required this.statusPesanan,
     this.waktuPembayaran,
     this.bukti,
+    this.paymentType,
+    this.paymentMethodName,
     this.gunung,
     this.jalur,
     this.userId,
@@ -171,22 +173,23 @@ class TransactionModel {
     return TransactionModel(
       id: json['id'],
       idPesanan: json['id_pesanan'],
-      paymentId: json['payment_id'],
       totalBayar: json['total_bayar'],
       statusPesanan: json['status_pesanan'],
       waktuPembayaran: json['waktu_pembayaran'],
       bukti: json['bukti'],
+      paymentType: json['payment_type'],
+      paymentMethodName: json['payment_method_name'],
     );
   }
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'id_pesanan': idPesanan,
-      'payment_id': paymentId,
       'total_bayar': totalBayar,
       'status_pesanan': statusPesanan,
       'waktu_pembayaran': waktuPembayaran,
       'bukti': bukti,
+      'payment_type': paymentType,
     };
   }
 }

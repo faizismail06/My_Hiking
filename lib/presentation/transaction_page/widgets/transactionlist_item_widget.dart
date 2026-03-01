@@ -1,14 +1,11 @@
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
-import 'package:myhiking/presentation/pending_verification_screen/bloc/pending_verification_bloc.dart';
-import 'package:myhiking/presentation/pending_verification_screen/pending_verification_screen.dart';
-import 'package:myhiking/presentation/payment_upload_screen/bloc/payment_upload_bloc.dart';
-import 'package:myhiking/presentation/payment_upload_screen/payment_upload_screen.dart';
-import '../../../api/api_service.dart';
+import 'package:myhiking/presentation/payment_method_screen/payment_method_screen.dart';
 import '../../../core/app_export.dart';
 import '../../../theme/custom_button_style.dart';
 import '../../../widgets/custom_elevated_button.dart';
 import '../models/transactionlist_item_model.dart';
+
 class TransactionlistItemWidget extends StatelessWidget {
   TransactionlistItemWidget(
     this.transactionlistItemModelObj, {
@@ -35,7 +32,7 @@ class TransactionlistItemWidget extends StatelessWidget {
         statusButton = CustomElevatedButton(
           height: 26.h,
           width: 98.h,
-          text: "Incomplete".tr,
+          text: "Bayar",
           buttonStyle: CustomButtonStyles.fillRed2,
           buttonTextStyle: CustomTextStyles.titleSmallOnPrimary,
           onPressed: () {
@@ -45,56 +42,21 @@ class TransactionlistItemWidget extends StatelessWidget {
               return;
             }
 
-            Navigator.pushReplacement(
+            Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => BlocProvider(
-                  create: (context) =>
-                      PaymentUploadBloc(apiService: ApiService()),
-                  child: PaymentUploadScreen(
-                    orderId: orderId,
-                    transaksiId: transactionlistItemModelObj.id,
-                  ),
-                ),
+                builder: (context) => PaymentMethodScreen(orderId: orderId),
               ),
             );
           },
         );
         break;
 
-      case 'unverified':
+      case 'complete':
         statusButton = CustomElevatedButton(
           height: 26.h,
           width: 98.h,
-          text: "Proses".tr,
-          buttonStyle: CustomButtonStyles.outlineTeal1,
-          buttonTextStyle: CustomTextStyles.titleSmallOnPrimary,
-          onPressed: () {
-            final orderId = transactionlistItemModelObj.pesananId;
-            if (orderId == null) {
-              print('Pesanan ID tidak valid');
-              return;
-            }
-
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => BlocProvider(
-                  create: (context) =>
-                      PendingVerificationBloc(apiService: ApiService()),
-                  child: PendingVerificationScreen(orderId: orderId),
-                ),
-              ),
-            );
-          },
-        );
-        break;
-
-      case 'verified':
-        statusButton = CustomElevatedButton(
-          height: 26.h,
-          width: 98.h,
-          text: "Selesai".tr,
+          text: "Lunas",
           buttonStyle: CustomButtonStyles.outlineTeal,
           buttonTextStyle: CustomTextStyles.titleSmallOnPrimary,
           onPressed: () {
@@ -113,8 +75,24 @@ class TransactionlistItemWidget extends StatelessWidget {
         break;
 
       default:
-        statusButton =
-            Text('Status tidak dikenal', style: TextStyle(color: Colors.red));
+        statusButton = CustomElevatedButton(
+          height: 26.h,
+          width: 98.h,
+          text: "Bayar",
+          buttonStyle: CustomButtonStyles.fillRed2,
+          buttonTextStyle: CustomTextStyles.titleSmallOnPrimary,
+          onPressed: () {
+            final orderId = transactionlistItemModelObj.pesananId;
+            if (orderId != null) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PaymentMethodScreen(orderId: orderId),
+                ),
+              );
+            }
+          },
+        );
     }
 
     return GestureDetector(

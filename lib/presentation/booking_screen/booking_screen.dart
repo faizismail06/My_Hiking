@@ -7,7 +7,6 @@ import 'package:intl/intl.dart';
 import 'package:myhiking/api/api_service.dart';
 import 'package:myhiking/models/bookingModel.dart';
 import 'package:myhiking/models/trail_model.dart';
-import 'package:myhiking/presentation/payment_method_screen/bloc/payment_method_bloc.dart';
 import 'package:myhiking/presentation/payment_method_screen/payment_method_screen.dart';
 import '../../core/app_export.dart';
 import '../../theme/custom_button_style.dart';
@@ -726,10 +725,7 @@ class _BookingScreenState extends State<BookingScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => BlocProvider<PaymentMethodBloc>(
-                    create: (context) => PaymentMethodBloc(),
-                    child: PaymentMethodScreen(orderId: booking.id),
-                  ),
+                  builder: (context) => PaymentMethodScreen(orderId: booking.id),
                 ),
               ).then((_) {
                 // Jika perlu melakukan sesuatu setelah layar baru dimulai, Anda bisa melakukannya di sini.

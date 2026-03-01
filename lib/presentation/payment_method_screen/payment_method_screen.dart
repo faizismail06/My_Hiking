@@ -1,61 +1,96 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:another_stepper/dto/stepper_data.dart';
 import 'package:another_stepper/widgets/another_stepper.dart';
-import 'package:myhiking/presentation/payment_upload_screen/bloc/payment_upload_bloc.dart';
-import 'package:myhiking/presentation/payment_upload_screen/payment_upload_screen.dart';
+import 'package:intl/intl.dart';
+import 'package:myhiking/presentation/midtrans_payment_screen/midtrans_payment_screen.dart';
+import 'package:myhiking/presentation/home_screen/home_screen.dart';
 import '../../api/api_service.dart';
 import '../../core/app_export.dart';
 import '../../theme/custom_button_style.dart';
 import '../../widgets/app_bar/appbar_subtitle.dart';
 import '../../widgets/app_bar/custom_app_bar.dart';
 import '../../widgets/custom_elevated_button.dart';
-import 'bloc/payment_method_bloc.dart';
-import 'models/paymentmethodslist_item_model.dart';
-import 'widgets/paymentmethodslist_item_widget.dart';
 
 class PaymentMethodScreen extends StatefulWidget {
   final int orderId;
   const PaymentMethodScreen({super.key, required this.orderId});
 
   @override
-  _PaymentMethodScreenState createState() =>
-      _PaymentMethodScreenState();
+  _PaymentMethodScreenState createState() => _PaymentMethodScreenState();
 }
 
-class _PaymentMethodScreenState
-    extends State<PaymentMethodScreen> {
-  String? selectedDebitCard; // Menyimpan kartu debit yang dipilih
+class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
+  bool _isLoading = true;
+  bool _isProcessing = false;
+  Map<String, dynamic>? _orderData;
+  List<dynamic> _paymentMethods = [];
+  String? _selectedPaymentMethod;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Memastikan BLoC siap untuk menangani event
-      context
-          .read<PaymentMethodBloc>()
-          .add(PaymentMethodInitialEvent());
-      context.read<PaymentMethodBloc>().add(FetchPaymentsEvent());
-    });
+    _fetchData();
+  }
+
+  Future<void> _fetchData() async {
+    try {
+      // Fetch order details and payment methods in parallel
+      final results = await Future.wait([
+        ApiService().fetchPesanan(widget.orderId),
+        ApiService().getMidtransPaymentMethods(),
+      ]);
+
+      if (mounted) {
+        setState(() {
+          _orderData = results[0];
+          if (results[1]['success'] == true) {
+            _paymentMethods = results[1]['data'] ?? [];
+          }
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Gagal memuat data';
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  String _formatCurrency(dynamic amount) {
+    final formatter = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    );
+    return formatter.format(amount ?? 0);
+  }
+
+  IconData _getPaymentIcon(String type) {
+    switch (type) {
+      case 'e_wallet':
+        return Icons.account_balance_wallet;
+      case 'bank_transfer':
+        return Icons.account_balance;
+      case 'cstore':
+        return Icons.store;
+      case 'credit_card':
+        return Icons.credit_card;
+      default:
+        return Icons.payment;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    print("id Pesanan : ${widget.orderId}");
     return SafeArea(
       child: Scaffold(
         appBar: _buildAppBar(context),
-        body: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 6.h, vertical: 2.h),
-          child: Column(
-            children: [
-              _buildPaymentSelectionStepper(context),
-              SizedBox(height: 16.h),
-              _buildPaymentMethodsList(context),
-            ],
-          ),
-        ),
-        bottomNavigationBar: _buildPaymentButtonSection(context),
+        body: _buildBody(),
+        bottomNavigationBar: _buildPaymentButton(context),
       ),
     );
   }
@@ -68,14 +103,12 @@ class _PaymentMethodScreenState
         children: [
           IconButton(
             icon: const Icon(Icons.arrow_back),
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
+            onPressed: () => Navigator.of(context).pop(),
             padding: EdgeInsets.only(right: 16.h),
           ),
           Expanded(
             child: Center(
-              child: AppbarSubtitleOne(text: "lbl_booking".tr),
+              child: AppbarSubtitleOne(text: "Pembayaran"),
             ),
           ),
           const SizedBox(width: 50),
@@ -84,243 +117,500 @@ class _PaymentMethodScreenState
     );
   }
 
-  Widget _buildPaymentSelectionStepper(BuildContext context) {
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 10.h),
+  Widget _buildBody() {
+    if (_isLoading) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(color: theme.colorScheme.primary),
+            SizedBox(height: 16),
+            Text('Memuat data...'),
+          ],
+        ),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 64, color: Colors.red),
+            SizedBox(height: 16),
+            Text(_errorMessage!, style: TextStyle(fontSize: 16)),
+            SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  _isLoading = true;
+                  _errorMessage = null;
+                });
+                _fetchData();
+              },
+              child: Text('Coba Lagi'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(16.h),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AnotherStepper(
-            iconHeight: 26,
-            iconWidth: 26,
-            stepperDirection: Axis.horizontal,
-            activeIndex:
-                0, // You can adjust active index logic as per your need
-            barThickness: 4,
-            inverted: true,
-            stepperList: _buildStepperDataList(),
+          _buildStepper(),
+          SizedBox(height: 24.h),
+          _buildOrderSummaryCard(),
+          SizedBox(height: 16.h),
+          _buildPaymentMethodSelectionCard(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStepper() {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 10.h),
+      child: AnotherStepper(
+        iconHeight: 26,
+        iconWidth: 26,
+        stepperDirection: Axis.horizontal,
+        activeIndex: 1,
+        barThickness: 4,
+        inverted: true,
+        stepperList: [
+          StepperData(iconWidget: _buildStepperIcon("1", true)),
+          StepperData(iconWidget: _buildStepperIcon("2", true)),
+          StepperData(iconWidget: _buildStepperIcon("3", false)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStepperIcon(String label, bool isActive) {
+    return Container(
+      height: 26.h,
+      width: 26.h,
+      decoration: BoxDecoration(
+        color: isActive ? theme.colorScheme.primary : appTheme.gray5001,
+        borderRadius: BorderRadius.circular(14.h),
+        border: isActive ? null : Border.all(color: appTheme.blueGray100, width: 2.h),
+      ),
+      child: Center(
+        child: Text(
+          label,
+          style: isActive 
+              ? CustomTextStyles.titleMediumOnPrimary_2
+              : TextStyle(color: appTheme.blueGray100),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOrderSummaryCard() {
+    final order = _orderData?['order'];
+    final mountain = order?['mountain'];
+    final trail = order?['trail'];
+    final members = order?['members'] as List? ?? [];
+    final totalMembers = members.length + 1;
+    final pricePerPerson = order?['total_harga_tiket'] ?? 0;
+    final totalPrice = totalMembers * pricePerPerson;
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: EdgeInsets.all(16.h),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.landscape, color: theme.colorScheme.primary, size: 24),
+                SizedBox(width: 8),
+                Text(
+                  'Ringkasan Pesanan',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+              ],
+            ),
+            Divider(height: 24),
+            _buildSummaryRow('Gunung', mountain?['nama'] ?? '-'),
+            _buildSummaryRow('Jalur', trail?['nama'] ?? '-'),
+            _buildSummaryRow('Tanggal Naik', order?['tanggal_naik'] ?? '-'),
+            _buildSummaryRow('Tanggal Turun', order?['tanggal_turun'] ?? '-'),
+            _buildSummaryRow('Jumlah Pendaki', '$totalMembers orang'),
+            _buildSummaryRow('Harga/Orang', _formatCurrency(pricePerPerson)),
+            Divider(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Total Pembayaran',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  _formatCurrency(totalPrice),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryRow(String label, String value) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 4.h),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(color: Colors.grey[600])),
+          Text(value, style: TextStyle(fontWeight: FontWeight.w500)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentMethodSelectionCard() {
+    // Group payment methods by type
+    Map<String, List<dynamic>> groupedMethods = {};
+    for (var method in _paymentMethods) {
+      String type = method['type'] ?? 'other';
+      if (!groupedMethods.containsKey(type)) {
+        groupedMethods[type] = [];
+      }
+      groupedMethods[type]!.add(method);
+    }
+
+    String _getTypeTitle(String type) {
+      switch (type) {
+        case 'e_wallet':
+          return 'E-Wallet';
+        case 'bank_transfer':
+          return 'Virtual Account';
+        case 'cstore':
+          return 'Gerai Retail';
+        case 'credit_card':
+          return 'Kartu Kredit/Debit';
+        default:
+          return 'Lainnya';
+      }
+    }
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: EdgeInsets.all(16.h),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.payment, color: theme.colorScheme.primary, size: 24),
+                SizedBox(width: 8),
+                Text(
+                  'Pilih Metode Pembayaran',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+              ],
+            ),
+            Divider(height: 24),
+            ...groupedMethods.entries.map((entry) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8.h),
+                    child: Row(
+                      children: [
+                        Icon(_getPaymentIcon(entry.key), size: 18, color: Colors.grey[600]),
+                        SizedBox(width: 8),
+                        Text(
+                          _getTypeTitle(entry.key),
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  ...entry.value.map((method) => _buildPaymentMethodItem(method)),
+                  SizedBox(height: 8.h),
+                ],
+              );
+            }).toList(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPaymentMethodItem(Map<String, dynamic> method) {
+    bool isSelected = _selectedPaymentMethod == method['id'];
+    
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _selectedPaymentMethod = method['id'];
+        });
+      },
+      child: Container(
+        margin: EdgeInsets.symmetric(vertical: 4.h),
+        padding: EdgeInsets.all(12.h),
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: isSelected ? theme.colorScheme.primary : Colors.grey[300]!,
+            width: isSelected ? 2 : 1,
           ),
-          SizedBox(height: 38.h),
-          Text(
-            "msg_pilih_pembayaran".tr,
-            style: CustomTextStyles.titleMediumGray900_1,
+          borderRadius: BorderRadius.circular(8),
+          color: isSelected ? theme.colorScheme.primary.withOpacity(0.05) : Colors.white,
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 20,
+              height: 20,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isSelected ? theme.colorScheme.primary : Colors.grey[400]!,
+                  width: 2,
+                ),
+              ),
+              child: isSelected
+                  ? Center(
+                      child: Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                    )
+                  : null,
+            ),
+            SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    method['name'] ?? '',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: isSelected ? theme.colorScheme.primary : Colors.black87,
+                    ),
+                  ),
+                  if (method['description'] != null)
+                    Text(
+                      method['description'],
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            if (isSelected)
+              Icon(Icons.check_circle, color: theme.colorScheme.primary, size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPaymentButton(BuildContext context) {
+    bool canPay = _selectedPaymentMethod != null && !_isProcessing && _orderData != null;
+    
+    return Container(
+      padding: EdgeInsets.all(16.h),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.2),
+            spreadRadius: 1,
+            blurRadius: 5,
+            offset: Offset(0, -2),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_selectedPaymentMethod == null)
+            Padding(
+              padding: EdgeInsets.only(bottom: 8.h),
+              child: Text(
+                'Pilih metode pembayaran terlebih dahulu',
+                style: TextStyle(
+                  color: Colors.orange[700],
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          CustomElevatedButton(
+            height: 52.h,
+            text: _isProcessing ? "MEMPROSES..." : "BAYAR SEKARANG",
+            onPressed: canPay ? () => _processPayment(context) : null,
+            buttonStyle: canPay
+                ? CustomButtonStyles.fillPrimary
+                : CustomButtonStyles.fillGray,
+            buttonTextStyle: CustomTextStyles.labelLarge13,
+            leftIcon: _isProcessing 
+                ? Container(
+                    margin: EdgeInsets.only(right: 8),
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : Icon(Icons.payment, color: Colors.white, size: 20),
           ),
         ],
       ),
     );
   }
 
-  List<StepperData> _buildStepperDataList() {
-    return [
-      StepperData(iconWidget: _buildStepperIcon("lbl_1")),
-      StepperData(iconWidget: _buildStepperIcon("lbl_2")),
-      StepperData(
-        iconWidget: Container(
-          height: 26.h,
-          width: 26.h,
-          decoration: BoxDecoration(
-            color: appTheme.gray5001,
-            borderRadius: BorderRadius.circular(12.h),
-            border: Border.all(
-              color: appTheme.blueGray100,
-              width: 2.h,
-            ),
-          ),
-        ),
-      ),
-    ];
-  }
-
-  Widget _buildStepperIcon(String label) {
-    return Container(
-      height: 26.h,
-      width: 26.h,
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primary,
-        borderRadius: BorderRadius.circular(14.h),
-      ),
-      child: Center(
-        child: Text(
-          label.tr,
-          style: CustomTextStyles.titleMediumOnPrimary_2,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPaymentMethodsList(BuildContext context) {
-    return Expanded(
-      child: Padding(
-        padding: EdgeInsets.only(right: 2.h),
-        child: BlocBuilder<PaymentMethodBloc, PaymentMethodState>(
-          builder: (context, state) {
-            // Show loading indicator
-            if (state.isLoading) {
-              return Center(
-                child: CircularProgressIndicator(),
-              );
-            }
-
-            // Show error message
-            if (state.error != null && state.error!.isNotEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.error_outline, size: 48.h, color: Colors.red),
-                    SizedBox(height: 16.h),
-                    Text(
-                      'Gagal memuat metode pembayaran',
-                      style: CustomTextStyles.titleSmallGray900,
-                    ),
-                    SizedBox(height: 8.h),
-                    Text(
-                      state.error!,
-                      style: CustomTextStyles.bodySmallGray800,
-                      textAlign: TextAlign.center,
-                    ),
-                    SizedBox(height: 16.h),
-                    ElevatedButton(
-                      onPressed: () {
-                        context.read<PaymentMethodBloc>().add(FetchPaymentsEvent());
-                      },
-                      child: Text('Coba Lagi'),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            final paymentMethodsList = state.paymentMethodModelObj?.paymentmethodslistItemList ?? [];
-
-            // Show empty state
-            if (paymentMethodsList.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.payment_outlined, size: 48.h, color: Colors.grey),
-                    SizedBox(height: 16.h),
-                    Text(
-                      'Tidak ada metode pembayaran tersedia',
-                      style: CustomTextStyles.titleSmallGray900,
-                    ),
-                    SizedBox(height: 16.h),
-                    ElevatedButton(
-                      onPressed: () {
-                        context.read<PaymentMethodBloc>().add(FetchPaymentsEvent());
-                      },
-                      child: Text('Refresh'),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            return ListView.separated(
-              padding: EdgeInsets.zero,
-              physics: const BouncingScrollPhysics(),
-              shrinkWrap: true,
-              separatorBuilder: (context, index) => SizedBox(height: 14.h),
-              itemCount: paymentMethodsList.length,
-              itemBuilder: (context, index) {
-                return PaymentmethodslistItemWidget(
-                  paymentMethodsList[index],
-                  onTapRadioGroup: (value) {
-                    setState(() {
-                      selectedDebitCard =
-                          value; // Simpan kartu debit yang dipilih
-                    });
-
-                    // Mengirimkan event ke Bloc
-                    context.read<PaymentMethodBloc>().add(
-                          PaymentmethodslistItemEvent(
-                              index: index), // Pastikan event ini ditangani
-                        );
-                  },
-                  isSelected: selectedDebitCard ==
-                      paymentMethodsList[index]
-                          .namaPayment, // Cek apakah item ini terpilih
-                );
-              },
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPaymentButtonSection(BuildContext context) {
-    bool isBankSelected = selectedDebitCard != null;
-
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 18.h),
-      child: CustomElevatedButton(
-        height: 48.h,
-        text: "lbl_bayar_sekarang".tr.toUpperCase(),
-        onPressed: isBankSelected
-            ? () {
-                // Cari model pembayaran yang dipilih berdasarkan debitcard
-                final selectedPayment = context
-                    .read<PaymentMethodBloc>()
-                    .state
-                    .paymentMethodModelObj
-                    ?.paymentmethodslistItemList
-                    .firstWhere(
-                      (payment) => payment.namaPayment == selectedDebitCard,
-                      orElse: () => PaymentmethodslistItemModel(),
-                    );
-
-                onTapRincian(
-                  context,
-                  selectedPayment?.id ?? 0,
-                );
-              }
-            : null, // Disable button if no bank is selected
-        margin: EdgeInsets.only(bottom: 12.h),
-        buttonStyle: isBankSelected
-            ? CustomButtonStyles
-                .fillPrimary // Primary color if bank is selected
-            : CustomButtonStyles.fillGray, // Gray color if no bank is selected
-        buttonTextStyle: CustomTextStyles.labelLarge13,
-      ),
-    );
-  }
-
-  void onTapRincian(BuildContext context, int id) async {
-    // Log selalu ditampilkan di awal fungsi
-    print("Pesanan ID: ${widget.orderId}, ID Payment: $id");
+  Future<void> _processPayment(BuildContext context) async {
+    if (_selectedPaymentMethod == null) return;
+    
+    setState(() {
+      _isProcessing = true;
+    });
 
     try {
-      // Panggil API untuk membuat transaksi
-      final transactionResponse = await ApiService().createTransaction(
+      // Create Midtrans payment with selected payment method
+      final paymentResult = await ApiService().createMidtransPayment(
         widget.orderId,
-        id,
+        paymentMethod: _selectedPaymentMethod,
       );
 
-      // Navigasi ke RincianPembayaranUploadScreen dengan data transaksi
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => BlocProvider(
-            create: (context) =>
-                PaymentUploadBloc(apiService: ApiService()),
-            child: PaymentUploadScreen(
-              orderId: widget.orderId,
-              transaksiId: transactionResponse.transaction.id,
+      if (!mounted) return;
+
+      if (paymentResult['success'] == true && paymentResult['redirect_url'] != null) {
+        // Navigate to Midtrans payment screen
+        final result = await Navigator.push<Map<String, dynamic>>(
+          context,
+          MaterialPageRoute(
+            builder: (context) => MidtransPaymentScreen(
+              transactionId: paymentResult['transaction_id'] ?? 0,
+              redirectUrl: paymentResult['redirect_url'],
+              snapToken: paymentResult['snap_token'],
             ),
           ),
-        ),
-      );
-    } catch (e) {
-      // Tangani error jika gagal membuat transaksi
-      print('Error creating transaction: $e');
+        );
 
-      // Tampilkan pesan error ke pengguna menggunakan ScaffoldMessenger
+        // Handle payment result
+        if (result != null && mounted) {
+          _handlePaymentResult(context, result, widget.orderId);
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(paymentResult['message'] ?? 'Gagal membuat pembayaran'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('Error processing payment: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal memproses pembayaran. Silakan coba lagi.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+        });
+      }
+    }
+  }
+
+  void _handlePaymentResult(BuildContext context, Map<String, dynamic> result, int orderId) {
+    final status = result['status'] ?? 'pending';
+
+    if (status == 'success') {
+      // Payment success - navigate to home screen and show success message
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (context) => HomeScreen.builder(context),
+        ),
+        (route) => false, // Remove all previous routes
+      );
+      
+      // Show success snackbar after navigation
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Pembayaran berhasil! Transaksi Anda sudah lunas.'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      });
+    } else if (status == 'pending') {
+      // Payment pending - navigate to home screen
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (context) => HomeScreen.builder(context),
+        ),
+        (route) => false,
+      );
+      
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Silakan cek status pembayaran di menu Transaksi'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      });
+    } else if (status == 'cancelled') {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Gagal membuat transaksi. Silakan coba lagi.'),
-          duration: Duration(seconds: 3),
+          content: Text('Pembayaran dibatalkan'),
+          backgroundColor: Colors.grey,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message'] ?? 'Pembayaran gagal'),
+          backgroundColor: Colors.red,
         ),
       );
     }

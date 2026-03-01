@@ -30,18 +30,17 @@ class TicketModel extends Equatable {
   });
 
   factory TicketModel.fromJson(Map<String, dynamic> json) {
-  // Periksa apakah 'pesanan' dan sub-elemen lainnya tidak null  
+  // API returns: booker, mountain, trail, members
   return TicketModel(
-    
-    id: json['id'] ?? 0, // Gunakan nilai default jika tidak ada 'id'
-    pemesanName: json['pemesan']?['name'] ?? 'Unknown', // Gunakan 'Unknown' jika 'pemesan' atau 'name' tidak ditemukan
-    gunungName: json['mountain']?['nama'] ?? 'Unknown', // Gunakan 'Unknown' jika 'mountain' atau 'nama' tidak ditemukan
-    jalurName: json['trail']?['nama'] ?? 'Unknown', // Gunakan 'Unknown' jika 'trail' atau 'nama' tidak ditemukan
-    tanggalNaik: json['tanggal_naik'] ?? '', // Gunakan string kosong jika tanggal_naik tidak ditemukan
-    tanggalTurun: json['tanggal_turun'] ?? '', // Gunakan string kosong jika tanggal_turun tidak ditemukan
-    totalHargaTiket: json['total_harga_tiket'] ?? 0, // Gunakan 0 jika total_harga_tiket tidak ditemukan
-    status: json['status'] ?? 'Unknown', // Gunakan 'Unknown' jika status tidak ditemukan
-    anggota: (json['anggota'] as List?)?.map((anggota) => Anggota.fromJson(anggota)).toList() ?? [], // Pastikan anggota tidak null
+    id: json['id'] ?? 0,
+    pemesanName: json['booker']?['name'] ?? 'Unknown', // API uses 'booker' not 'pemesan'
+    gunungName: json['mountain']?['nama'] ?? 'Unknown',
+    jalurName: json['trail']?['nama'] ?? 'Unknown',
+    tanggalNaik: json['tanggal_naik'] ?? '',
+    tanggalTurun: json['tanggal_turun'] ?? '',
+    totalHargaTiket: json['total_harga_tiket'] ?? 0,
+    status: json['status'] ?? 'Unknown',
+    anggota: (json['members'] as List?)?.map((member) => Anggota.fromJson(member as Map<String, dynamic>)).toList() ?? [], // API uses 'members' not 'anggota'
   );
 }
 
@@ -98,8 +97,8 @@ class Anggota extends Equatable {
   // Factory method to create an Anggota from JSON
   factory Anggota.fromJson(Map<String, dynamic> json) {
     return Anggota(
-      id: json['id'],
-      name: json['name'],
+      id: json['id'] ?? 0,
+      name: json['name'] ?? 'Unknown',
     );
   }
 

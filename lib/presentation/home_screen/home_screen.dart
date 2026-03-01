@@ -49,9 +49,46 @@ class HomeScreen extends StatelessWidget {
             ],
           ),
         ),
+        // Floating Action Button untuk Chatbot
+        floatingActionButton: _buildChatbotFAB(context),
         bottomNavigationBar: SizedBox(
           width: double.maxFinite,
           child: _buildBottomNavigation(context),
+        ),
+      ),
+    );
+  }
+
+  /// Widget untuk Chatbot FAB
+  Widget _buildChatbotFAB(BuildContext context) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 10.h),
+      child: FloatingActionButton(
+        onPressed: () {
+          Navigator.of(context, rootNavigator: true).pushNamed(
+            AppRoutes.chatbotScreen,
+          );
+        },
+        backgroundColor: theme.colorScheme.primary,
+        elevation: 6,
+        child: Container(
+          padding: EdgeInsets.all(12.h),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                theme.colorScheme.primary,
+                theme.colorScheme.primary.withValues(alpha: 0.8),
+              ],
+            ),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            Icons.smart_toy_outlined,
+            color: Colors.white,
+            size: 28.h,
+          ),
         ),
       ),
     );

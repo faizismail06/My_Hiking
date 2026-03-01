@@ -1,0 +1,694 @@
+import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../api/api_service.dart';
+import '../../core/app_export.dart';
+
+class TicketActionScreen extends StatefulWidget {
+  final int orderId;
+  final String status;
+  final String mountainName;
+  final String hikingDate;
+
+  const TicketActionScreen({
+    super.key,
+    required this.orderId,
+    required this.status,
+    required this.mountainName,
+    required this.hikingDate,
+  });
+
+  @override
+  State<TicketActionScreen> createState() => _TicketActionScreenState();
+}
+
+class _TicketActionScreenState extends State<TicketActionScreen> {
+  bool _isPanicLoading = false;
+  String? _selectedEmergencyType;
+  final TextEditingController _descriptionController = TextEditingController();
+
+  final List<String> _emergencyTypes = [
+    'Hipotermia',
+    'Kaki Keselo',
+    'Tersesat',
+    'Kelelahan Ekstrem',
+    'Dehidrasi',
+    'Cedera',
+    'Lainnya',
+  ];
+
+  @override
+  void dispose() {
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
+  Future<Position?> _getCurrentLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    // Check if location services are enabled
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Layanan lokasi tidak aktif. Mohon aktifkan GPS.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return null;
+    }
+
+    // Check and request permission
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Izin lokasi ditolak'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return null;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Izin lokasi ditolak permanen. Mohon izinkan di pengaturan.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return null;
+    }
+
+    // Get current position
+    try {
+      return await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal mendapatkan lokasi: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return null;
+    }
+  }
+
+  void _showPanicDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
+                  SizedBox(width: 10),
+                  Text(
+                    'PANIC / DARURAT',
+                    style: TextStyle(
+                      color: Colors.red,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Pilih jenis keadaan darurat:',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    SizedBox(height: 12),
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          isExpanded: true,
+                          hint: Text('Pilih jenis darurat'),
+                          value: _selectedEmergencyType,
+                          items: _emergencyTypes.map((type) {
+                            return DropdownMenuItem(
+                              value: type,
+                              child: Text(type),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setDialogState(() {
+                              _selectedEmergencyType = value;
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'Keterangan tambahan (opsional):',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    SizedBox(height: 8),
+                    TextField(
+                      controller: _descriptionController,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        hintText: 'Jelaskan kondisi Anda...',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    Container(
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade50,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.orange.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline, color: Colors.orange.shade700),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Lokasi Anda akan dikirim ke tim SAR untuk bantuan darurat.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.orange.shade900,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _selectedEmergencyType = null;
+                    _descriptionController.clear();
+                  },
+                  child: Text(
+                    'Batal',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: _selectedEmergencyType == null
+                      ? null
+                      : () {
+                          Navigator.pop(context);
+                          _sendPanicRequest();
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: Text(
+                    'Kirim SOS',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _sendPanicRequest() async {
+    setState(() {
+      _isPanicLoading = true;
+    });
+
+    try {
+      // Get current location
+      final position = await _getCurrentLocation();
+      if (position == null) {
+        setState(() {
+          _isPanicLoading = false;
+        });
+        return;
+      }
+
+      // Get user ID
+      final token = await ApiService().getToken();
+      if (token == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Sesi telah berakhir. Silakan login kembali.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        setState(() {
+          _isPanicLoading = false;
+        });
+        return;
+      }
+
+      final userResponse = await ApiService().getUserProfile(token);
+      if (!userResponse['success']) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Gagal mendapatkan data pengguna'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        setState(() {
+          _isPanicLoading = false;
+        });
+        return;
+      }
+
+      final userId = userResponse['data']['id'];
+
+      // Send panic request
+      final response = await ApiService().sendPanicRequest(
+        userId: userId,
+        orderId: widget.orderId,
+        latitude: position.latitude,
+        longitude: position.longitude,
+        emergencyType: _selectedEmergencyType!,
+        description: _descriptionController.text.isEmpty
+            ? null
+            : _descriptionController.text,
+      );
+
+      if (response['success']) {
+        _showSuccessDialog();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response['message'] ?? 'Gagal mengirim permintaan darurat'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Terjadi kesalahan: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        _isPanicLoading = false;
+      });
+      _selectedEmergencyType = null;
+      _descriptionController.clear();
+    }
+  }
+
+  void _showSuccessDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.check_circle,
+              color: Colors.green,
+              size: 80,
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Permintaan Darurat Terkirim!',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Tim SAR telah menerima permintaan Anda dan akan segera merespons. Tetap tenang dan tunggu bantuan.',
+              style: TextStyle(color: Colors.grey.shade600),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+        actions: [
+          Center(
+            child: ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.colorScheme.primary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: Text(
+                'OK',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Scaffold(
+        backgroundColor: appTheme.gray50,
+        appBar: AppBar(
+          backgroundColor: theme.colorScheme.primary,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: Text(
+            'Detail Tiket',
+            style: TextStyle(color: Colors.white),
+          ),
+          centerTitle: true,
+        ),
+        body: Padding(
+          padding: EdgeInsets.all(20.h),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Order Info Card
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(20.h),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.1),
+                      spreadRadius: 2,
+                      blurRadius: 8,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            Icons.terrain,
+                            color: theme.colorScheme.primary,
+                            size: 32,
+                          ),
+                        ),
+                        SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.mountainName,
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                widget.hikingDate,
+                                style: TextStyle(
+                                  color: Colors.grey.shade600,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 16),
+                    Divider(),
+                    SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Text(
+                          'Order ID: ',
+                          style: TextStyle(color: Colors.grey.shade600),
+                        ),
+                        Text(
+                          '#${widget.orderId}',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Text(
+                          'Status: ',
+                          style: TextStyle(color: Colors.grey.shade600),
+                        ),
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _getStatusColor(widget.status).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            widget.status,
+                            style: TextStyle(
+                              color: _getStatusColor(widget.status),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              SizedBox(height: 30),
+
+              // View Ticket Button
+              _buildActionButton(
+                icon: Icons.qr_code_2,
+                title: 'Lihat Tiket',
+                subtitle: 'Tampilkan QR Code untuk check-in',
+                color: theme.colorScheme.primary,
+                onTap: () {
+                  Navigator.pushNamed(
+                    context,
+                    AppRoutes.ticketScreen,
+                    arguments: widget.orderId,
+                  );
+                },
+              ),
+
+              SizedBox(height: 16),
+
+              // Panic Button - Only show when status is "Sedang Mendaki"
+              if (widget.status == 'Sedang Mendaki') ...[
+                _buildActionButton(
+                  icon: Icons.sos,
+                  title: 'PANIC / SOS',
+                  subtitle: 'Kirim permintaan bantuan darurat',
+                  color: Colors.red,
+                  isLoading: _isPanicLoading,
+                  onTap: _showPanicDialog,
+                ),
+                SizedBox(height: 20),
+                // Warning info
+                Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.red.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.warning_amber_rounded,
+                        color: Colors.red.shade700,
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Gunakan tombol PANIC hanya dalam keadaan darurat. Tim SAR akan segera dikirim ke lokasi Anda.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.red.shade700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
+              Spacer(),
+
+              // Google Form Button (for checkout/feedback)
+              if (widget.status == 'Sedang Mendaki')
+                Center(
+                  child: TextButton.icon(
+                    onPressed: () async {
+                      const url = 'https://forms.gle/24H6HALhYRYEXVLS8';
+                      final uri = Uri.parse(url);
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      }
+                    },
+                    icon: Icon(Icons.assignment_outlined),
+                    label: Text('Isi Form Feedback'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.grey.shade600,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required VoidCallback onTap,
+    bool isLoading = false,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: isLoading ? null : onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: double.infinity,
+          padding: EdgeInsets.all(20.h),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: color.withOpacity(0.3), width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: color.withOpacity(0.1),
+                spreadRadius: 2,
+                blurRadius: 8,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: isLoading
+                    ? SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(color),
+                        ),
+                      )
+                    : Icon(
+                        icon,
+                        color: color,
+                        size: 28,
+                      ),
+              ),
+              SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: color,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios,
+                color: color.withOpacity(0.5),
+                size: 20,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'Booking':
+        return Colors.blue;
+      case 'Sedang Mendaki':
+        return Colors.orange;
+      case 'Selesai':
+        return Colors.green;
+      default:
+        return Colors.grey;
+    }
+  }
+}

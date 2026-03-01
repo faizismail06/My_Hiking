@@ -4,7 +4,6 @@ import '../../../core/app_export.dart';
 import '../../../theme/custom_button_style.dart';
 import '../../../widgets/custom_elevated_button.dart';
 import '../models/recentclimbinglist_item_model.dart';
-import '../../pop_up_checkout_dialog/pop_up_checkout_dialog.dart';
 
 // ignore_for_file: must_be_immutable
 class RecentclimbinglistItemWidget extends StatelessWidget {
@@ -102,14 +101,13 @@ class RecentclimbinglistItemWidget extends StatelessWidget {
       buttonStyle: CustomButtonStyles.outlineTeal1,
       buttonTextStyle: CustomTextStyles.titleMediumOnPrimary,
       onPressed: () {
-        // Handle the action for "Booking" status
-        // Optionally show checkout dialog or navigate to booking details
-        // _showCheckoutDialog(context);
+        // Navigate to ticket action screen
+        onTapRecentclimbing?.call();
       },
     );
   }
 
-  // Button for "Selesai" status
+  // Button for "Sedang Mendaki" status
   Widget _buildMendakiButton(BuildContext context) {
     return CustomElevatedButton(
       height: 26.h,
@@ -118,92 +116,24 @@ class RecentclimbinglistItemWidget extends StatelessWidget {
       buttonStyle: CustomButtonStyles.outlineTeal,
       buttonTextStyle: CustomTextStyles.titleMediumOnPrimary,
       onPressed: () {
-        // Handle the action for "Selesai" status if needed
-        // Optionally show details or navigate to history
-        _showCheckoutDialog(context);
+        // Navigate to ticket action screen
+        onTapRecentclimbing?.call();
       },
     );
   }
 
-  // Method to show checkout dialog with pesananId
-  // void _showCheckoutDialog(BuildContext context) {
-  //   // Ensure pesananId is converted to int if it's not already
-  //   int pesananId = int.tryParse(recentclimbinglistItemModelObj.id.toString()) ?? 0;
-
-  //   showDialog(
-  //     context: context,
-  //     barrierDismissible: true,
-  //     builder: (_) => AlertDialog(
-  //       content: PopUpCheckoutDialog.builder(
-  //         context,
-  //         pesananId
-  //       ),
-  //       backgroundColor: const Color.fromARGB(0, 0, 255, 8),
-  //       contentPadding: EdgeInsets.zero,
-  //       insetPadding: EdgeInsets.zero,
-  //     ),
-  //   );
-  // }
-
-  void _showCheckoutDialog(BuildContext context) {
-    int pesananId =
-        int.tryParse(recentclimbinglistItemModelObj.id.toString()) ?? 0;
-
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierColor: Colors.black54,
-      builder: (BuildContext context) {
-        return WillPopScope(
-          onWillPop: () async => true,
-          child: GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Dialog(
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              insetPadding: EdgeInsets.zero, // Menambahkan ini
-              child: GestureDetector(
-                onTap: () {},
-                child: Container(
-                  // Tambahkan Container untuk mengatur ukuran
-                  padding: EdgeInsets.zero,
-                  width: double.infinity,
-                  child: PopUpCheckoutDialog.builder(context, pesananId),
-                ),
-              ),
-            ),
-          ),
-        );
+  // Button for "Selesai" status
+  Widget _buildSelesaiButton(BuildContext context) {
+    return CustomElevatedButton(
+      height: 26.h,
+      width: 98.h,
+      text: "Selesai".tr,
+      buttonStyle: CustomButtonStyles.outlineTeal2,
+      buttonTextStyle: CustomTextStyles.titleMediumOnPrimary,
+      onPressed: () {
+        // Navigate to ticket action screen
+        onTapRecentclimbing?.call();
       },
     );
   }
-}
-
-// Button for "Booking" status
-Widget _buildBookingButton(BuildContext context) {
-  return CustomElevatedButton(
-    height: 26.h,
-    width: 98.h,
-    text: "Booking".tr,
-    buttonStyle: CustomButtonStyles.outlineTeal1,
-    buttonTextStyle: CustomTextStyles.titleMediumOnPrimary,
-    onPressed: () {
-      // Handle the action for "Booking" status
-      // For example, show a booking details dialog or navigate to a new screen.
-    },
-  );
-}
-
-// Button for "Selesai" status
-Widget _buildSelesaiButton(BuildContext context) {
-  return CustomElevatedButton(
-    height: 26.h,
-    width: 98.h,
-    text: "Selesai".tr,
-    buttonStyle: CustomButtonStyles.outlineTeal2,
-    buttonTextStyle: CustomTextStyles.titleMediumOnPrimary,
-    onPressed: () {
-      // Handle the action for "Selesai" status if needed
-    },
-  );
 }

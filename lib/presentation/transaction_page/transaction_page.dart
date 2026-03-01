@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:myhiking/presentation/payment_method_screen/payment_method_screen.dart';
 import '../../api/api_service.dart';
 import '../../core/app_export.dart';
 import 'bloc/transaction_bloc.dart';
@@ -184,7 +185,7 @@ class _TransactionPageState extends State<TransactionPage> {
                 model,
                 onTapRecentclimbing: () {
                   _handleTapRecentClimbing(
-                      context, model.status, model.id.toString());
+                      context, model.status, model.pesananId);
                 },
               );
             },
@@ -195,15 +196,23 @@ class _TransactionPageState extends State<TransactionPage> {
   }
 
   void _handleTapRecentClimbing(
-      BuildContext context, String? status, String? id) {
-    switch (status) {
+      BuildContext context, String? status, int? orderId) {
+    if (orderId == null) return;
+    
+    switch (status?.toLowerCase()) {
       case "incomplete":
-        NavigatorService.pushNamed(AppRoutes.paymentUploadScreen);
-      case "verified":
-        NavigatorService.pushNamed(AppRoutes.ticketScreen);
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PaymentMethodScreen(orderId: orderId),
+          ),
+        );
         break;
-      case "unverified":
-        NavigatorService.pushNamed(AppRoutes.pendingVerificationScreen);
+      case "complete":
+        NavigatorService.pushNamed(
+          AppRoutes.ticketScreen,
+          arguments: orderId,
+        );
         break;
       default:
         print('Status transaksi tidak dikenali: $status');

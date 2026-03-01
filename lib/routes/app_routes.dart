@@ -21,7 +21,9 @@ import '../presentation/trail_screen/trail_screen.dart';
 import '../presentation/success_screen/success_screen.dart';
 import '../presentation/rules_screen/rules_screen.dart';
 import '../presentation/ticket_screen/ticket_screen.dart';
+import '../presentation/ticket_action_screen/ticket_action_screen.dart';
 import '../presentation/friend_screen/friend_screen.dart';
+import '../presentation/chatbot_screen/chatbot_screen.dart';
 
 class AppRoutes {
   static const String landingScreen = '/landing_screen';
@@ -45,8 +47,10 @@ class AppRoutes {
   static const String dataProfileScreen = '/data_profile_screen';
   static const String transactionPage = '/transaction_page';
   static const String ticketScreen = '/ticket_screen';
+  static const String ticketActionScreen = '/ticket_action_screen';
   static const String historyPage = '/history_page';
   static const String friendScreen = '/friend_screen';
+  static const String chatbotScreen = '/chatbot_screen';
   static const String appNavigationScreen = '/app_navigation_screen';
   static const String initialRoute = '/initialRoute';
 
@@ -113,6 +117,21 @@ class AppRoutes {
           }
           return TicketScreen.builder(context, orderId);
         },
+        ticketActionScreen: (context) {
+          final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+
+          if (args == null) {
+            return Scaffold(
+              body: Center(child: Text("Arguments are required")),
+            );
+          }
+          return TicketActionScreen(
+            orderId: args['orderId'] as int,
+            status: args['status'] as String,
+            mountainName: args['mountainName'] as String,
+            hikingDate: args['hikingDate'] as String,
+          );
+        },
         appNavigationScreen: AppNavigationScreen.builder,
         initialRoute: LandingScreen.builder,
         transactionPage: TransactionPage.builder,
@@ -128,5 +147,6 @@ class AppRoutes {
 
           return FriendScreen.builder(context, userId);
         },
+        chatbotScreen: ChatbotScreen.builder,
       };
 }

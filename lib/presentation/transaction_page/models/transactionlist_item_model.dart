@@ -6,12 +6,13 @@ class TransactionItemModel extends Equatable {
   TransactionItemModel({
     this.id,
     this.pesananId,
-    this.paymentId,
     this.status,
     this.waktuPembayaran,
     this.gunung,
     this.jalur,
     this.userId,
+    this.paymentType,
+    this.paymentMethodName,
   });
 
   factory TransactionItemModel.fromJson(Map<String, dynamic> json) {
@@ -20,45 +21,47 @@ class TransactionItemModel extends Equatable {
       pesananId: json['id_pesanan'] is String
           ? int.parse(json['id_pesanan'])
           : json['id_pesanan'],
-      paymentId: json['payment_id'] is String
-          ? int.parse(json['payment_id'].toString())
-          : json['payment_id'],
       status: json['status'],
       waktuPembayaran: json['waktu_pembayaran'],
       gunung: json['gunung'],
       jalur: json['jalur'],
       userId: json['pemesan'].toString(),
+      paymentType: json['payment_type'],
+      paymentMethodName: json['payment_method_name'],
     );
   }
 
   final int? id;
   final int? pesananId;
-  final int? paymentId;
   final String? status;
   final String? waktuPembayaran;
   final String? gunung;
   final String? jalur;
   final String? userId;
+  final String? paymentType;
+  final String? paymentMethodName;
 
   TransactionItemModel copyWith({
     int? id,
     int? pesananId,
-    int? paymentId,
     String? status,
     String? waktuPembayaran,
     String? gunung,
     String? jalur,
     String? userId,
+    String? paymentType,
+    String? paymentMethodName,
   }) {
     return TransactionItemModel(
       id: id ?? this.id,
       pesananId: pesananId ?? this.pesananId,
-      paymentId: paymentId ?? this.paymentId,
       status: status ?? this.status,
       waktuPembayaran: waktuPembayaran ?? this.waktuPembayaran,
       gunung: gunung ?? this.gunung,
       jalur: jalur ?? this.jalur,
       userId: userId ?? this.userId,
+      paymentType: paymentType ?? this.paymentType,
+      paymentMethodName: paymentMethodName ?? this.paymentMethodName,
     );
   }
 
@@ -66,11 +69,12 @@ class TransactionItemModel extends Equatable {
   List<Object?> get props => [
         id,
         pesananId,
-        paymentId,
         status,
         waktuPembayaran,
         gunung,
         jalur,
         userId,
+        paymentType,
+        paymentMethodName,
       ];
 }

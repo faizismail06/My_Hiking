@@ -27,14 +27,22 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
       );
       if (response.statusCode == 200) {
         final jsonResponse = jsonDecode(response.body);
+        
+        // API returns { "order": { ... } }
+        final orderData = jsonResponse['order'];
+        if (orderData == null) {
+          emit(TicketErrorState(message: 'Data pesanan tidak ditemukan.'));
+          return;
+        }
 
-        final ticket = TicketModel.fromJson(jsonResponse['pesanan']);
+        final ticket = TicketModel.fromJson(orderData);
         emit(TicketLoadedState(ticketModel: ticket));
       } else {
-        print('error');
+        print('error: ${response.body}');
         emit(TicketErrorState(message: 'Gagal memuat data.'));
       }
     } catch (e) {
+      print('Exception: $e');
       emit(TicketErrorState(message: e.toString()));
     }
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../api/api_service.dart';
 import '../../core/app_export.dart';
 import 'bloc/history_bloc.dart';
@@ -121,7 +122,7 @@ class _HistoryPageState extends State<HistoryPage> {
                   bottom: 8.h,
                 ),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withOpacity(0.7),
+                  color: theme.colorScheme.primary.withValues(alpha: 0.7),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -167,8 +168,8 @@ class _HistoryPageState extends State<HistoryPage> {
               return RecentclimbinglistItemWidget(
                 model,
                 onTapRecentclimbing: () {
-                  // Panggil metode untuk menampilkan dialog checkout dengan pesananId
-                  _showCheckoutDialogWithPesananId(context, model.id);
+                  // Navigate to ticket action screen
+                  _navigateToTicketAction(context, model);
                 },
               );
             },
@@ -178,10 +179,28 @@ class _HistoryPageState extends State<HistoryPage> {
     );
   }
 
-  /// Metode untuk menampilkan dialog checkout dengan pesananId
-  void _showCheckoutDialogWithPesananId(BuildContext context, dynamic pesananId) {
-    // Konversi pesananId ke int jika belum
-    int parsedPesananId = int.tryParse(pesananId.toString()) ?? 0;
-
+  /// Navigate to ticket action screen
+  void _navigateToTicketAction(BuildContext context, RecentclimbinglistItemModel model) {
+    int parsedPesananId = int.tryParse(model.id.toString()) ?? 0;
+    
+    // Format the hiking date for display
+    String formattedDate = '';
+    try {
+      DateTime tanggal = DateTime.parse(model.tanggalNaik.toString());
+      formattedDate = DateFormat('EEEE, dd MMMM yyyy', 'id_ID').format(tanggal);
+    } catch (e) {
+      formattedDate = model.tanggalNaik ?? '';
+    }
+    
+    // Use root navigator to navigate outside the nested navigator
+    Navigator.of(context, rootNavigator: true).pushNamed(
+      AppRoutes.ticketActionScreen,
+      arguments: {
+        'orderId': parsedPesananId,
+        'status': model.status ?? 'Booking',
+        'mountainName': model.gunung ?? 'Gunung',
+        'hikingDate': formattedDate,
+      },
+    );
   }
 }

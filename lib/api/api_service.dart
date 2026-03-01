@@ -317,32 +317,28 @@ class ApiService {
     }
   }
 
-  Future<TransactionResponseModel> createTransaction(
-    int orderId,
-    int id,
-  ) async {
+  Future<TransactionResponseModel> createTransaction(int orderId) async {
     try {
-      print("Api order id, payment id: $orderId, $id");
+      print("Api order id: $orderId");
+      
+      // Build request body
+      Map<String, dynamic> requestBody = {
+        'id_pesanan': orderId,
+      };
+      
       final response = await http.post(
         Uri.parse('$baseUrl/transactions/store'),
         headers: {
           'Content-Type': 'application/json',
-          // Tambahkan header Authorization jika diperlukan:
-          // 'Authorization': 'Bearer your_token_here',
         },
-        body: json.encode({
-          'id_pesanan': orderId,
-          'payment_id': id,
-        }),
+        body: json.encode(requestBody),
       );
 
       if (response.statusCode == 201) {
-        // Parsing respons JSON jika sukses
         print('Transaction created successfully');
         print('Response body: ${response.body}');
         return TransactionResponseModel.fromJson(json.decode(response.body));
       } else {
-        // Tangani error dari server
         final errorBody = json.decode(response.body);
         print('Failed to create transaction');
         print('Response status code: ${response.statusCode}');
@@ -351,7 +347,6 @@ class ApiService {
             'Failed to create transaction: ${errorBody['message'] ?? 'Unknown error'}');
       }
     } catch (e) {
-      // Tangani kesalahan lain (misalnya kesalahan jaringan atau parsing)
       print('Error creating transaction: $e');
       throw Exception('Failed to create transaction. Please try again.');
     }
@@ -612,6 +607,357 @@ class ApiService {
       return {
         'success': false,
         'message': e.toString(),
+      };
+    }
+  }
+
+  /// Send a panic/emergency request
+  Future<Map<String, dynamic>> sendPanicRequest({
+    required int userId,
+    required int orderId,
+    required double latitude,
+    required double longitude,
+    required String emergencyType,
+    String? description,
+  }) async {
+    try {
+      final url = Uri.parse('$baseUrl/panic');
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'user_id': userId,
+          'order_id': orderId,
+          'latitude': latitude,
+          'longitude': longitude,
+          'emergency_type': emergencyType,
+          'description': description,
+        }),
+      );
+
+      final responseData = jsonDecode(response.body);
+      
+      if (response.statusCode == 201) {
+        return {
+          'success': true,
+          'message': responseData['message'],
+          'data': responseData['data'],
+        };
+      } else {
+        return {
+          'success': false,
+          'message': responseData['message'] ?? 'Gagal mengirim permintaan darurat',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': e.toString(),
+      };
+    }
+  }
+
+  /// Get panic request status by order ID
+  Future<Map<String, dynamic>> getPanicStatus(int orderId) async {
+    try {
+      final url = Uri.parse('$baseUrl/panic/order/$orderId');
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        return {
+          'success': true,
+          'data': responseData['data'],
+        };
+      } else {
+        return {
+          'success': false,
+          'message': 'Gagal mendapatkan status panic',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': e.toString(),
+      };
+    }
+  }
+
+  /// Cancel a panic request
+  Future<Map<String, dynamic>> cancelPanicRequest(int panicId, int userId) async {
+    try {
+      final url = Uri.parse('$baseUrl/panic/$panicId/cancel');
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'user_id': userId,
+        }),
+      );
+
+      final responseData = jsonDecode(response.body);
+      
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'message': responseData['message'],
+        };
+      } else {
+        return {
+          'success': false,
+          'message': responseData['message'] ?? 'Gagal membatalkan permintaan',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': e.toString(),
+      };
+    }
+  }
+
+  // ============================================
+  // CHATBOT METHODS
+  // ============================================
+
+  /// Base URL for chatbot server (Python Flask)
+  static const String chatbotBaseUrl = 'http://127.0.0.1:5000/api';
+
+  /// Send message to chatbot and get response
+  Future<Map<String, dynamic>> sendChatMessage({
+    required String message,
+    List<Map<String, dynamic>>? history,
+  }) async {
+    try {
+      final url = Uri.parse('$chatbotBaseUrl/chat');
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'message': message,
+          'history': history ?? [],
+        }),
+      );
+
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': responseData['success'] ?? true,
+          'message': responseData['message'] ?? 'Tidak ada respons',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': responseData['message'] ?? 'Gagal mengirim pesan ke chatbot',
+        };
+      }
+    } catch (e) {
+      print('Chatbot Error: $e');
+      return {
+        'success': false,
+        'message': 'Tidak dapat terhubung ke chatbot. Pastikan server chatbot berjalan.',
+      };
+    }
+  }
+
+  /// Get chatbot info and available data
+  Future<Map<String, dynamic>> getChatbotInfo() async {
+    try {
+      final url = Uri.parse('$chatbotBaseUrl/chat/info');
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        return {
+          'success': true,
+          'data': responseData['data'],
+        };
+      } else {
+        return {
+          'success': false,
+          'message': 'Gagal mendapatkan info chatbot',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Tidak dapat terhubung ke chatbot server',
+      };
+    }
+  }
+
+  /// Check chatbot server health
+  Future<bool> isChatbotServerHealthy() async {
+    try {
+      final url = Uri.parse('$chatbotBaseUrl/health');
+      final response = await http.get(url).timeout(
+        const Duration(seconds: 5),
+        onTimeout: () => http.Response('', 408),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // ==================== MIDTRANS PAYMENT API METHODS ====================
+
+  /// Get available Midtrans payment methods
+  Future<Map<String, dynamic>> getMidtransPaymentMethods() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/payment-methods'),
+        headers: {
+          'Accept': 'application/json',
+        },
+      );
+
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'data': responseData['data'],
+        };
+      } else {
+        return {
+          'success': false,
+          'message': responseData['message'] ?? 'Gagal memuat metode pembayaran',
+        };
+      }
+    } catch (e) {
+      print('Payment Methods Error: $e');
+      return {
+        'success': false,
+        'message': 'Tidak dapat terhubung ke server',
+      };
+    }
+  }
+
+  /// Create Midtrans payment and get Snap token
+  Future<Map<String, dynamic>> createMidtransPayment(
+    int orderId, {
+    String? paymentMethod,
+  }) async {
+    try {
+      String? token = await getToken();
+      
+      Map<String, dynamic> requestBody = {
+        'order_id': orderId,
+      };
+      
+      if (paymentMethod != null) {
+        requestBody['payment_method'] = paymentMethod;
+      }
+      
+      final response = await http.post(
+        Uri.parse('$baseUrl/midtrans/create-payment'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(requestBody),
+      );
+
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = responseData['data'] ?? responseData;
+        return {
+          'success': true,
+          'snap_token': data['snap_token'],
+          'redirect_url': data['redirect_url'],
+          'order_id': data['midtrans_order_id'],
+          'transaction_id': data['transaction_id'],
+        };
+      } else {
+        return {
+          'success': false,
+          'message': responseData['message'] ?? 'Gagal membuat pembayaran',
+        };
+      }
+    } catch (e) {
+      print('Midtrans Payment Error: $e');
+      return {
+        'success': false,
+        'message': 'Tidak dapat terhubung ke server pembayaran',
+      };
+    }
+  }
+
+  /// Get Midtrans configuration (client key and snap URL)
+  Future<Map<String, dynamic>> getMidtransConfig() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/midtrans/config'),
+        headers: {
+          'Accept': 'application/json',
+        },
+      );
+
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'client_key': responseData['client_key'],
+          'snap_url': responseData['snap_url'],
+          'is_production': responseData['is_production'],
+        };
+      } else {
+        return {
+          'success': false,
+          'message': 'Gagal mendapatkan konfigurasi Midtrans',
+        };
+      }
+    } catch (e) {
+      print('Midtrans Config Error: $e');
+      return {
+        'success': false,
+        'message': 'Tidak dapat terhubung ke server',
+      };
+    }
+  }
+
+  /// Check Midtrans payment status
+  Future<Map<String, dynamic>> checkMidtransStatus(String orderId) async {
+    try {
+      String? token = await getToken();
+      
+      final response = await http.get(
+        Uri.parse('$baseUrl/midtrans/status/$orderId'),
+        headers: {
+          'Accept': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      ).timeout(Duration(seconds: 15)); // Add timeout to prevent hanging
+
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'data': responseData,
+        };
+      } else {
+        return {
+          'success': false,
+          'message': responseData['message'] ?? 'Gagal mengecek status pembayaran',
+        };
+      }
+    } catch (e) {
+      print('Midtrans Status Error: $e');
+      return {
+        'success': false,
+        'message': 'Tidak dapat terhubung ke server',
       };
     }
   }
