@@ -26,6 +26,8 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   String userName = '';
   int userId = 0;
+  String? userTier;
+  String? userTierSource;
   bool isLoading = true;
   @override
   void initState() {
@@ -57,9 +59,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final response = await ApiService().getUser(token);
       if (response['success']) {
         if (mounted) {
+          final data = response['data'] as Map<String, dynamic>;
           setState(() {
-            userName = response['data']['name'];
-            userId = response['data']['id'];
+            userName = (data['name'] ?? '').toString();
+            userId = data['id'] is int
+                ? data['id'] as int
+                : int.tryParse((data['id'] ?? '').toString()) ?? 0;
+            userTier = data['tier']?.toString();
+            userTierSource = data['tier_source']?.toString();
             isLoading = false;
           });
         }
@@ -109,28 +116,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   /// Section Widget: Profile Header
   Widget _buildProfileHeader(BuildContext context) {
+    final tierPresentation = _tierPresentation(userTier);
+
     return SizedBox(
-      height: 156.h,
+      height: 164.h,
       width: double.maxFinite,
       child: Stack(
         alignment: Alignment.bottomRight,
         children: [
           Container(
             width: 224.h,
-            margin: EdgeInsets.only(bottom: 30.h),
-            padding: EdgeInsets.only(left: 58.h, top: 14.h, bottom: 14.h),
+            margin: EdgeInsets.only(bottom: 26.h),
+            padding: EdgeInsets.only(left: 58.h, top: 10.h, bottom: 10.h),
             decoration: BoxDecoration(
               color: theme.colorScheme.primary.withOpacity(0.7),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.start,
               children: [
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
                     userName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.titleLarge,
                   ),
                 ),
@@ -138,22 +149,117 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   padding: EdgeInsets.only(left: 0.h),
                   child: Text(
                     "ID : ${userId.toString()}",
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: CustomTextStyles.titleMediumOnPrimary_1,
                   ),
                 ),
-                SizedBox(height: 4.h)
+                SizedBox(height: 5.h),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 9.h, vertical: 4.h),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.16),
+                    borderRadius: BorderRadius.circular(999.h),
+                    border: Border.all(
+                      color: tierPresentation.color.withOpacity(0.85),
+                      width: 1.h,
+                    ),
+                  ),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          tierPresentation.icon,
+                          color: tierPresentation.color,
+                          size: 13.h,
+                        ),
+                        SizedBox(width: 6.h),
+                        Text(
+                          tierPresentation.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: CustomTextStyles.bodySmallGray50003.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.2,
+                            fontSize: 11.fSize,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
           CustomImageView(
             imagePath: ImageConstant.imgAmping91,
-            height: 156.h,
+            height: 164.h,
             width: 228.h,
             alignment: Alignment.centerLeft,
           ),
         ],
       ),
     );
+  }
+
+  _TierPresentation _tierPresentation(String? rawTier) {
+    final normalized = (rawTier ?? '').trim().toLowerCase();
+
+    if (normalized.isEmpty || normalized == 'null') {
+      return const _TierPresentation(
+        label: 'Tier: Belum Ditentukan',
+        color: Color(0xFFFFD54F),
+        icon: Icons.help_outline_rounded,
+      );
+    }
+
+    if (normalized == 'pemula' ||
+        normalized == 'beginner' ||
+        normalized == 'tier_1') {
+      return const _TierPresentation(
+        label: 'Tier 1 - Pemula',
+        color: Color(0xFF8BC34A),
+        icon: Icons.eco_outlined,
+      );
+    }
+
+    if (normalized == 'menengah' ||
+        normalized == 'intermediate' ||
+        normalized == 'tier_2') {
+      return const _TierPresentation(
+        label: 'Tier 2 - Menengah',
+        color: Color(0xFFFFB300),
+        icon: Icons.hiking_rounded,
+      );
+    }
+
+    if (normalized == 'mahir' ||
+        normalized == 'advanced' ||
+        normalized == 'tier_3') {
+      return const _TierPresentation(
+        label: 'Tier 3 - Mahir',
+        color: Color(0xFFE57373),
+        icon: Icons.workspace_premium_outlined,
+      );
+    }
+
+    return _TierPresentation(
+      label: 'Tier: ${rawTier ?? '-'}',
+      color: const Color(0xFF81C784),
+      icon: Icons.flag_outlined,
+    );
+  }
+
+  String _formatTierSource(String? source) {
+    if (source == null || source.trim().isEmpty) return '-';
+    return source.replaceAll('_', ' ').split(' ').map((word) {
+      if (word.isEmpty) return '';
+      return word[0].toUpperCase() + word.substring(1).toLowerCase();
+    }).join(' ');
   }
 
   /// Section Widget: Profile Settings
@@ -391,4 +497,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
       },
     );
   }
+}
+
+class _TierPresentation {
+  final String label;
+  final Color color;
+  final IconData icon;
+
+  const _TierPresentation({
+    required this.label,
+    required this.color,
+    required this.icon,
+  });
 }

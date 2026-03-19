@@ -529,7 +529,7 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
         ),
         SizedBox(height: 12.h),
         SizedBox(
-          height: 120.h,
+          height: 132.h,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: EdgeInsets.symmetric(horizontal: 12.h),
@@ -547,7 +547,7 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
                 child: Container(
                   width: 85.h,
                   margin: EdgeInsets.symmetric(horizontal: 4.h),
-                  padding: EdgeInsets.all(12.h),
+                  padding: EdgeInsets.symmetric(horizontal: 8.h, vertical: 8.h),
                   decoration: BoxDecoration(
                     color: isSelected 
                         ? theme.colorScheme.primary 
@@ -568,28 +568,37 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
                     ],
                   ),
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    mainAxisSize: MainAxisSize.max,
                     children: [
-                      Text(
-                        day.isToday ? 'Hari Ini' : day.dayName,
-                        style: TextStyle(
-                          fontSize: 12.fSize,
-                          fontWeight: FontWeight.w600,
-                          color: isSelected ? Colors.white : Colors.black87,
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          day.isToday ? 'Hari Ini' : day.dayName,
+                          maxLines: 1,
+                          style: TextStyle(
+                            fontSize: 11.fSize,
+                            fontWeight: FontWeight.w600,
+                            color: isSelected ? Colors.white : Colors.black87,
+                          ),
                         ),
                       ),
-                      SizedBox(height: 4.h),
+                      SizedBox(height: 2.h),
                       Text(
                         day.weatherIcon,
-                        style: TextStyle(fontSize: 28.fSize),
+                        style: TextStyle(fontSize: 24.fSize),
                       ),
-                      SizedBox(height: 4.h),
-                      Text(
-                        '${day.maxTemp.toStringAsFixed(0)}°/${day.minTemp.toStringAsFixed(0)}°',
-                        style: TextStyle(
-                          fontSize: 11.fSize,
-                          fontWeight: FontWeight.w500,
-                          color: isSelected ? Colors.white : Colors.black54,
+                      SizedBox(height: 2.h),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          '${day.maxTemp.toStringAsFixed(0)}°/${day.minTemp.toStringAsFixed(0)}°',
+                          maxLines: 1,
+                          style: TextStyle(
+                            fontSize: 10.fSize,
+                            fontWeight: FontWeight.w500,
+                            color: isSelected ? Colors.white : Colors.black54,
+                          ),
                         ),
                       ),
                     ],
@@ -773,7 +782,7 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
         ),
         SizedBox(height: 12.h),
         SizedBox(
-          height: 140.h,
+          height: 152.h,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: EdgeInsets.symmetric(horizontal: 12.h),
@@ -785,7 +794,7 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
               return Container(
                 width: 75.h,
                 margin: EdgeInsets.symmetric(horizontal: 4.h),
-                padding: EdgeInsets.all(10.h),
+                padding: EdgeInsets.symmetric(horizontal: 8.h, vertical: 8.h),
                 decoration: BoxDecoration(
                   color: isNow 
                       ? theme.colorScheme.primary.withOpacity(0.1)
@@ -799,48 +808,56 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
                   ),
                 ),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  mainAxisSize: MainAxisSize.max,
                   children: [
-                    Text(
-                      isNow ? 'Sekarang' : hour.formattedTime,
-                      style: TextStyle(
-                        fontSize: 11.fSize,
-                        fontWeight: isNow ? FontWeight.bold : FontWeight.w500,
-                        color: isNow ? theme.colorScheme.primary : Colors.black54,
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        isNow ? 'Sekarang' : hour.formattedTime,
+                        maxLines: 1,
+                        style: TextStyle(
+                          fontSize: 10.fSize,
+                          fontWeight: isNow ? FontWeight.bold : FontWeight.w500,
+                          color: isNow ? theme.colorScheme.primary : Colors.black54,
+                        ),
                       ),
                     ),
-                    SizedBox(height: 6.h),
+                    SizedBox(height: 2.h),
                     Text(
                       hour.weatherIcon,
-                      style: TextStyle(fontSize: 24.fSize),
+                      style: TextStyle(fontSize: 22.fSize),
                     ),
-                    SizedBox(height: 6.h),
+                    SizedBox(height: 2.h),
                     Text(
                       '${hour.temperature.toStringAsFixed(0)}°',
                       style: TextStyle(
-                        fontSize: 16.fSize,
+                        fontSize: 14.fSize,
                         fontWeight: FontWeight.bold,
                         color: Colors.black87,
                       ),
                     ),
-                    SizedBox(height: 4.h),
+                    SizedBox(height: 2.h),
                     if (hour.precipitationProbability > 0)
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.water_drop,
-                            size: 10.h,
-                            color: Colors.blue[400],
-                          ),
-                          Text(
-                            '${hour.precipitationProbability}%',
-                            style: TextStyle(
-                              fontSize: 10.fSize,
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.water_drop,
+                              size: 10.h,
                               color: Colors.blue[400],
                             ),
-                          ),
-                        ],
+                            Text(
+                              '${hour.precipitationProbability}%',
+                              style: TextStyle(
+                                fontSize: 9.fSize,
+                                color: Colors.blue[400],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                   ],
                 ),

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 import 'package:http/http.dart';
@@ -9,9 +10,61 @@ import 'package:myhiking/presentation/data_profile_screen/models/res_user.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../presentation/rules_screen/models/rule_model.dart';
-
 const String baseUrl = 'http://127.0.0.1:8000/api';
+
+class ApiActionException implements Exception {
+  final String code;
+  final String message;
+  final int statusCode;
+  final String? nextStep;
+  final Map<String, dynamic>? data;
+
+  ApiActionException({
+    required this.code,
+    required this.message,
+    required this.statusCode,
+    this.nextStep,
+    this.data,
+  });
+
+  factory ApiActionException.fromHttp(Response response) {
+    Map<String, dynamic> parsed = {};
+    try {
+      final body = jsonDecode(response.body);
+      if (body is Map<String, dynamic>) {
+        parsed = body;
+      }
+    } catch (_) {
+      parsed = {};
+    }
+
+    return ApiActionException(
+      code: (parsed['code'] ?? 'UNKNOWN_ERROR').toString(),
+      message:
+          (parsed['message'] ?? 'Terjadi kesalahan pada server.').toString(),
+      statusCode: response.statusCode,
+      nextStep: parsed['next_step']?.toString(),
+      data: parsed,
+    );
+  }
+
+  @override
+  String toString() {
+    return 'ApiActionException(code: $code, status: $statusCode, message: $message)';
+  }
+}
+
+class BookingDecisionResult {
+  final ModelBooking booking;
+  final Map<String, dynamic>? dss;
+  final Map<String, dynamic>? warning;
+
+  BookingDecisionResult({
+    required this.booking,
+    this.dss,
+    this.warning,
+  });
+}
 
 class ApiService {
   Future<String?> getToken() async {
@@ -73,6 +126,78 @@ class ApiService {
     }
   }
 
+  Future<Map<String, dynamic>> getOnboardingExperienceStatus(
+      String token) async {
+    final url = Uri.parse('$baseUrl/onboarding/experience/status');
+    final response = await http.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final responseData = jsonDecode(response.body);
+      return {
+        'success': true,
+        'data': responseData['data'] ?? {},
+      };
+    }
+
+    if ([401, 403, 409, 422].contains(response.statusCode)) {
+      throw ApiActionException.fromHttp(response);
+    }
+
+    throw Exception(
+      'Gagal mengambil status onboarding. Kode status: ${response.statusCode}',
+    );
+  }
+
+  Future<Map<String, dynamic>> submitOnboardingExperience({
+    required int jumlahPendakian,
+    required int jumlahSummit,
+  }) async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) {
+      throw ApiActionException(
+        code: 'UNAUTHORIZED',
+        message: 'Silakan login terlebih dahulu.',
+        statusCode: 401,
+      );
+    }
+
+    final url = Uri.parse('$baseUrl/onboarding/experience');
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'jumlah_pendakian': jumlahPendakian,
+        'jumlah_summit': jumlahSummit,
+      }),
+    );
+
+    if (response.statusCode == 201) {
+      final responseData = jsonDecode(response.body);
+      return {
+        'success': true,
+        'data': responseData['data'] ?? {},
+        'message': responseData['message'] ?? 'Onboarding berhasil disimpan.',
+      };
+    }
+
+    if ([401, 403, 409, 422].contains(response.statusCode)) {
+      throw ApiActionException.fromHttp(response);
+    }
+
+    throw Exception(
+      'Gagal menyimpan onboarding experience. Kode status: ${response.statusCode}',
+    );
+  }
+
   Future<ModelBooking?> createBooking(
     int idGunung,
     int jalurId,
@@ -81,6 +206,31 @@ class ApiService {
     String tanggalTurun,
     int totalHargaTiket, {
     List<int>? anggotaIds, // Parameter opsional untuk anggota
+    bool forceContinue = false,
+  }) async {
+    final result = await createBookingWithDecision(
+      idGunung,
+      jalurId,
+      userId,
+      formattedDate,
+      tanggalTurun,
+      totalHargaTiket,
+      anggotaIds: anggotaIds,
+      forceContinue: forceContinue,
+    );
+
+    return result.booking;
+  }
+
+  Future<BookingDecisionResult> createBookingWithDecision(
+    int idGunung,
+    int jalurId,
+    int userId,
+    String formattedDate,
+    String tanggalTurun,
+    int totalHargaTiket, {
+    List<int>? anggotaIds,
+    bool forceContinue = false,
   }) async {
     try {
       // print('$anggotaIds');
@@ -105,6 +255,9 @@ class ApiService {
       // Menambahkan anggotaIds ke requestBody jika ada
       if (anggotaIds != null && anggotaIds.isNotEmpty) {
         requestBody["anggota_ids"] = anggotaIds;
+      }
+      if (forceContinue) {
+        requestBody["force_continue"] = true;
       }
       print("Anggota Ids: {$anggotaIds}");
       final response = await http.post(
@@ -143,7 +296,17 @@ class ApiService {
             "Order created successfully! Order ID: ${jsonResponse['order']['id']}");
 
         getOrderDetail(orderId);
-        return ModelBooking.fromJson(jsonResponse['order']);
+        return BookingDecisionResult(
+          booking: ModelBooking.fromJson(jsonResponse['order']),
+          dss: jsonResponse['dss'] is Map<String, dynamic>
+              ? jsonResponse['dss'] as Map<String, dynamic>
+              : null,
+          warning: jsonResponse['warning'] is Map<String, dynamic>
+              ? jsonResponse['warning'] as Map<String, dynamic>
+              : null,
+        );
+      } else if ([403, 409, 422].contains(response.statusCode)) {
+        throw ApiActionException.fromHttp(response);
       } else if (response.statusCode == 302) {
         throw Exception('Redirect terjadi. Periksa konfigurasi backend.');
       } else {
@@ -151,8 +314,11 @@ class ApiService {
             'Gagal membuat booking. Kode status: ${response.statusCode}, Body: ${response.body}');
       }
     } catch (e) {
+      if (e is ApiActionException) {
+        rethrow;
+      }
       print('Terjadi kesalahan saat membuat booking: $e');
-      return null;
+      throw Exception('Terjadi kesalahan saat membuat booking: $e');
     }
   }
 
@@ -213,6 +379,8 @@ class ApiService {
     String? emergencyPhone,
     String? dateOfBirth,
     File? profilePicture,
+    Uint8List? profilePictureBytes,
+    String? profilePictureFileName,
     int? level,
   }) async {
     try {
@@ -240,7 +408,15 @@ class ApiService {
       if (level != null) request.fields['level'] = level.toString();
 
       // Menambahkan file profile_picture jika ada
-      if (profilePicture != null) {
+      if (profilePictureBytes != null && profilePictureFileName != null) {
+        final multipartFile = http.MultipartFile.fromBytes(
+          'profile_picture',
+          profilePictureBytes,
+          filename: profilePictureFileName,
+        );
+
+        request.files.add(multipartFile);
+      } else if (profilePicture != null) {
         final profilePictureStream = http.ByteStream(profilePicture.openRead());
         final profilePictureLength = await profilePicture.length();
 
@@ -560,20 +736,30 @@ class ApiService {
   Future<Map<String, dynamic>> getCurrentWeather(
       double latitude, double longitude) async {
     try {
-      final url = Uri.parse(
-          'https://api.open-meteo.com/v1/forecast?latitude=$latitude&longitude=$longitude&current=temperature_2m,weather_code&timezone=auto');
+      final url = Uri.parse('$baseUrl/weather/current?lat=$latitude&lng=$longitude');
 
-      final response = await http.get(url);
+      final response = await http.get(url, headers: {
+        'Accept': 'application/json',
+      });
 
       if (response.statusCode == 200) {
+        final payload = jsonDecode(response.body);
         return {
-          'success': true,
-          'data': jsonDecode(response.body),
+          'success': payload['success'] == true,
+          'data': payload['data'] ?? {},
         };
       } else {
+        String message = 'Failed to fetch weather data';
+        try {
+          final payload = jsonDecode(response.body);
+          if (payload is Map<String, dynamic>) {
+            message = (payload['message'] ?? payload['error'] ?? message).toString();
+          }
+        } catch (_) {}
+
         return {
           'success': false,
-          'message': 'Failed to fetch weather data',
+          'message': message,
         };
       }
     } catch (e) {
@@ -588,23 +774,30 @@ class ApiService {
   Future<Map<String, dynamic>> getWeatherForecast(
       double latitude, double longitude) async {
     try {
-      final url = Uri.parse(
-          'https://api.open-meteo.com/v1/forecast?latitude=$latitude&longitude=$longitude'
-          '&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max,sunrise,sunset'
-          '&hourly=temperature_2m,weather_code,relative_humidity_2m,precipitation_probability,wind_speed_10m'
-          '&timezone=auto&forecast_days=7');
+      final url = Uri.parse('$baseUrl/weather/forecast?lat=$latitude&lng=$longitude');
 
-      final response = await http.get(url);
+      final response = await http.get(url, headers: {
+        'Accept': 'application/json',
+      });
 
       if (response.statusCode == 200) {
+        final payload = jsonDecode(response.body);
         return {
-          'success': true,
-          'data': jsonDecode(response.body),
+          'success': payload['success'] == true,
+          'data': payload['data'] ?? {},
         };
       } else {
+        String message = 'Failed to fetch weather forecast';
+        try {
+          final payload = jsonDecode(response.body);
+          if (payload is Map<String, dynamic>) {
+            message = (payload['message'] ?? payload['error'] ?? message).toString();
+          }
+        } catch (_) {}
+
         return {
           'success': false,
-          'message': 'Failed to fetch weather forecast',
+          'message': message,
         };
       }
     } catch (e) {

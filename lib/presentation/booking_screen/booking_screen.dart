@@ -644,123 +644,152 @@ class _BookingScreenState extends State<BookingScreen> {
       buttonStyle: CustomButtonStyles.fillPrimary,
       buttonTextStyle: CustomTextStyles.labelLarge13,
       onPressed: () async {
-        try {
-          // Pastikan userId sudah terisi
-          if (userId.isEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                    "Data pengguna belum tersedia. Harap tunggu sebentar."),
-              ),
-            );
-            return;
-          }
-
-          // Mengambil state dari BookingBloc
-          final bookingBloc = BlocProvider.of<BookingBloc>(context);
-          final state = bookingBloc.state;
-
-          // Ambil data dari state
-          final selectedMembers = state.selectedMembers ?? [];
-          final bookingDate = state.bookingDateFieldController?.text;
-          final idGunung = state.mountain?.id;
-          final jalurId = state.trail?.id;
-          final biaya = state.trail?.biaya;
-          final userIdInt = int.tryParse(userId);
-
-          // Format tanggal sebelum digunakan
-          String formatTanggal(String bookingDate) {
-            try {
-              final DateTime dateTime = DateTime.parse(bookingDate);
-              final DateFormat dateFormat = DateFormat('yyyy-MM-dd');
-              return dateFormat.format(dateTime);
-            } catch (e) {
-              return "Format tanggal tidak valid";
-            }
-          }
-
-          final formattedDate =
-              bookingDate != null ? formatTanggal(bookingDate) : null;
-          final tanggalTurun = formattedDate != null
-              ? DateTime.parse(formattedDate)
-                  .add(Duration(days: 1))
-                  .toString() // Tanggal turun 1 hari setelah tanggal naik
-              : null;
-          
-          // Get member IDs from selected members
-          List<int>? anggotaIds = selectedMembers.isNotEmpty
-              ? selectedMembers.map((m) => m.id).toList()
-              : null;
-
-          print("Selected Members: ${selectedMembers.map((m) => '${m.name} (${m.id})').toList()}");
-          print("anggota Ids {$anggotaIds}");
-
-          // Jika anggotaIds kosong, biarkan null atau kosongkan list
-          if (formattedDate != null &&
-              idGunung != null &&
-              jalurId != null &&
-              userIdInt != null &&
-              tanggalTurun != null &&
-              biaya != null) {
-            // Memanggil API untuk membuat booking
-            ModelBooking? booking = await ApiService().createBooking(
-              idGunung,
-              jalurId,
-              userIdInt,
-              formattedDate,
-              tanggalTurun, // Tanggal turunnya
-              biaya.toInt(),
-              anggotaIds: anggotaIds?.isNotEmpty == true
-                  ? anggotaIds
-                  : null, // Safely handle null
-            );
-            if (booking != null) {
-              // Menampilkan ID pesanan di SnackBar
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Booking berhasil dibuat!'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => PaymentMethodScreen(orderId: booking.id),
-                ),
-              ).then((_) {
-                // Jika perlu melakukan sesuatu setelah layar baru dimulai, Anda bisa melakukannya di sini.
-              });
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Gagal membuat booking. Coba lagi.'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text("Harap lengkapi data pemesanan.")),
-            );
-          }
-        } catch (e) {
-          // Tangani kesalahan
-          String errorMessage;
-          if (e is FormatException) {
-            errorMessage = "Format tanggal tidak valid.";
-          } else if (e is SocketException) {
-            errorMessage = "Terjadi masalah dengan koneksi internet.";
-          } else if (e is HttpException) {
-            errorMessage = "Terjadi kesalahan saat menghubungi server.";
-          } else {
-            errorMessage = "Terjadi kesalahan yang tidak terduga.";
-          }
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(errorMessage)),
-          );
-        }
+        await _submitBooking(context);
       },
     );
+  }
+
+  Future<void> _submitBooking(BuildContext context,
+      {bool forceContinue = false}) async {
+    try {
+      if (userId.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Data pengguna belum tersedia. Harap tunggu sebentar.'),
+          ),
+        );
+        return;
+      }
+
+      final bookingBloc = BlocProvider.of<BookingBloc>(context);
+      final state = bookingBloc.state;
+
+      final selectedMembers = state.selectedMembers ?? [];
+      final bookingDate = state.bookingDateFieldController?.text;
+      final idGunung = state.mountain?.id;
+      final jalurId = state.trail?.id;
+      final biaya = state.trail?.biaya;
+      final userIdInt = int.tryParse(userId);
+
+      String formatTanggal(String rawDate) {
+        final DateTime dateTime = DateTime.parse(rawDate);
+        final DateFormat dateFormat = DateFormat('yyyy-MM-dd');
+        return dateFormat.format(dateTime);
+      }
+
+      final formattedDate = bookingDate != null ? formatTanggal(bookingDate) : null;
+      final tanggalTurun = formattedDate != null
+          ? DateTime.parse(formattedDate).add(const Duration(days: 1)).toString()
+          : null;
+
+      List<int>? anggotaIds =
+          selectedMembers.isNotEmpty ? selectedMembers.map((m) => m.id).toList() : null;
+
+      if (formattedDate == null ||
+          idGunung == null ||
+          jalurId == null ||
+          userIdInt == null ||
+          tanggalTurun == null ||
+          biaya == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Harap lengkapi data pemesanan.')),
+        );
+        return;
+      }
+
+      final decisionResult = await ApiService().createBookingWithDecision(
+        idGunung,
+        jalurId,
+        userIdInt,
+        formattedDate,
+        tanggalTurun,
+        biaya.toInt(),
+        anggotaIds: anggotaIds?.isNotEmpty == true ? anggotaIds : null,
+        forceContinue: forceContinue,
+      );
+
+      final booking = decisionResult.booking;
+
+      if (!context.mounted) return;
+
+      final warning = decisionResult.warning;
+      if (warning != null && warning['message'] != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(warning['message'].toString()),
+            backgroundColor: warning['type'] == 'high_risk'
+                ? Colors.red.shade700
+                : Colors.amber.shade700,
+          ),
+        );
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Booking berhasil dibuat!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PaymentMethodScreen(orderId: booking.id),
+        ),
+      );
+    } on ApiActionException catch (apiError) {
+      if (apiError.code == 'HIGH_RISK_CONFIRMATION_REQUIRED') {
+        final continueBooking = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Peringatan Risiko Tinggi'),
+            content: Text(
+              apiError.message.isNotEmpty
+                  ? apiError.message
+                  : 'Jalur ini memiliki risiko tinggi untuk tingkat pengalaman Anda. Apakah tetap lanjut?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Batal'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Lanjutkan'),
+              ),
+            ],
+          ),
+        );
+
+        if (continueBooking == true) {
+          await _submitBooking(context, forceContinue: true);
+        }
+        return;
+      }
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(apiError.message)),
+        );
+      }
+    } catch (e) {
+      String errorMessage;
+      if (e is FormatException) {
+        errorMessage = 'Format tanggal tidak valid.';
+      } else if (e is SocketException) {
+        errorMessage = 'Terjadi masalah dengan koneksi internet.';
+      } else if (e is HttpException) {
+        errorMessage = 'Terjadi kesalahan saat menghubungi server.';
+      } else {
+        errorMessage = 'Terjadi kesalahan yang tidak terduga.';
+      }
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage)),
+        );
+      }
+    }
   }
 
   void onTapBookingDateInput(BuildContext context) async {

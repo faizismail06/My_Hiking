@@ -41,7 +41,7 @@ class RoutelistsectionItemWidget extends StatelessWidget {
             SizedBox(height: 4.h),
             // Menampilkan jarak
             Text(
-              "${routeModel.distance} km",
+              "${routeModel.distanceLabel} km",
               style: CustomTextStyles.labelMediumPrimary,
               textAlign: TextAlign.center,
             ),

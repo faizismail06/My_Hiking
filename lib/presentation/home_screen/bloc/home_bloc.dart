@@ -26,10 +26,13 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     emit(state.copyWith(searchController: TextEditingController()));
 
     try {
-      List<HomelistItemModel> homelistItems = await fetchGunungData();
+      final feed = await fetchHomeFeed();
       emit(state.copyWith(
+        recommendedMountain: feed.recommended,
+        baseRecommendedMountain: feed.recommended,
+        allMountains: feed.mountains,
         homeInitialModelObj: state.homeInitialModelObj?.copyWith(
-          homelistItemList: homelistItems,
+          homelistItemList: feed.mountains,
         ),
       ));
     } catch (e) {
@@ -45,38 +48,71 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     final query = event.query.toLowerCase();
 
     if (query.isEmpty) {
-      // If the search query is empty, show all items again
-      final homelistItems = await fetchGunungData();
       emit(state.copyWith(
+        recommendedMountain: state.baseRecommendedMountain,
         homeInitialModelObj: state.homeInitialModelObj?.copyWith(
-          homelistItemList: homelistItems,
+          homelistItemList: state.allMountains,
         ),
       ));
     } else {
-      // Filter the list based on the search query
-      final filteredList = state.homeInitialModelObj?.homelistItemList
+      final filteredList = state.allMountains
           .where((item) => item.namaGunung?.toLowerCase().contains(query) ?? false)
           .toList();
+
+      final baseRecommended = state.baseRecommendedMountain;
+      final showRecommended = baseRecommended != null &&
+          (baseRecommended.namaGunung?.toLowerCase().contains(query) ?? false);
+
       emit(state.copyWith(
+        recommendedMountain: showRecommended ? baseRecommended : null,
+        clearRecommendedMountain: !showRecommended,
         homeInitialModelObj: state.homeInitialModelObj?.copyWith(
-          homelistItemList: filteredList ?? [],
+          homelistItemList: filteredList,
         ),
       ));
     }
   }
 
-  // Fungsi untuk mengambil data gunung
-  Future<List<HomelistItemModel>> fetchGunungData() async {
-    final response =
-        await http.get(Uri.parse('$baseUrl/mountains'));
+  Future<HomeFeedResult> fetchHomeFeed() async {
+    final token = await ApiService().getToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/mountains/home-feed'),
+      headers: {
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+    );
 
     if (response.statusCode == 200) {
-      List<dynamic> jsonData = json.decode(response.body);
-      // print(jsonData); // Menampilkan data JSON yang diterima
+      final Map<String, dynamic> jsonData = json.decode(response.body);
+      final recommended = jsonData['recommended'] is Map<String, dynamic>
+          ? HomelistItemModel.fromJson(jsonData['recommended'] as Map<String, dynamic>)
+          : null;
+      final rawMountains = jsonData['mountains'];
 
-      return jsonData.map((data) => HomelistItemModel.fromJson(data)).toList();
+      final List<dynamic> mountainItems = rawMountains is List
+        ? rawMountains
+        : rawMountains is Map
+          ? rawMountains.values.toList()
+          : const [];
+
+      final mountains = mountainItems
+        .whereType<Map>()
+        .map((item) => HomelistItemModel.fromJson(Map<String, dynamic>.from(item)))
+        .toList();
+
+      return HomeFeedResult(recommended: recommended, mountains: mountains);
     } else {
       throw Exception('Failed to load data');
     }
   }
+}
+
+class HomeFeedResult {
+  final HomelistItemModel? recommended;
+  final List<HomelistItemModel> mountains;
+
+  HomeFeedResult({
+    required this.recommended,
+    required this.mountains,
+  });
 }

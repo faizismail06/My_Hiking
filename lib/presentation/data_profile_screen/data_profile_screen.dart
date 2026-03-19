@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:myhiking/api/api_service.dart';
@@ -36,6 +37,7 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
   bool isLoading = true;
   String? _fileNameIdentity; // Menyimpan nama file yang diunggah
   String? _filePathIdentity;
+  Uint8List? _fileBytesIdentity;
 
   @override
   void initState() {
@@ -286,14 +288,15 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
       final dateOfBirth = state.dateOfBirthController?.text;
       final level = 1; // Contoh level default
       File? profilePicture;
+      Uint8List? profilePictureBytes;
+      String? profilePictureFileName;
 
-      // Jika ada file gambar yang dipilih, gunakan profilePicturePath
-      if (_fileNameIdentity != null) {
-        profilePicture = File(_fileNameIdentity!);
-        print("Profile picture path: $_fileNameIdentity");
-      }
-      if (_filePathIdentity != null) {
-        profilePicture = File(_filePathIdentity!); // Gunakan path lengkap
+      if (_fileBytesIdentity != null && _fileNameIdentity != null) {
+        profilePictureBytes = _fileBytesIdentity;
+        profilePictureFileName = _fileNameIdentity;
+      } else if (_filePathIdentity != null && _fileNameIdentity != null) {
+        profilePicture = File(_filePathIdentity!);
+        profilePictureFileName = _fileNameIdentity;
       }
 
       print("Mengirim data ke API:");
@@ -306,7 +309,7 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
       print("Emergency Phone: $emergencyPhone");
       print("Date of Birth: $dateOfBirth");
       print("Level: $level");
-      print("Profile Picture: ${profilePicture?.path}");
+      print("Profile Picture Name: ${profilePictureFileName ?? '-'}");
 
       // Panggil fungsi API untuk memperbarui profil pengguna
       final response = await ApiService().updateUserProfile(
@@ -320,6 +323,8 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
         emergencyPhone: emergencyPhone,
         dateOfBirth: dateOfBirth,
         profilePicture: profilePicture,
+        profilePictureBytes: profilePictureBytes,
+        profilePictureFileName: profilePictureFileName,
         level: level,
       );
 
@@ -1009,7 +1014,7 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
   /// Section Widget
   Widget _buildIdentityUploadSection(BuildContext context) {
     return SizedBox(
-      height: 100.h,
+      height: 150.h,
       width: double.maxFinite,
       child: Stack(
         alignment: Alignment.center,
@@ -1060,6 +1065,7 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
                               await FilePicker.platform.pickFiles(
                             type: FileType.custom,
                             allowedExtensions: ['jpg', 'jpeg', 'png'],
+                            withData: true,
                           );
 
                           if (result != null) {
@@ -1144,12 +1150,14 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
                               );
                             } else {
                               // File size is acceptable, proceed with update
+                              final bytes = file.bytes;
                               setState(() {
                                 _fileNameIdentity = file.name;
-                                _filePathIdentity = file.path;
+                                _filePathIdentity = kIsWeb ? null : file.path;
+                                _fileBytesIdentity = bytes;
                               });
                               print('File dipilih: ${file.name}');
-                              print('Path lengkap: ${file.path}');
+                              print('File bytes tersedia: ${bytes != null}');
                             }
                           } else {
                             print('Pemilihan file dibatalkan');
@@ -1179,12 +1187,88 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
                       ),
                     ],
                   ),
-                )
+                ),
+                if (_fileNameIdentity != null) SizedBox(height: 8.h),
+                if (_fileNameIdentity != null)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextButton.icon(
+                          style: TextButton.styleFrom(
+                            alignment: Alignment.centerLeft,
+                            padding: EdgeInsets.zero,
+                            minimumSize: const Size(0, 0),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          onPressed: _showIdentityPreview,
+                          icon: const Icon(Icons.image_outlined, size: 18),
+                          label: Text(
+                            _fileNameIdentity!,
+                            overflow: TextOverflow.ellipsis,
+                            style: CustomTextStyles.bodySmallBlack900Light
+                                .copyWith(
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Hapus file',
+                        onPressed: () {
+                          setState(() {
+                            _fileNameIdentity = null;
+                            _filePathIdentity = null;
+                            _fileBytesIdentity = null;
+                          });
+                        },
+                        icon:
+                            const Icon(Icons.delete_outline, color: Colors.red),
+                      ),
+                    ],
+                  ),
               ],
             ),
           )
         ],
       ),
+    );
+  }
+
+  Future<void> _showIdentityPreview() async {
+    if (_fileNameIdentity == null) return;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        Widget preview;
+
+        if (_fileBytesIdentity != null) {
+          preview = InteractiveViewer(
+            child: Image.memory(_fileBytesIdentity!, fit: BoxFit.contain),
+          );
+        } else if (!kIsWeb && _filePathIdentity != null) {
+          preview = InteractiveViewer(
+            child: Image.file(File(_filePathIdentity!), fit: BoxFit.contain),
+          );
+        } else {
+          preview = const Text('Preview tidak tersedia untuk file ini.');
+        }
+
+        return AlertDialog(
+          title: Text(_fileNameIdentity!),
+          content: SizedBox(
+            width: 320,
+            height: 320,
+            child: Center(child: preview),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Tutup'),
+            ),
+          ],
+        );
+      },
     );
   }
 

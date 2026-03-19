@@ -19,10 +19,14 @@ class TrailBloc extends Bloc<TrailEvent, TrailState> {
       int trailId, int mountainId, Emitter<TrailState> emit) async {
     emit(state.copyWith(isLoading: true));
     try {
+      final token = await apiService.getToken();
+
       // API Request
       final response = await http.get(
         Uri.parse('$baseUrl/mountains/$mountainId/trails/$trailId'),
-        headers: {'Authorization': 'Bearer your_token'},
+        headers: {
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
       );
       print('Headers: ${response.headers}');
       // Validasi Status HTTP
@@ -36,6 +40,7 @@ class TrailBloc extends Bloc<TrailEvent, TrailState> {
           isLoading: false,
           jalur: detailTrailCentres.jalur,
           gunung: detailTrailCentres.gunung,
+          dss: detailTrailCentres.dss,
         ));
       } else {
         // Emit State dengan Pesan Error

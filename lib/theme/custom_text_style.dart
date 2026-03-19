@@ -312,6 +312,11 @@ class CustomTextStyles {
       theme.textTheme.titleMedium!.copyWith(
         color: theme.colorScheme.onPrimary,
       );
+  static TextStyle get titleMediumPrimary =>
+      theme.textTheme.titleMedium!.copyWith(
+        color: theme.colorScheme.primary,
+        fontWeight: FontWeight.w600,
+      );
   static TextStyle get titleMediumSemiBold =>
       theme.textTheme.titleMedium!.copyWith(
         fontWeight: FontWeight.w600,

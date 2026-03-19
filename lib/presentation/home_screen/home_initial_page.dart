@@ -186,9 +186,10 @@ class HomeInitialPageState extends State<HomeInitialPage> {
           ),
           SizedBox(height: 6.h),
           Expanded(
-              child: SingleChildScrollView(
-            child: _buildHomeList(context),
-          ))
+            child: SingleChildScrollView(
+              child: _buildHomeFeed(context),
+            ),
+          )
         ],
       ),
     );
@@ -196,27 +197,61 @@ class HomeInitialPageState extends State<HomeInitialPage> {
   }
 
   /// Section Widget
-  Widget _buildHomeList(BuildContext context) {
+  Widget _buildHomeFeed(BuildContext context) {
     return Padding(
       padding: EdgeInsets.only(right: 4),
-      child: BlocSelector<HomeBloc, HomeState, HomeInitialModel?>(
-        selector: (state) => state.homeInitialModelObj,
-        builder: (context, homeInitialModelObj) {
-          return ListView.separated(
-            padding: EdgeInsets.zero,
-            physics: const NeverScrollableScrollPhysics(),
-            shrinkWrap: true,
-            separatorBuilder: (context, index) {
-              return SizedBox(height: 0);
-            },
-            itemCount: homeInitialModelObj?.homelistItemList.length ?? 0,
-            itemBuilder: (context, index) {
-              HomelistItemModel model =
-                  homeInitialModelObj?.homelistItemList[index] ??
-                      HomelistItemModel();
-              return HomelistItemWidget(
-                  model); // Memanggil widget dengan model gunung
-            },
+      child: BlocBuilder<HomeBloc, HomeState>(
+        builder: (context, state) {
+          final homeInitialModelObj = state.homeInitialModelObj;
+          final recommended = state.recommendedMountain;
+          final mountains = homeInitialModelObj?.homelistItemList ?? [];
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (recommended != null) ...[
+                Padding(
+                  padding: EdgeInsets.only(left: 8.h, top: 8.h, bottom: 8.h),
+                  child: Text(
+                    'Rekomendasi Untuk Anda',
+                    style: CustomTextStyles.titleMediumPrimary,
+                  ),
+                ),
+                HomelistItemWidget(
+                  recommended,
+                  isRecommended: true,
+                ),
+                SizedBox(height: 8.h),
+              ],
+              Padding(
+                padding: EdgeInsets.only(left: 8.h, top: 4.h, bottom: 8.h),
+                child: Text(
+                  'Gunung Lainnya',
+                  style: CustomTextStyles.titleMediumPrimary,
+                ),
+              ),
+              ListView.separated(
+                padding: EdgeInsets.zero,
+                physics: const NeverScrollableScrollPhysics(),
+                shrinkWrap: true,
+                separatorBuilder: (context, index) => SizedBox(height: 0),
+                itemCount: mountains.length,
+                itemBuilder: (context, index) {
+                  HomelistItemModel model = mountains[index];
+                  return HomelistItemWidget(model);
+                },
+              ),
+              if (recommended == null && mountains.isEmpty)
+                Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16.h),
+                  child: Center(
+                    child: Text(
+                      'Belum ada data gunung tersedia.',
+                      style: CustomTextStyles.bodyMediumGray500,
+                    ),
+                  ),
+                ),
+            ],
           );
         },
       ),

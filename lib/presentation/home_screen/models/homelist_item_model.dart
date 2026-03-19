@@ -1,3 +1,5 @@
+import 'package:myhiking/models/model.dart';
+
 // Model untuk data gunung
 class HomelistItemModel {
   int? id;
@@ -5,6 +7,7 @@ class HomelistItemModel {
   String? gambar;
   // String? province;
   Province? province;
+  DssEvaluation? dss;
 
   var title;
 
@@ -13,16 +16,27 @@ class HomelistItemModel {
     this.namaGunung,
     this.gambar,
     this.province,
+    this.dss,
   });
 
   factory HomelistItemModel.fromJson(Map<String, dynamic> json) {
+    final rawProvince = json["province"];
+
     return HomelistItemModel(
       id: json['id'],
       namaGunung: json['nama'] ?? 'Nama Gunung Tidak Tersedia',
       gambar: json['gambar'] ?? 'URL Gambar Tidak Tersedia',
       // province: json['province_name'] ?? 'Provinsi Tidak Tersedia',
-      province:
-          json["province"] != null ? Province.fromJson(json["province"]) : null,
+      province: rawProvince is Map<String, dynamic>
+          ? Province.fromJson(rawProvince)
+          : rawProvince is Map
+              ? Province.fromJson(Map<String, dynamic>.from(rawProvince))
+              : rawProvince is String
+                  ? Province(id: 0, name: rawProvince)
+                  : null,
+        dss: json['dss'] is Map<String, dynamic>
+          ? DssEvaluation.fromJson(json['dss'])
+          : null,
     );
   }
 
@@ -33,6 +47,7 @@ class HomelistItemModel {
       'gambar': gambar,
       // 'province': province,
       "province": province?.toJson(),
+      'dss': dss?.toJson(),
     };
   }
 

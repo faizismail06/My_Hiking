@@ -4,6 +4,9 @@ import 'package:myhiking/api/api_service.dart';
 import 'package:myhiking/models/model.dart';
 import 'package:myhiking/presentation/booking_screen/bloc/booking_bloc.dart';
 import 'package:myhiking/presentation/booking_screen/booking_screen.dart';
+import 'package:myhiking/presentation/data_profile_screen/bloc/data_profile_bloc.dart';
+import 'package:myhiking/presentation/data_profile_screen/data_profile_screen.dart';
+import 'package:myhiking/presentation/experience_onboarding_screen/experience_onboarding_screen.dart';
 import 'package:myhiking/presentation/rules_screen/bloc/rules_bloc.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/app_export.dart';
@@ -374,7 +377,7 @@ class _RouteScreenState extends State<RouteScreen> {
                       color: theme.colorScheme.primary, size: 35),
                   SizedBox(width: 8),
                   Text(
-                      "Jarak\n${routeModel.distance} km", // Teks dengan dua baris
+                      "Jarak\n${routeModel.distanceLabel} km", // Teks dengan dua baris
                       textAlign: TextAlign.center,
                       style: CustomTextStyles.labelMediumPrimary10.copyWith(
                           fontSize:
@@ -440,7 +443,10 @@ class _RouteScreenState extends State<RouteScreen> {
       text: "Pesan Sekarang",
       buttonStyle: CustomButtonStyles.outlineBlackTL14,
       buttonTextStyle: CustomTextStyles.titleLarge_1,
-      onPressed: () {
+      onPressed: () async {
+        final allowed = await _guardBeforeBooking(context);
+        if (!allowed) return;
+
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -457,6 +463,231 @@ class _RouteScreenState extends State<RouteScreen> {
         print(
             "Navigating to BookingScreen with idGunung: ${widget.idGunung}, jalurId: ${widget.jalurId}, ${userId.toString()}");
       },
+    );
+  }
+
+  Future<bool> _guardBeforeBooking(BuildContext context) async {
+    try {
+      final token = await ApiService().getToken();
+      if (token == null || token.isEmpty) {
+        await _showWarningDialog(
+          title: 'Login Diperlukan',
+          message: 'Silakan login terlebih dahulu untuk melanjutkan booking.',
+          icon: Icons.warning_amber_rounded,
+          iconColor: Colors.orange,
+          confirmText: 'Mengerti',
+        );
+        return false;
+      }
+
+      final userResponse = await ApiService().getUser(token);
+      if (!(userResponse['success'] == true)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Gagal mengambil data pengguna.')),
+        );
+        return false;
+      }
+
+      final userData = (userResponse['data'] as Map<String, dynamic>);
+      final currentUserId = userData['id'] is int
+          ? userData['id'] as int
+          : int.tryParse(userData['id'].toString()) ?? 0;
+
+      final userLevel = userData['level'] is int
+          ? userData['level'] as int
+          : int.tryParse((userData['level'] ?? '').toString()) ?? 0;
+        final normalizedLevel = userLevel == 0 ? 1 : userLevel;
+
+      final missingProfileFields = <String>[];
+      if (_isMissing(userData['nik'])) missingProfileFields.add('NIK');
+      if (_isMissing(userData['address'])) missingProfileFields.add('Alamat');
+      if (_isMissing(userData['phone'])) missingProfileFields.add('Nomor telepon');
+      if (_isMissing(userData['emergency_phone'])) {
+        missingProfileFields.add('Kontak darurat');
+      }
+      if (_isMissing(userData['date_of_birth'])) {
+        missingProfileFields.add('Tanggal lahir');
+      }
+
+      if (normalizedLevel == 1 && missingProfileFields.isNotEmpty) {
+        final openProfile = await _showWarningDialog(
+          title: 'Data Profil Belum Lengkap',
+          message:
+              'Sebelum booking, lengkapi data profil terlebih dahulu',
+          icon: Icons.report_problem_rounded,
+          iconColor: Colors.orange,
+          confirmText: 'Lengkapi Profil',
+          cancelText: 'Nanti',
+        );
+
+        if (openProfile == true && context.mounted) {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => BlocProvider(
+                create: (context) => DataProfileBloc(apiService: ApiService()),
+                child: DataProfileScreen(userId: currentUserId),
+              ),
+            ),
+          );
+
+          if (!context.mounted) return false;
+          return _guardBeforeBooking(context);
+        }
+        return false;
+      }
+
+      final onboarding = await ApiService().getOnboardingExperienceStatus(token);
+      final data = (onboarding['data'] as Map<String, dynamic>?) ?? {};
+
+      final isHiker = normalizedLevel == 1 || data['is_hiker'] == true;
+      final identityComplete = data['identity_complete'] == true;
+      final experienceCompleted = data['experience_completed'] == true;
+
+      if (isHiker && !identityComplete) {
+        final goToProfile = await _showWarningDialog(
+          title: 'Data Profil Belum Lengkap',
+          message: 'Sebelum booking, lengkapi data profil terlebih dahulu.',
+          icon: Icons.report_problem_rounded,
+          iconColor: Colors.orange,
+          confirmText: 'Lengkapi Profil',
+          cancelText: 'Nanti',
+        );
+
+        if (goToProfile == true && context.mounted) {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => BlocProvider(
+                create: (context) => DataProfileBloc(apiService: ApiService()),
+                child: DataProfileScreen(userId: currentUserId),
+              ),
+            ),
+          );
+
+          if (!context.mounted) return false;
+          return _guardBeforeBooking(context);
+        }
+        return false;
+      }
+
+      if (isHiker && !experienceCompleted) {
+        final openOnboarding = await _showWarningDialog(
+          title: 'Isi Pengalaman Pendakian',
+          message:
+              'Sebelum booking, isi onboarding pengalaman pendakian terlebih dahulu.',
+          icon: Icons.warning_rounded,
+          iconColor: Colors.red,
+          confirmText: 'Isi Sekarang',
+          cancelText: 'Nanti',
+        );
+
+        if (openOnboarding == true && context.mounted) {
+          final completed = await Navigator.push<bool>(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const ExperienceOnboardingScreen(),
+            ),
+          );
+
+          if (!context.mounted) return false;
+          if (completed == true) {
+            return _guardBeforeBooking(context);
+          }
+        }
+        return false;
+      }
+
+      return true;
+    } on ApiActionException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+      return false;
+    } catch (_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Gagal memeriksa kesiapan booking.')),
+      );
+      return false;
+    }
+  }
+
+  bool _isMissing(dynamic value) {
+    if (value == null) return true;
+    final text = value.toString().trim().toLowerCase();
+    return text.isEmpty || text == 'null' || text == '-';
+  }
+
+  Future<bool?> _showWarningDialog({
+    required String title,
+    required String message,
+    required IconData icon,
+    required Color iconColor,
+    required String confirmText,
+    String? cancelText,
+  }) {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: 20.h,
+            vertical: 20.h,
+          ),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.onPrimary,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(height: 6.h),
+              Icon(icon, color: iconColor, size: 40.h),
+              SizedBox(height: 20.h),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: CustomTextStyles.titleSmallBlack900.copyWith(
+                  height: 1.40,
+                ),
+              ),
+              SizedBox(height: 10.h),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: CustomTextStyles.bodySmallBlack900.copyWith(
+                  height: 1.40,
+                ),
+              ),
+              SizedBox(height: 32.h),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  if (cancelText != null)
+                    CustomElevatedButton(
+                      height: 35.h,
+                      width: 100.h,
+                      text: cancelText,
+                      buttonStyle: CustomButtonStyles.fillRed,
+                      buttonTextStyle: CustomTextStyles.labelMediumOnPrimary,
+                      onPressed: () => Navigator.of(context).pop(false),
+                    ),
+                  CustomElevatedButton(
+                    height: 35.h,
+                    width: cancelText != null ? 100.h : 140.h,
+                    text: confirmText,
+                    buttonStyle: CustomButtonStyles.fillPrimaryTL12,
+                    buttonTextStyle: CustomTextStyles.labelMediumOnPrimary,
+                    onPressed: () => Navigator.of(context).pop(true),
+                  )
+                ],
+              )
+            ],
+          ),
+        ),
+      ),
     );
   }
 

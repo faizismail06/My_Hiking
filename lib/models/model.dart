@@ -84,12 +84,14 @@ class ResDetailRouteCentres {
   final String message;
   final Jalur jalur; // Data jalur utama
   final Gunung gunung; // Data gunung sebagai properti langsung
+  final DssEvaluation? dss;
 
   ResDetailRouteCentres({
     required this.status,
     required this.message,
     required this.jalur,
     required this.gunung,
+    this.dss,
   });
 
   factory ResDetailRouteCentres.fromJson(Map<String, dynamic> json) {
@@ -99,6 +101,7 @@ class ResDetailRouteCentres {
       jalur: Jalur.fromJson(json['trail']),
       gunung: Gunung.fromJson(
           json['trail']['mountain']), // Ambil mountain dari dalam trail
+      dss: json['dss'] != null ? DssEvaluation.fromJson(json['dss']) : null,
     );
   }
 
@@ -108,6 +111,97 @@ class ResDetailRouteCentres {
       'message': message,
       'trail': jalur.toJson(),
       'mountain': gunung.toJson(),
+      'dss': dss?.toJson(),
+    };
+  }
+}
+
+class DssEvaluation {
+  final String riskLevel;
+  final String recommendation;
+  final String message;
+  final double routeScore;
+  final double weatherScoreFinal;
+  final double finalScore;
+  final List<String> reasoning;
+  final DssWeather? weather;
+
+  DssEvaluation({
+    required this.riskLevel,
+    required this.recommendation,
+    required this.message,
+    required this.routeScore,
+    required this.weatherScoreFinal,
+    required this.finalScore,
+    required this.reasoning,
+    this.weather,
+  });
+
+  factory DssEvaluation.fromJson(Map<String, dynamic> json) {
+    return DssEvaluation(
+      riskLevel: (json['risk_level'] ?? 'safe').toString(),
+      recommendation: (json['recommendation'] ?? 'recommended').toString(),
+      message: (json['message'] ?? '').toString(),
+      routeScore: double.tryParse((json['route_score'] ?? 0).toString()) ?? 0,
+      weatherScoreFinal:
+          double.tryParse((json['weather_score_final'] ?? 0).toString()) ?? 0,
+      finalScore: double.tryParse((json['final_score'] ?? 0).toString()) ?? 0,
+      reasoning: (json['reasoning'] as List?)
+              ?.map((item) => item.toString())
+              .toList() ??
+          const [],
+      weather: json['weather'] is Map<String, dynamic>
+          ? DssWeather.fromJson(json['weather'] as Map<String, dynamic>)
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'risk_level': riskLevel,
+      'recommendation': recommendation,
+      'message': message,
+      'route_score': routeScore,
+      'weather_score_final': weatherScoreFinal,
+      'final_score': finalScore,
+      'reasoning': reasoning,
+      'weather': weather?.toJson(),
+    };
+  }
+}
+
+class DssWeather {
+  final int code;
+  final String condition;
+  final double? temperature;
+  final double? windSpeed;
+
+  DssWeather({
+    required this.code,
+    required this.condition,
+    this.temperature,
+    this.windSpeed,
+  });
+
+  factory DssWeather.fromJson(Map<String, dynamic> json) {
+    return DssWeather(
+      code: int.tryParse((json['code'] ?? 0).toString()) ?? 0,
+      condition: (json['condition'] ?? '').toString(),
+      temperature: json['temperature'] != null
+          ? double.tryParse(json['temperature'].toString())
+          : null,
+      windSpeed: json['wind_speed'] != null
+          ? double.tryParse(json['wind_speed'].toString())
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'code': code,
+      'condition': condition,
+      'temperature': temperature,
+      'wind_speed': windSpeed,
     };
   }
 }
@@ -121,7 +215,10 @@ class Jalur {
   final String? district;
   final String? regency;
   final String? province;
-  final int jarak;
+  final double jarak;
+  final double? elevasi;
+  final double? durasi;
+  final String? tingkatKesulitan;
   final String? gambar;
   final int biaya;
   final double? latitude;
@@ -137,6 +234,9 @@ class Jalur {
     this.regency,
     this.province,
     required this.jarak,
+    this.elevasi,
+    this.durasi,
+    this.tingkatKesulitan,
     this.gambar,
     required this.biaya,
     this.latitude,
@@ -153,7 +253,10 @@ class Jalur {
       district: json['district'],
       regency: json['regency'],
       province: json['province'],
-      jarak: json['jarak'] ?? 0,
+      jarak: double.tryParse((json['jarak'] ?? 0).toString()) ?? 0.0,
+      elevasi: json['elevasi'] != null ? double.tryParse(json['elevasi'].toString()) : null,
+      durasi: json['durasi'] != null ? double.tryParse(json['durasi'].toString()) : null,
+      tingkatKesulitan: json['tingkat_kesulitan']?.toString(),
       gambar: json['gambar']?? "Gambar tidak tersedia",
       biaya: json['biaya'] ?? 0,
       latitude: json['latitude'] != null ? double.tryParse(json['latitude'].toString()) : null,
@@ -172,6 +275,9 @@ class Jalur {
       "regency": regency,
       "province": province,
       "jarak": jarak,
+      "elevasi": elevasi,
+      "durasi": durasi,
+      "tingkat_kesulitan": tingkatKesulitan,
       "gambar": gambar,
       "biaya": biaya,
     };

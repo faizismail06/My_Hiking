@@ -18,6 +18,7 @@ import '../presentation/reset_kirim_email_screen/reset_kirim_email_screen.dart';
 import '../presentation/reset_page_two_screen/reset_page_two_screen.dart';
 import '../presentation/payment_upload_screen/payment_upload_screen.dart';
 import '../presentation/trail_screen/trail_screen.dart';
+import '../presentation/experience_onboarding_screen/experience_onboarding_screen.dart';
 import '../presentation/success_screen/success_screen.dart';
 import '../presentation/rules_screen/rules_screen.dart';
 import '../presentation/ticket_screen/ticket_screen.dart';
@@ -51,6 +52,7 @@ class AppRoutes {
   static const String historyPage = '/history_page';
   static const String friendScreen = '/friend_screen';
   static const String chatbotScreen = '/chatbot_screen';
+  static const String experienceOnboardingScreen = '/experience_onboarding_screen';
   static const String appNavigationScreen = '/app_navigation_screen';
   static const String initialRoute = '/initialRoute';
 
@@ -148,5 +150,6 @@ class AppRoutes {
           return FriendScreen.builder(context, userId);
         },
         chatbotScreen: ChatbotScreen.builder,
+        experienceOnboardingScreen: (context) => const ExperienceOnboardingScreen(),
       };
 }

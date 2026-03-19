@@ -7,12 +7,18 @@ class HomeState extends Equatable {
     this.searchController,
     this.homeInitialModelObj,
     this.homeModelObj,
+    this.recommendedMountain,
+    this.baseRecommendedMountain,
+    this.allMountains = const [],
     this.errorMessage, // Menambahkan errorMessage
   });
 
   TextEditingController? searchController;
   HomeModel? homeModelObj;
   HomeInitialModel? homeInitialModelObj;
+  HomelistItemModel? recommendedMountain;
+  HomelistItemModel? baseRecommendedMountain;
+  List<HomelistItemModel> allMountains;
   String? errorMessage; // Field untuk menyimpan pesan error
 
   @override
@@ -20,6 +26,9 @@ class HomeState extends Equatable {
         searchController,
         homeInitialModelObj,
         homeModelObj,
+        recommendedMountain,
+        baseRecommendedMountain,
+        allMountains,
         errorMessage,
       ];
 
@@ -27,12 +36,24 @@ class HomeState extends Equatable {
     TextEditingController? searchController,
     HomeInitialModel? homeInitialModelObj,
     HomeModel? homeModelObj,
+    HomelistItemModel? recommendedMountain,
+    HomelistItemModel? baseRecommendedMountain,
+    List<HomelistItemModel>? allMountains,
+    bool clearRecommendedMountain = false,
+    bool clearBaseRecommendedMountain = false,
     String? errorMessage,
   }) {
     return HomeState(
       searchController: searchController ?? this.searchController,
       homeInitialModelObj: homeInitialModelObj ?? this.homeInitialModelObj,
       homeModelObj: homeModelObj ?? this.homeModelObj,
+      recommendedMountain: clearRecommendedMountain
+          ? null
+          : (recommendedMountain ?? this.recommendedMountain),
+      baseRecommendedMountain: clearBaseRecommendedMountain
+          ? null
+          : (baseRecommendedMountain ?? this.baseRecommendedMountain),
+      allMountains: allMountains ?? this.allMountains,
       errorMessage: errorMessage ?? this.errorMessage, // Update copyWith
     );
   }

@@ -7,6 +7,7 @@ class TrailState extends Equatable {
   final Jalur? jalur; // Detail jalur yang diambil dari API
   final Gunung? gunung; // Detail gunung terkait
   final String? errorMessage; // Pesan error jika ada masalah
+  final DssEvaluation? dss; // Evaluasi DSS dari backend
 
   const TrailState({
     this.error,
@@ -14,6 +15,7 @@ class TrailState extends Equatable {
     this.jalur,
     this.gunung,
     this.errorMessage,
+    this.dss,
   });
 
   /// Copy state dengan nilai baru (immutable)
@@ -23,6 +25,7 @@ class TrailState extends Equatable {
     Jalur? jalur,
     Gunung? gunung,
     String? errorMessage,
+    DssEvaluation? dss,
   }) {
     return TrailState(
       error: error ?? this.error,
@@ -30,9 +33,10 @@ class TrailState extends Equatable {
       jalur: jalur ?? this.jalur,
       gunung: gunung ?? this.gunung,
       errorMessage: errorMessage ?? this.errorMessage,
+      dss: dss ?? this.dss,
     );
   }
 
   @override
-  List<Object?> get props => [error, isLoading, jalur, gunung, errorMessage];
+  List<Object?> get props => [error, isLoading, jalur, gunung, errorMessage, dss];
 }

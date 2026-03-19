@@ -5,7 +5,7 @@ class RouteModel {
   final String description; // Deskripsi jalur
   final String location; // Lokasi detail (gabungan alamat)
   final String gambar;
-  final int distance; // Jarak
+  final double distance; // Jarak
   final String mapBasecamp;
   final Gunung gunung; // Informasi gunung
 
@@ -33,4 +33,10 @@ class RouteModel {
     );
   }
   String get maps => mapBasecamp;
+
+  String get distanceLabel {
+    return distance % 1 == 0
+        ? distance.toStringAsFixed(0)
+        : distance.toStringAsFixed(2);
+  }
 }

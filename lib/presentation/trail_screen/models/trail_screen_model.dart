@@ -5,11 +5,12 @@ class TrailScreenModel {
   final String description; // Deskripsi jalur
   final String location; // Lokasi detail (gabungan alamat)
   final String gambar;
-  final int distance; // Jarak
+  final double distance; // Jarak
   final String mapBasecamp;
   final Gunung gunung; // Informasi gunung
   final double? latitude;
   final double? longitude;
+  final DssEvaluation? dss;
 
   TrailScreenModel({
     required this.name,
@@ -21,6 +22,7 @@ class TrailScreenModel {
     required this.gambar,
     this.latitude,
     this.longitude,
+    this.dss,
   });
 
   /// Membuat model dari ResDetailRouteCentres
@@ -36,7 +38,14 @@ class TrailScreenModel {
       gambar: data.jalur.gambar ?? "gambar tidak ada",
       latitude: data.jalur.latitude,
       longitude: data.jalur.longitude,
+      dss: data.dss,
     );
   }
   String get maps => mapBasecamp;
+
+  String get distanceLabel {
+    return distance % 1 == 0
+        ? distance.toStringAsFixed(0)
+        : distance.toStringAsFixed(2);
+  }
 }
