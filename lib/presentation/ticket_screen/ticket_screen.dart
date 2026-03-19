@@ -67,7 +67,7 @@ class _TicketScreenState extends State<TicketScreen> {
 
       if (imageBytes == null) throw 'Failed to capture widget';
 
-      final now = DateFormat('ddMMyyyy_HHmmss').format(DateTime.now());  
+      final now = DateFormat('ddMMyyyy_HHmmss').format(DateTime.now());
       final filePath =
           '/storage/emulated/0/DCIM/Downloads/ticket_${ticketModel.id}_$now.png';
       await File(filePath).writeAsBytes(imageBytes);
@@ -285,12 +285,27 @@ class _TicketScreenState extends State<TicketScreen> {
                                         SizedBox(height: 12.h),
                                         CustomElevatedButton(
                                           height: 50.h,
-                                          text: "Download Tiket".tr,
+                                          text: ticket.canPrintTicket
+                                              ? "Download Tiket".tr
+                                              : "Bayar Dulu",
                                           buttonStyle: CustomButtonStyles
                                               .outlineBlueGrayC,
                                           buttonTextStyle: CustomTextStyles
                                               .titleMediumManropeOnPrimary,
                                           onPressed: () async {
+                                            if (!ticket.canPrintTicket) {
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                const SnackBar(
+                                                  content: Text(
+                                                    'Tiket belum bisa dicetak. Silakan lunasi pembayaran terlebih dahulu.',
+                                                  ),
+                                                  backgroundColor: Colors.red,
+                                                ),
+                                              );
+                                              return;
+                                            }
+
                                             WidgetsBinding.instance
                                                 .addPostFrameCallback(
                                                     (_) async {

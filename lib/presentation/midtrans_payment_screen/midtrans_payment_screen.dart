@@ -46,7 +46,7 @@ class _MidtransPaymentScreenState extends State<MidtransPaymentScreen> {
           _paymentUrl = widget.redirectUrl;
           _isLoading = false;
         });
-        
+
         // For web platform, open in browser
         if (_isWebPlatform) {
           await _openPaymentInBrowser();
@@ -55,14 +55,15 @@ class _MidtransPaymentScreenState extends State<MidtransPaymentScreen> {
         }
       } else {
         // Need to create payment first
-        final result = await ApiService().createMidtransPayment(widget.transactionId);
-        
+        final result =
+            await ApiService().createMidtransPayment(widget.transactionId);
+
         if (result['success'] == true && result['redirect_url'] != null) {
           setState(() {
             _paymentUrl = result['redirect_url'];
             _isLoading = false;
           });
-          
+
           // For web platform, open in browser
           if (_isWebPlatform) {
             await _openPaymentInBrowser();
@@ -88,7 +89,7 @@ class _MidtransPaymentScreenState extends State<MidtransPaymentScreen> {
 
   Future<void> _openPaymentInBrowser() async {
     if (_paymentUrl == null) return;
-    
+
     try {
       final uri = Uri.parse(_paymentUrl!);
       if (await canLaunchUrl(uri)) {
@@ -136,7 +137,7 @@ class _MidtransPaymentScreenState extends State<MidtransPaymentScreen> {
             final url = request.url.toLowerCase();
 
             // Check for finish/callback URLs
-            if (url.contains('/finish') || 
+            if (url.contains('/finish') ||
                 url.contains('status_code=') ||
                 url.contains('transaction_status=')) {
               _handlePaymentCallback(request.url);
@@ -144,7 +145,7 @@ class _MidtransPaymentScreenState extends State<MidtransPaymentScreen> {
             }
 
             // Allow Midtrans Snap URLs
-            if (url.contains('midtrans.com') || 
+            if (url.contains('midtrans.com') ||
                 url.contains('sandbox.midtrans') ||
                 url.contains('snap.midtrans')) {
               return NavigationDecision.navigate;
@@ -189,20 +190,19 @@ class _MidtransPaymentScreenState extends State<MidtransPaymentScreen> {
     String status = 'pending';
     String message = 'Pembayaran sedang diproses';
 
-    if (transactionStatus == 'capture' || 
+    if (transactionStatus == 'capture' ||
         transactionStatus == 'settlement' ||
         statusCode == '200') {
       status = 'success';
       message = 'Pembayaran berhasil!';
-      
+
       // Sync status with backend silently (don't show loading for success)
       // This ensures DB is updated even if webhook doesn't reach localhost
       _syncPaymentStatus(orderId); // Don't await - just fire and forget
-      
-    } else if (transactionStatus == 'deny' || 
-               transactionStatus == 'cancel' ||
-               transactionStatus == 'expire' ||
-               statusCode == '202') {
+    } else if (transactionStatus == 'deny' ||
+        transactionStatus == 'cancel' ||
+        transactionStatus == 'expire' ||
+        statusCode == '202') {
       status = 'failed';
       message = 'Pembayaran gagal atau dibatalkan';
     } else if (transactionStatus == 'pending' || statusCode == '201') {
@@ -210,13 +210,12 @@ class _MidtransPaymentScreenState extends State<MidtransPaymentScreen> {
       try {
         await _syncPaymentStatus(orderId);
         final result = await ApiService().checkMidtransStatus(
-          orderId.isNotEmpty ? orderId : widget.transactionId.toString()
-        );
-        
+            orderId.isNotEmpty ? orderId : widget.transactionId.toString());
+
         if (result['success'] == true && result['data'] != null) {
           final data = result['data']['data'] ?? result['data'];
           final dbStatus = (data['status'] ?? '').toString().toLowerCase();
-          
+
           if (dbStatus == 'complete') {
             status = 'success';
             message = 'Pembayaran berhasil!';
@@ -234,7 +233,7 @@ class _MidtransPaymentScreenState extends State<MidtransPaymentScreen> {
       _showPaymentResult(status, message);
     }
   }
-  
+
   /// Sync payment status with backend (important for localhost where webhook can't reach)
   Future<void> _syncPaymentStatus(String orderId) async {
     try {
@@ -262,13 +261,13 @@ class _MidtransPaymentScreenState extends State<MidtransPaymentScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                status == 'success' 
-                    ? Icons.check_circle 
+                status == 'success'
+                    ? Icons.check_circle
                     : status == 'failed'
                         ? Icons.cancel
                         : Icons.hourglass_empty,
-                color: status == 'success' 
-                    ? Colors.green 
+                color: status == 'success'
+                    ? Colors.green
                     : status == 'failed'
                         ? Colors.red
                         : Colors.orange,
@@ -276,8 +275,8 @@ class _MidtransPaymentScreenState extends State<MidtransPaymentScreen> {
               ),
               SizedBox(height: 16),
               Text(
-                status == 'success' 
-                    ? 'Pembayaran Berhasil' 
+                status == 'success'
+                    ? 'Pembayaran Berhasil'
                     : status == 'failed'
                         ? 'Pembayaran Gagal'
                         : 'Menunggu Pembayaran',
@@ -467,7 +466,7 @@ class _MidtransPaymentScreenState extends State<MidtransPaymentScreen> {
             Text(
               _paymentOpenedInBrowser
                   ? 'Halaman pembayaran telah dibuka di tab/window baru. '
-                    'Silakan selesaikan pembayaran di sana.'
+                      'Silakan selesaikan pembayaran di sana.'
                   : 'Klik tombol di bawah untuk membuka halaman pembayaran.',
               textAlign: TextAlign.center,
               style: TextStyle(
@@ -530,16 +529,33 @@ class _MidtransPaymentScreenState extends State<MidtransPaymentScreen> {
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
-                      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                     ),
-                    onPressed: () {
-                      // Fire-and-forget: sync status in background without blocking
-                      ApiService().checkMidtransStatus(widget.transactionId.toString());
-                      
-                      // Return success immediately (Midtrans only calls finish on success)
+                    onPressed: () async {
+                      String status = 'pending';
+                      String message =
+                          'Silakan cek status di halaman transaksi';
+
+                      if (widget.transactionId > 0) {
+                        final result = await ApiService().checkMidtransStatus(
+                            widget.transactionId.toString());
+
+                        if (result['success'] == true &&
+                            result['data'] != null) {
+                          final data = result['data']['data'] ?? result['data'];
+                          final dbStatus =
+                              (data['status'] ?? '').toString().toLowerCase();
+                          if (dbStatus == 'complete') {
+                            status = 'success';
+                            message = 'Pembayaran berhasil!';
+                          }
+                        }
+                      }
+
                       Navigator.of(context).pop({
-                        'status': 'success',
-                        'message': 'Pembayaran berhasil!',
+                        'status': status,
+                        'message': message,
                         'transaction_id': widget.transactionId,
                       });
                     },

@@ -27,7 +27,7 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
       );
       if (response.statusCode == 200) {
         final jsonResponse = jsonDecode(response.body);
-        
+
         // API returns { "order": { ... } }
         final orderData = jsonResponse['order'];
         if (orderData == null) {
@@ -35,7 +35,14 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
           return;
         }
 
-        final ticket = TicketModel.fromJson(orderData);
+        final canPrintFromApi = jsonResponse['can_print_ticket'] == true;
+        final ticket = TicketModel.fromJson(orderData).copyWith(
+          canPrintTicket: canPrintFromApi ||
+              ((orderData['transaction']?['status_pesanan'] ?? '') ==
+                  'Complete'),
+          transactionStatus:
+              orderData['transaction']?['status_pesanan'] ?? 'Incomplete',
+        );
         emit(TicketLoadedState(ticketModel: ticket));
       } else {
         print('error: ${response.body}');

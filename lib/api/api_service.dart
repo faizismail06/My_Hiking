@@ -20,7 +20,6 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> getUser(String token) async {
-
     final url = Uri.parse('$baseUrl/user');
     final response = await http.get(
       url,
@@ -124,8 +123,8 @@ class ApiService {
 
       if (response.statusCode == 201) {
         final jsonResponse = jsonDecode(response.body);
-        final orderId = jsonResponse['order']
-            ['id']; // Using jsonResponse, not response
+        final orderId =
+            jsonResponse['order']['id']; // Using jsonResponse, not response
         // Check if members exist in response
 
         if (jsonResponse['order']['members'] != null) {
@@ -320,12 +319,12 @@ class ApiService {
   Future<TransactionResponseModel> createTransaction(int orderId) async {
     try {
       print("Api order id: $orderId");
-      
+
       // Build request body
       Map<String, dynamic> requestBody = {
         'id_pesanan': orderId,
       };
-      
+
       final response = await http.post(
         Uri.parse('$baseUrl/transactions/store'),
         headers: {
@@ -452,10 +451,12 @@ class ApiService {
   }
 
   /// Search users
-  Future<Map<String, dynamic>> searchUsers(String query, int currentUserId) async {
+  Future<Map<String, dynamic>> searchUsers(
+      String query, int currentUserId) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/friends/search?query=$query&user_id=$currentUserId'),
+        Uri.parse(
+            '$baseUrl/friends/search?query=$query&user_id=$currentUserId'),
       );
 
       if (response.statusCode == 200) {
@@ -498,7 +499,8 @@ class ApiService {
   }
 
   /// Accept friend request
-  Future<Map<String, dynamic>> acceptFriend(int friendshipId, int userId) async {
+  Future<Map<String, dynamic>> acceptFriend(
+      int friendshipId, int userId) async {
     try {
       final response = await http.put(
         Uri.parse('$baseUrl/friends/$friendshipId/accept'),
@@ -517,7 +519,8 @@ class ApiService {
   }
 
   /// Reject friend request
-  Future<Map<String, dynamic>> rejectFriend(int friendshipId, int userId) async {
+  Future<Map<String, dynamic>> rejectFriend(
+      int friendshipId, int userId) async {
     try {
       final response = await http.put(
         Uri.parse('$baseUrl/friends/$friendshipId/reject'),
@@ -536,7 +539,8 @@ class ApiService {
   }
 
   /// Remove friend
-  Future<Map<String, dynamic>> removeFriend(int friendshipId, int userId) async {
+  Future<Map<String, dynamic>> removeFriend(
+      int friendshipId, int userId) async {
     try {
       final response = await http.delete(
         Uri.parse('$baseUrl/friends/$friendshipId?user_id=$userId'),
@@ -553,12 +557,12 @@ class ApiService {
   }
 
   /// Get current weather from Open-Meteo API
-  Future<Map<String, dynamic>> getCurrentWeather(double latitude, double longitude) async {
+  Future<Map<String, dynamic>> getCurrentWeather(
+      double latitude, double longitude) async {
     try {
       final url = Uri.parse(
-        'https://api.open-meteo.com/v1/forecast?latitude=$latitude&longitude=$longitude&current=temperature_2m,weather_code&timezone=auto'
-      );
-      
+          'https://api.open-meteo.com/v1/forecast?latitude=$latitude&longitude=$longitude&current=temperature_2m,weather_code&timezone=auto');
+
       final response = await http.get(url);
 
       if (response.statusCode == 200) {
@@ -581,15 +585,15 @@ class ApiService {
   }
 
   /// Get weather forecast from Open-Meteo API (7 days with hourly data)
-  Future<Map<String, dynamic>> getWeatherForecast(double latitude, double longitude) async {
+  Future<Map<String, dynamic>> getWeatherForecast(
+      double latitude, double longitude) async {
     try {
       final url = Uri.parse(
-        'https://api.open-meteo.com/v1/forecast?latitude=$latitude&longitude=$longitude'
-        '&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max,sunrise,sunset'
-        '&hourly=temperature_2m,weather_code,relative_humidity_2m,precipitation_probability,wind_speed_10m'
-        '&timezone=auto&forecast_days=7'
-      );
-      
+          'https://api.open-meteo.com/v1/forecast?latitude=$latitude&longitude=$longitude'
+          '&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max,sunrise,sunset'
+          '&hourly=temperature_2m,weather_code,relative_humidity_2m,precipitation_probability,wind_speed_10m'
+          '&timezone=auto&forecast_days=7');
+
       final response = await http.get(url);
 
       if (response.statusCode == 200) {
@@ -638,7 +642,7 @@ class ApiService {
       );
 
       final responseData = jsonDecode(response.body);
-      
+
       if (response.statusCode == 201) {
         return {
           'success': true,
@@ -648,7 +652,8 @@ class ApiService {
       } else {
         return {
           'success': false,
-          'message': responseData['message'] ?? 'Gagal mengirim permintaan darurat',
+          'message':
+              responseData['message'] ?? 'Gagal mengirim permintaan darurat',
         };
       }
     } catch (e) {
@@ -686,7 +691,8 @@ class ApiService {
   }
 
   /// Cancel a panic request
-  Future<Map<String, dynamic>> cancelPanicRequest(int panicId, int userId) async {
+  Future<Map<String, dynamic>> cancelPanicRequest(
+      int panicId, int userId) async {
     try {
       final url = Uri.parse('$baseUrl/panic/$panicId/cancel');
       final response = await http.post(
@@ -700,7 +706,7 @@ class ApiService {
       );
 
       final responseData = jsonDecode(response.body);
-      
+
       if (response.statusCode == 200) {
         return {
           'success': true,
@@ -731,18 +737,38 @@ class ApiService {
   Future<Map<String, dynamic>> sendChatMessage({
     required String message,
     List<Map<String, dynamic>>? history,
+    String role = 'pendaki',
+    int? userId,
+    List<int>? selectedMemberIds,
+    List<String>? selectedMemberNames,
   }) async {
     try {
       final url = Uri.parse('$chatbotBaseUrl/chat');
+
+      Map<String, dynamic> body = {
+        'message': message,
+        'history': history ?? [],
+        'role': role,
+      };
+
+      if (userId != null) {
+        body['user_id'] = userId;
+      }
+
+      if (selectedMemberIds != null && selectedMemberIds.isNotEmpty) {
+        body['selected_member_ids'] = selectedMemberIds;
+      }
+
+      if (selectedMemberNames != null && selectedMemberNames.isNotEmpty) {
+        body['selected_member_names'] = selectedMemberNames;
+      }
+
       final response = await http.post(
         url,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: jsonEncode({
-          'message': message,
-          'history': history ?? [],
-        }),
+        body: jsonEncode(body),
       );
 
       final responseData = jsonDecode(response.body);
@@ -751,18 +777,24 @@ class ApiService {
         return {
           'success': responseData['success'] ?? true,
           'message': responseData['message'] ?? 'Tidak ada respons',
+          'download_url': responseData['download_url'],
+          'payment_url': responseData['payment_url'],
+          'transaction_id': responseData['transaction_id'],
+          'order_id': responseData['order_id'],
         };
       } else {
         return {
           'success': false,
-          'message': responseData['message'] ?? 'Gagal mengirim pesan ke chatbot',
+          'message':
+              responseData['message'] ?? 'Gagal mengirim pesan ke chatbot',
         };
       }
     } catch (e) {
       print('Chatbot Error: $e');
       return {
         'success': false,
-        'message': 'Tidak dapat terhubung ke chatbot. Pastikan server chatbot berjalan.',
+        'message':
+            'Tidak dapat terhubung ke chatbot. Pastikan server chatbot berjalan.',
       };
     }
   }
@@ -793,14 +825,117 @@ class ApiService {
     }
   }
 
+  /// Lookup user by exact ID for member selection validation.
+  Future<Map<String, dynamic>> getUserById(int userId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/user-data/$userId'),
+        headers: {
+          'Accept': 'application/json',
+        },
+      );
+
+      final responseData = jsonDecode(response.body);
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        return {
+          'success': true,
+          'data': responseData['data'],
+        };
+      }
+
+      return {
+        'success': false,
+        'message': responseData['message'] ?? 'User tidak ditemukan',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Gagal memeriksa user ID',
+      };
+    }
+  }
+
+  // ==================== CHAT HISTORY API METHODS ====================
+
+  /// Get list of chat histories for a user
+  Future<Map<String, dynamic>> getChatHistories({
+    required int userId,
+    String role = 'pendaki',
+  }) async {
+    try {
+      final url =
+          Uri.parse('$chatbotBaseUrl/chat/history?user_id=$userId&role=$role');
+      final response = await http.get(url);
+      final responseData = jsonDecode(response.body);
+      return responseData;
+    } catch (e) {
+      return {'success': false, 'message': 'Gagal memuat riwayat chat'};
+    }
+  }
+
+  /// Get a specific chat history by ID
+  Future<Map<String, dynamic>> getChatHistory(int historyId) async {
+    try {
+      final url = Uri.parse('$chatbotBaseUrl/chat/history/$historyId');
+      final response = await http.get(url);
+      final responseData = jsonDecode(response.body);
+      return responseData;
+    } catch (e) {
+      return {'success': false, 'message': 'Gagal memuat riwayat chat'};
+    }
+  }
+
+  /// Save or update chat history
+  Future<Map<String, dynamic>> saveChatHistory({
+    required int userId,
+    required String role,
+    required List<Map<String, dynamic>> messages,
+    int? historyId,
+    String? title,
+  }) async {
+    try {
+      final url = Uri.parse('$chatbotBaseUrl/chat/history');
+      final body = {
+        'user_id': userId,
+        'role': role,
+        'messages': messages,
+      };
+      if (historyId != null) body['history_id'] = historyId;
+      if (title != null) body['title'] = title;
+
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'success': false, 'message': 'Gagal menyimpan riwayat chat'};
+    }
+  }
+
+  /// Delete a chat history
+  Future<Map<String, dynamic>> deleteChatHistory(int historyId,
+      {int? userId}) async {
+    try {
+      String urlStr = '$chatbotBaseUrl/chat/history/$historyId';
+      if (userId != null) urlStr += '?user_id=$userId';
+      final url = Uri.parse(urlStr);
+      final response = await http.delete(url);
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'success': false, 'message': 'Gagal menghapus riwayat chat'};
+    }
+  }
+
   /// Check chatbot server health
   Future<bool> isChatbotServerHealthy() async {
     try {
       final url = Uri.parse('$chatbotBaseUrl/health');
       final response = await http.get(url).timeout(
-        const Duration(seconds: 5),
-        onTimeout: () => http.Response('', 408),
-      );
+            const Duration(seconds: 5),
+            onTimeout: () => http.Response('', 408),
+          );
       return response.statusCode == 200;
     } catch (e) {
       return false;
@@ -829,7 +964,8 @@ class ApiService {
       } else {
         return {
           'success': false,
-          'message': responseData['message'] ?? 'Gagal memuat metode pembayaran',
+          'message':
+              responseData['message'] ?? 'Gagal memuat metode pembayaran',
         };
       }
     } catch (e) {
@@ -848,15 +984,15 @@ class ApiService {
   }) async {
     try {
       String? token = await getToken();
-      
+
       Map<String, dynamic> requestBody = {
         'order_id': orderId,
       };
-      
+
       if (paymentMethod != null) {
         requestBody['payment_method'] = paymentMethod;
       }
-      
+
       final response = await http.post(
         Uri.parse('$baseUrl/midtrans/create-payment'),
         headers: {
@@ -931,7 +1067,7 @@ class ApiService {
   Future<Map<String, dynamic>> checkMidtransStatus(String orderId) async {
     try {
       String? token = await getToken();
-      
+
       final response = await http.get(
         Uri.parse('$baseUrl/midtrans/status/$orderId'),
         headers: {
@@ -950,7 +1086,8 @@ class ApiService {
       } else {
         return {
           'success': false,
-          'message': responseData['message'] ?? 'Gagal mengecek status pembayaran',
+          'message':
+              responseData['message'] ?? 'Gagal mengecek status pembayaran',
         };
       }
     } catch (e) {

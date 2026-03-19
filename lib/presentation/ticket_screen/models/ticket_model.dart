@@ -15,6 +15,8 @@ class TicketModel extends Equatable {
   final String tanggalTurun;
   final int totalHargaTiket;
   final String status;
+  final String transactionStatus;
+  final bool canPrintTicket;
   final List<Anggota> anggota;
 
   const TicketModel({
@@ -26,24 +28,34 @@ class TicketModel extends Equatable {
     required this.tanggalTurun,
     required this.totalHargaTiket,
     required this.status,
+    required this.transactionStatus,
+    required this.canPrintTicket,
     required this.anggota,
   });
 
   factory TicketModel.fromJson(Map<String, dynamic> json) {
-  // API returns: booker, mountain, trail, members
-  return TicketModel(
-    id: json['id'] ?? 0,
-    pemesanName: json['booker']?['name'] ?? 'Unknown', // API uses 'booker' not 'pemesan'
-    gunungName: json['mountain']?['nama'] ?? 'Unknown',
-    jalurName: json['trail']?['nama'] ?? 'Unknown',
-    tanggalNaik: json['tanggal_naik'] ?? '',
-    tanggalTurun: json['tanggal_turun'] ?? '',
-    totalHargaTiket: json['total_harga_tiket'] ?? 0,
-    status: json['status'] ?? 'Unknown',
-    anggota: (json['members'] as List?)?.map((member) => Anggota.fromJson(member as Map<String, dynamic>)).toList() ?? [], // API uses 'members' not 'anggota'
-  );
-}
-
+    // API returns: booker, mountain, trail, members
+    return TicketModel(
+      id: json['id'] ?? 0,
+      pemesanName: json['booker']?['name'] ??
+          'Unknown', // API uses 'booker' not 'pemesan'
+      gunungName: json['mountain']?['nama'] ?? 'Unknown',
+      jalurName: json['trail']?['nama'] ?? 'Unknown',
+      tanggalNaik: json['tanggal_naik'] ?? '',
+      tanggalTurun: json['tanggal_turun'] ?? '',
+      totalHargaTiket: json['total_harga_tiket'] ?? 0,
+      status: json['status'] ?? 'Unknown',
+      transactionStatus: json['transaction']?['status_pesanan'] ?? 'Incomplete',
+      canPrintTicket:
+          (json['transaction']?['status_pesanan'] ?? 'Incomplete') ==
+              'Complete',
+      anggota: (json['members'] as List?)
+              ?.map(
+                  (member) => Anggota.fromJson(member as Map<String, dynamic>))
+              .toList() ??
+          [], // API uses 'members' not 'anggota'
+    );
+  }
 
   // Method to copy this object with updated values
   TicketModel copyWith({
@@ -55,6 +67,8 @@ class TicketModel extends Equatable {
     String? tanggalTurun,
     int? totalHargaTiket,
     String? status,
+    String? transactionStatus,
+    bool? canPrintTicket,
     List<Anggota>? anggota,
   }) {
     return TicketModel(
@@ -66,6 +80,8 @@ class TicketModel extends Equatable {
       tanggalTurun: tanggalTurun ?? this.tanggalTurun,
       totalHargaTiket: totalHargaTiket ?? this.totalHargaTiket,
       status: status ?? this.status,
+      transactionStatus: transactionStatus ?? this.transactionStatus,
+      canPrintTicket: canPrintTicket ?? this.canPrintTicket,
       anggota: anggota ?? this.anggota,
     );
   }
@@ -80,6 +96,8 @@ class TicketModel extends Equatable {
         tanggalTurun,
         totalHargaTiket,
         status,
+        transactionStatus,
+        canPrintTicket,
         anggota,
       ];
 }

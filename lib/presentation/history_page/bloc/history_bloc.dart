@@ -6,7 +6,6 @@ import 'package:http/http.dart' as http;
 import '../models/recentclimbinglist_item_model.dart';
 import '../models/history_model.dart';
 
-
 part 'history_event.dart';
 part 'history_state.dart';
 
@@ -27,7 +26,8 @@ class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
       String userId = event.userId;
 
       // Memanggil fetchRecentClimbingList dengan userId
-      List<RecentclimbinglistItemModel> recentClimbingList = await fetchRecentClimbingList(userId);
+      List<RecentclimbinglistItemModel> recentClimbingList =
+          await fetchRecentClimbingList(userId);
 
       // Emit state dengan userId dan data yang diambil
       emit(
@@ -49,19 +49,25 @@ class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
   }
 
   // Function untuk mengambil data dari API dengan userId
-  Future<List<RecentclimbinglistItemModel>> fetchRecentClimbingList(String userId) async {
+  Future<List<RecentclimbinglistItemModel>> fetchRecentClimbingList(
+      String userId) async {
     final response = await http.get(Uri.parse('$baseUrl/orders'));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body)['data'] as List;
 
       // Filter data berdasarkan userId yang diterima
-      final filteredData = data
-          .where((item) => item['id_user'].toString() == userId)
+      final filteredData =
+          data.where((item) => item['id_user'].toString() == userId).toList()
+            ..sort((a, b) {
+              final aId = int.tryParse(a['id'].toString()) ?? 0;
+              final bId = int.tryParse(b['id'].toString()) ?? 0;
+              return aId.compareTo(bId);
+            });
+
+      return filteredData
           .map((item) => RecentclimbinglistItemModel.fromJson(item))
           .toList();
-
-      return filteredData;
     } else {
       throw Exception('Failed to load data');
     }
@@ -74,7 +80,8 @@ class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
   ) async {
     try {
       // Mengambil data dari API tanpa menggunakan userId (untuk kasus inisialisasi)
-      List<RecentclimbinglistItemModel> recentClimbingList = await fetchRecentClimbingList("");
+      List<RecentclimbinglistItemModel> recentClimbingList =
+          await fetchRecentClimbingList("");
 
       // Emit state dengan data yang diambil
       emit(

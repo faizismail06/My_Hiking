@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:myhiking/presentation/payment_method_screen/payment_method_screen.dart';
 import '../../api/api_service.dart';
 import '../../core/app_export.dart';
 import 'bloc/history_bloc.dart';
@@ -25,6 +26,7 @@ class HistoryPage extends StatefulWidget {
   @override
   _HistoryPageState createState() => _HistoryPageState();
 }
+
 class _HistoryPageState extends State<HistoryPage> {
   String userId = '';
   String userName = '';
@@ -33,7 +35,7 @@ class _HistoryPageState extends State<HistoryPage> {
   void initState() {
     super.initState();
     _getUserProfile();
-    }
+  }
 
   Future<void> _getUserProfile() async {
     final token = await ApiService().getToken();
@@ -52,6 +54,7 @@ class _HistoryPageState extends State<HistoryPage> {
 
     // print(userName);
   }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -163,8 +166,8 @@ class _HistoryPageState extends State<HistoryPage> {
             itemCount: historyModelObj?.recentclimbinglistItemList.length ?? 0,
             itemBuilder: (context, index) {
               RecentclimbinglistItemModel model =
-                  historyModelObj?.recentclimbinglistItemList[index] ?? 
-                  RecentclimbinglistItemModel();
+                  historyModelObj?.recentclimbinglistItemList[index] ??
+                      RecentclimbinglistItemModel();
               return RecentclimbinglistItemWidget(
                 model,
                 onTapRecentclimbing: () {
@@ -180,9 +183,25 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   /// Navigate to ticket action screen
-  void _navigateToTicketAction(BuildContext context, RecentclimbinglistItemModel model) {
+  void _navigateToTicketAction(
+      BuildContext context, RecentclimbinglistItemModel model) {
     int parsedPesananId = int.tryParse(model.id.toString()) ?? 0;
-    
+    final status = (model.status ?? '').trim();
+
+    if (parsedPesananId <= 0) {
+      return;
+    }
+
+    if (status.toLowerCase() == 'bayar') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PaymentMethodScreen(orderId: parsedPesananId),
+        ),
+      );
+      return;
+    }
+
     // Format the hiking date for display
     String formattedDate = '';
     try {
@@ -191,13 +210,13 @@ class _HistoryPageState extends State<HistoryPage> {
     } catch (e) {
       formattedDate = model.tanggalNaik ?? '';
     }
-    
+
     // Use root navigator to navigate outside the nested navigator
     Navigator.of(context, rootNavigator: true).pushNamed(
       AppRoutes.ticketActionScreen,
       arguments: {
         'orderId': parsedPesananId,
-        'status': model.status ?? 'Booking',
+        'status': status.isEmpty ? 'Booking' : status,
         'mountainName': model.gunung ?? 'Gunung',
         'hikingDate': formattedDate,
       },

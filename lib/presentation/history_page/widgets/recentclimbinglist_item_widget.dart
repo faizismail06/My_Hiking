@@ -81,6 +81,8 @@ class RecentclimbinglistItemWidget extends StatelessWidget {
 
     // Handle the status by displaying the correct button
     switch (status) {
+      case 'Bayar':
+        return _buildBayarButton(context);
       case 'Booking':
         return _buildBookingButton(context);
       case 'Sedang Mendaki':
@@ -90,6 +92,20 @@ class RecentclimbinglistItemWidget extends StatelessWidget {
       default:
         return SizedBox(); // Return an empty widget if no match
     }
+  }
+
+  // Button for unpaid order
+  Widget _buildBayarButton(BuildContext context) {
+    return CustomElevatedButton(
+      height: 26.h,
+      width: 98.h,
+      text: "Bayar",
+      buttonStyle: CustomButtonStyles.fillRed2,
+      buttonTextStyle: CustomTextStyles.titleMediumOnPrimary,
+      onPressed: () {
+        onTapRecentclimbing?.call();
+      },
+    );
   }
 
   // Button for "Booking" status
