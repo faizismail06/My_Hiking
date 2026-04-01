@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../api/api_service.dart';
 import '../../core/app_export.dart';
+import '../../core/utils/web_file_downloader_stub.dart'
+  if (dart.library.html) '../../core/utils/web_file_downloader_web.dart';
+import '../offline_tracking_screen/offline_tracking_screen.dart';
 
 class TicketActionScreen extends StatefulWidget {
   final int orderId;
@@ -24,6 +31,7 @@ class TicketActionScreen extends StatefulWidget {
 
 class _TicketActionScreenState extends State<TicketActionScreen> {
   bool _isPanicLoading = false;
+  bool _isRouteDownloadLoading = false;
   String? _selectedEmergencyType;
   final TextEditingController _descriptionController = TextEditingController();
 
@@ -41,6 +49,212 @@ class _TicketActionScreenState extends State<TicketActionScreen> {
   void dispose() {
     _descriptionController.dispose();
     super.dispose();
+  }
+
+  String _escapeXml(String input) {
+    return input
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&apos;');
+  }
+
+  Future<Directory> _resolveDownloadDirectory() async {
+    if (kIsWeb) {
+      throw Exception('Platform web menggunakan mekanisme download browser');
+    }
+
+    if (Platform.isAndroid) {
+      var status = await Permission.manageExternalStorage.status;
+      if (!status.isGranted) {
+        status = await Permission.manageExternalStorage.request();
+      }
+
+      if (!status.isGranted) {
+        throw Exception('Izin penyimpanan ditolak');
+      }
+
+      final downloadDir = Directory('/storage/emulated/0/Download');
+      if (!await downloadDir.exists()) {
+        await downloadDir.create(recursive: true);
+      }
+      return downloadDir;
+    }
+
+    return getApplicationDocumentsDirectory();
+  }
+
+  String _buildGpxContent({
+    required String mountainName,
+    required String trailName,
+    required List<Map<String, dynamic>> points,
+    required List<Map<String, dynamic>> posts,
+  }) {
+    final nowIso = DateTime.now().toUtc().toIso8601String();
+    final buffer = StringBuffer();
+
+    buffer.writeln('<?xml version="1.0" encoding="UTF-8"?>');
+    buffer.writeln('<gpx version="1.1" creator="MyHiking" xmlns="http://www.topografix.com/GPX/1/1">');
+    buffer.writeln('  <metadata>');
+    buffer.writeln('    <name>${_escapeXml('$mountainName - $trailName')}</name>');
+    buffer.writeln('    <time>$nowIso</time>');
+    buffer.writeln('  </metadata>');
+
+    for (final post in posts) {
+      final lat = double.tryParse((post['lat'] ?? post['latitude'] ?? '').toString());
+      final lng = double.tryParse((post['lng'] ?? post['lon'] ?? post['longitude'] ?? '').toString());
+      if (lat == null || lng == null) {
+        continue;
+      }
+
+      final name = _escapeXml((post['name'] ?? 'Pos').toString());
+      final description = post['description']?.toString();
+      buffer.writeln('  <wpt lat="$lat" lon="$lng">');
+      buffer.writeln('    <name>$name</name>');
+      if (description != null && description.isNotEmpty) {
+        buffer.writeln('    <desc>${_escapeXml(description)}</desc>');
+      }
+      buffer.writeln('  </wpt>');
+    }
+
+    buffer.writeln('  <trk>');
+    buffer.writeln('    <name>${_escapeXml('$mountainName - $trailName')}</name>');
+    buffer.writeln('    <trkseg>');
+
+    for (final point in points) {
+      final lat = double.tryParse((point['lat'] ?? point['latitude'] ?? '').toString());
+      final lng = double.tryParse((point['lng'] ?? point['lon'] ?? point['longitude'] ?? '').toString());
+      if (lat == null || lng == null) {
+        continue;
+      }
+
+      final ele = point['ele'];
+      final time = point['time']?.toString();
+
+      buffer.writeln('      <trkpt lat="$lat" lon="$lng">');
+      if (ele != null) {
+        buffer.writeln('        <ele>${_escapeXml(ele.toString())}</ele>');
+      }
+      if (time != null && time.isNotEmpty) {
+        buffer.writeln('        <time>${_escapeXml(time)}</time>');
+      }
+      buffer.writeln('      </trkpt>');
+    }
+
+    buffer.writeln('    </trkseg>');
+    buffer.writeln('  </trk>');
+    buffer.writeln('</gpx>');
+
+    return buffer.toString();
+  }
+
+  Future<void> _downloadOrderedRoute() async {
+    if (_isRouteDownloadLoading) {
+      return;
+    }
+
+    setState(() {
+      _isRouteDownloadLoading = true;
+    });
+
+    try {
+      final orderResponse = await ApiService().fetchPesanan(widget.orderId);
+      final order = orderResponse['order'] as Map<String, dynamic>?;
+
+      final mountainId = int.tryParse((order?['id_gunung'] ?? '').toString());
+      final trailId = int.tryParse((order?['id_jalur'] ?? '').toString());
+
+      if (mountainId == null || trailId == null) {
+        throw Exception('Data gunung/jalur pada pesanan tidak ditemukan');
+      }
+
+      final previewResponse = await ApiService().fetchTrailPreview(
+        mountainId: mountainId,
+        trailId: trailId,
+      );
+
+      final routePreview = previewResponse['route_preview'] as Map<String, dynamic>?;
+      final pointsRaw = (routePreview?['points'] as List?) ?? const [];
+      if (pointsRaw.isEmpty) {
+        throw Exception('Preview jalur belum tersedia untuk rute ini');
+      }
+
+      final points = pointsRaw
+          .whereType<Map>()
+          .map((item) => Map<String, dynamic>.from(item))
+          .toList();
+      final posts = ((previewResponse['posts'] as List?) ?? const [])
+          .whereType<Map>()
+          .map((item) => Map<String, dynamic>.from(item))
+          .toList();
+
+      final trailName = (order?['trail']?['nama'] ?? 'jalur').toString();
+      final mountainName = (order?['mountain']?['nama'] ?? widget.mountainName).toString();
+
+      final gpxContent = _buildGpxContent(
+        mountainName: mountainName,
+        trailName: trailName,
+        points: points,
+        posts: posts,
+      );
+      final safeMountain = mountainName.replaceAll(RegExp(r'[^a-zA-Z0-9]+'), '_');
+      final safeTrail = trailName.replaceAll(RegExp(r'[^a-zA-Z0-9]+'), '_');
+      final fileName = 'jalur_${safeMountain}_${safeTrail}_${widget.orderId}.gpx';
+
+      if (kIsWeb) {
+        await downloadTextFileOnWeb(
+          fileName: fileName,
+          content: gpxContent,
+          mimeType: 'application/gpx+xml',
+        );
+
+        if (!mounted) {
+          return;
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Jalur berhasil diunduh melalui browser'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        return;
+      }
+
+      final directory = await _resolveDownloadDirectory();
+      final file = File('${directory.path}/$fileName');
+
+      await file.writeAsString(gpxContent, flush: true);
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Jalur berhasil diunduh ke: ${file.path}'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal download jalur: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isRouteDownloadLoading = false;
+        });
+      }
+    }
   }
 
   Future<Position?> _getCurrentLocation() async {
@@ -518,6 +732,37 @@ class _TicketActionScreenState extends State<TicketActionScreen> {
                     context,
                     AppRoutes.ticketScreen,
                     arguments: widget.orderId,
+                  );
+                },
+              ),
+
+              SizedBox(height: 16),
+
+              _buildActionButton(
+                icon: Icons.route,
+                title: 'Download Jalur (GPX)',
+                subtitle: 'Simpan jalur pendakian yang dipesan untuk offline',
+                color: Colors.teal,
+                isLoading: _isRouteDownloadLoading,
+                onTap: _downloadOrderedRoute,
+              ),
+
+              SizedBox(height: 16),
+
+              _buildActionButton(
+                icon: Icons.explore,
+                title: 'Tracking Offline + Kompas',
+                subtitle: 'Upload GPX, tracking GPS, dan kompas real-time',
+                color: Colors.indigo,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => OfflineTrackingScreen(
+                        orderId: widget.orderId,
+                        mountainName: widget.mountainName,
+                      ),
+                    ),
                   );
                 },
               ),

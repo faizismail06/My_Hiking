@@ -14,6 +14,7 @@ import '../../theme/custom_button_style.dart';
 import '../../widgets/custom_elevated_button.dart';
 import '../../widgets/custom_icon_button.dart';
 import '../../widgets/weather_widget.dart' show WeatherBadge;
+import '../trail_preview_screen/trail_preview_screen.dart';
 import '../rules_screen/rules_screen.dart';
 import 'bloc/trail_bloc.dart';
 import 'models/trail_screen_model.dart';
@@ -241,6 +242,10 @@ class _TrailScreenState extends State<TrailScreen> {
 
                             // Trail Actions Section
                             _buildTrailActions(context, trailModel),
+
+                            SizedBox(height: 8.h),
+
+                            _buildPreviewJalurButton(context, trailModel),
 
                             SizedBox(height: 16.h),
 
@@ -552,6 +557,40 @@ class _TrailScreenState extends State<TrailScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildPreviewJalurButton(
+      BuildContext context, TrailScreenModel trailModel) {
+    return CustomElevatedButton(
+      height: 52.h,
+      text: "Lihat Preview Jalur Lengkap",
+      leftIcon: Container(
+        margin: EdgeInsets.only(right: 12.h),
+        child: Icon(
+          Icons.route_rounded,
+          size: 22.h,
+          color: Colors.white
+        ),
+      ),
+      buttonStyle: CustomButtonStyles.outlineBlackTL14,
+      buttonTextStyle: CustomTextStyles.labelLargePrimarySemiBold.copyWith(
+        color: Colors.white,
+      ),
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TrailPreviewScreen(
+              trailName: trailModel.name,
+              routePreview: trailModel.routePreview,
+              basecampLatitude: trailModel.latitude,
+              basecampLongitude: trailModel.longitude,
+              posts: trailModel.posts,
+            ),
+          ),
+        );
+      },
     );
   }
 

@@ -11,6 +11,8 @@ class TrailScreenModel {
   final double? latitude;
   final double? longitude;
   final DssEvaluation? dss;
+  final RoutePreview? routePreview;
+  final List<TrailPost> posts;
 
   TrailScreenModel({
     required this.name,
@@ -23,10 +25,13 @@ class TrailScreenModel {
     this.latitude,
     this.longitude,
     this.dss,
+    this.routePreview,
+    this.posts = const [],
   });
 
   /// Membuat model dari ResDetailRouteCentres
-  factory TrailScreenModel.fromResDetailRouteCentres(ResDetailRouteCentres data) {
+  factory TrailScreenModel.fromResDetailRouteCentres(
+      ResDetailRouteCentres data) {
     return TrailScreenModel(
       name: data.jalur.nama,
       description: data.jalur.deskripsi ?? '',
@@ -39,6 +44,8 @@ class TrailScreenModel {
       latitude: data.jalur.latitude,
       longitude: data.jalur.longitude,
       dss: data.dss,
+      routePreview: data.jalur.routePreview,
+      posts: data.jalur.posts,
     );
   }
   String get maps => mapBasecamp;

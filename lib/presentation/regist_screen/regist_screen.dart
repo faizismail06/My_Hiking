@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:myhiking/api/api_service.dart';
+import 'dart:io';
 import 'dart:convert'; // Add this import
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/app_export.dart';
 import '../../widgets/custom_elevated_button.dart';
 import '../../widgets/custom_text_form_field.dart';
@@ -10,7 +15,9 @@ import 'package:http/http.dart' as http;
 
 
 class RegistScreen extends StatelessWidget {
-  const RegistScreen({super.key});
+  RegistScreen({super.key});
+
+  final ApiService _apiService = ApiService();
 
   static Widget builder(BuildContext context) {
     return BlocProvider<RegistBloc>(
@@ -19,7 +26,7 @@ class RegistScreen extends StatelessWidget {
           registModelObj: const RegistModel(),
         ),
       )..add(RegistInitialEvent()),
-      child: const RegistScreen(),
+      child: RegistScreen(),
     );
   }
 
@@ -70,6 +77,8 @@ class RegistScreen extends StatelessWidget {
                         _buildConfirmPasswordSection(context),
                         SizedBox(height: 44.h),
                         _buildRegisterButton(context),
+                        SizedBox(height: 12.h),
+                        _buildGoogleRegisterButton(context),
                         SizedBox(height: 8.h),
                       ],
                     ),
@@ -168,6 +177,50 @@ class RegistScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildGoogleRegisterButton(BuildContext context) {
+    return SizedBox(
+      width: double.maxFinite,
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 66.h),
+        child: OutlinedButton(
+          onPressed: () => onTapGoogleRegister(context),
+          style: OutlinedButton.styleFrom(
+            backgroundColor: Colors.white,
+            foregroundColor: const Color(0xFF1F1F1F),
+            minimumSize: Size(double.maxFinite, 44.h),
+            side: const BorderSide(color: Color(0xFF747775), width: 1),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(999.h),
+            ),
+            padding: EdgeInsets.symmetric(horizontal: 12.h, vertical: 10.h),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'G',
+                style: TextStyle(
+                  color: const Color(0xFF4285F4),
+                  fontSize: 18.fSize,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              SizedBox(width: 8.h),
+              Text(
+                'Sign up with Google',
+                style: TextStyle(
+                  color: const Color(0xFF1F1F1F),
+                  fontSize: 14.fSize,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   /// Footer section
   Widget _buildFooterSection(BuildContext context) {
     return SizedBox(
@@ -221,6 +274,87 @@ class RegistScreen extends StatelessWidget {
       // Tampilkan pesan password tidak sesuai
       print('Password tidak sesuai');
     }
+  }
+
+  Future<void> onTapGoogleRegister(BuildContext context) async {
+    if (!_isGoogleSignInSupportedPlatform()) {
+      _showErrorDialog(
+        context,
+        'Google Sign-In belum didukung di platform ini. Jalankan di Android, iOS, macOS, atau Web.',
+      );
+      return;
+    }
+
+    try {
+      final GoogleSignIn googleSignIn = GoogleSignIn(scopes: ['email']);
+      await googleSignIn.signOut();
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+
+      if (googleUser == null) {
+        return;
+      }
+
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+      final String? idToken = googleAuth.idToken;
+
+      if (idToken == null || idToken.isEmpty) {
+        _showErrorDialog(context, 'Gagal mendapatkan token Google.');
+        return;
+      }
+
+      final responseData = await _apiService.loginWithGoogle(idToken);
+      final token = responseData['token']?.toString();
+
+      if (token == null || token.isEmpty) {
+        _showErrorDialog(context, 'Token login tidak ditemukan.');
+        return;
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('token', token);
+
+      NavigatorService.pushNamed(AppRoutes.homeScreen);
+    } on SocketException {
+      _showErrorDialog(context, 'Tidak ada koneksi internet.');
+    } on MissingPluginException {
+      _showErrorDialog(
+        context,
+        'Plugin Google Sign-In belum aktif. Lakukan full restart aplikasi dan jalankan di platform yang didukung.',
+      );
+    } catch (e) {
+      _showErrorDialog(context, e.toString().replaceFirst('Exception: ', ''));
+    }
+  }
+
+  bool _isGoogleSignInSupportedPlatform() {
+    if (kIsWeb) {
+      return true;
+    }
+
+    return defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.macOS;
+  }
+
+  void _showErrorDialog(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Google Register Gagal'),
+          content: Text(message),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
   }
   
 

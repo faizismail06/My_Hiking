@@ -72,6 +72,27 @@ class ApiService {
     return prefs.getString('token');
   }
 
+  Future<Map<String, dynamic>> loginWithGoogle(String idToken) async {
+    final url = Uri.parse('$baseUrl/auth/google');
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'id_token': idToken}),
+    );
+
+    final responseData = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      return responseData;
+    }
+
+    throw Exception(
+      responseData['message']?.toString() ??
+          'Gagal autentikasi menggunakan Google.',
+    );
+  }
+
   Future<Map<String, dynamic>> getUser(String token) async {
     final url = Uri.parse('$baseUrl/user');
     final response = await http.get(
@@ -366,6 +387,23 @@ class ApiService {
     } else {
       throw Exception('Failed to load pesanan');
     }
+  }
+
+  Future<Map<String, dynamic>> fetchTrailPreview({
+    required int mountainId,
+    required int trailId,
+  }) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/mountains/$mountainId/trails/$trailId/preview'),
+    );
+
+    if (response.statusCode == 200) {
+      return json.decode(response.body) as Map<String, dynamic>;
+    }
+
+    throw Exception(
+      'Gagal mengambil preview jalur. Kode status: ${response.statusCode}',
+    );
   }
 
   Future<ResUser> updateUserProfile({
@@ -937,12 +975,17 @@ class ApiService {
   }) async {
     try {
       final url = Uri.parse('$chatbotBaseUrl/chat');
+      final authToken = await getToken();
 
       Map<String, dynamic> body = {
         'message': message,
         'history': history ?? [],
         'role': role,
       };
+
+      if (authToken != null && authToken.isNotEmpty) {
+        body['auth_token'] = authToken;
+      }
 
       if (userId != null) {
         body['user_id'] = userId;
@@ -960,6 +1003,8 @@ class ApiService {
         url,
         headers: {
           'Content-Type': 'application/json',
+          if (authToken != null && authToken.isNotEmpty)
+            'Authorization': 'Bearer $authToken',
         },
         body: jsonEncode(body),
       );
@@ -970,6 +1015,8 @@ class ApiService {
         return {
           'success': responseData['success'] ?? true,
           'message': responseData['message'] ?? 'Tidak ada respons',
+          'code': responseData['code'],
+          'next_step': responseData['next_step'],
           'download_url': responseData['download_url'],
           'payment_url': responseData['payment_url'],
           'transaction_id': responseData['transaction_id'],
