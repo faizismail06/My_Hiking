@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'bloc/midtrans_payment_cubit.dart';
+import 'bloc/midtrans_payment_state.dart';
 import '../../api/api_service.dart';
 import '../../core/app_export.dart';
 import '../../widgets/app_bar/appbar_subtitle.dart';
@@ -25,12 +27,10 @@ class MidtransPaymentScreen extends StatefulWidget {
 
 class _MidtransPaymentScreenState extends State<MidtransPaymentScreen> {
   WebViewController? _controller;
-  bool _isLoading = true;
-  bool _hasError = false;
-  String _errorMessage = '';
-  String? _paymentUrl;
-  bool _isWebPlatform = kIsWeb;
-  bool _paymentOpenedInBrowser = false;
+  final MidtransPaymentCubit _cubit = MidtransPaymentCubit();
+  final bool _isWebPlatform = kIsWeb;
+
+  MidtransPaymentState get _state => _cubit.state;
 
   @override
   void initState() {
@@ -38,14 +38,18 @@ class _MidtransPaymentScreenState extends State<MidtransPaymentScreen> {
     _initPayment();
   }
 
+  @override
+  void dispose() {
+    _cubit.close();
+    super.dispose();
+  }
+
   Future<void> _initPayment() async {
     try {
       if (widget.redirectUrl != null && widget.redirectUrl!.isNotEmpty) {
         // Already have redirect URL from previous screen
-        setState(() {
-          _paymentUrl = widget.redirectUrl;
-          _isLoading = false;
-        });
+        _cubit.setPaymentUrl(widget.redirectUrl);
+        _cubit.setLoading(false);
 
         // For web platform, open in browser
         if (_isWebPlatform) {
@@ -59,10 +63,8 @@ class _MidtransPaymentScreenState extends State<MidtransPaymentScreen> {
             await ApiService().createMidtransPayment(widget.transactionId);
 
         if (result['success'] == true && result['redirect_url'] != null) {
-          setState(() {
-            _paymentUrl = result['redirect_url'];
-            _isLoading = false;
-          });
+          _cubit.setPaymentUrl(result['redirect_url']);
+          _cubit.setLoading(false);
 
           // For web platform, open in browser
           if (_isWebPlatform) {
@@ -71,48 +73,32 @@ class _MidtransPaymentScreenState extends State<MidtransPaymentScreen> {
             _initWebView();
           }
         } else {
-          setState(() {
-            _hasError = true;
-            _errorMessage = result['message'] ?? 'Gagal membuat pembayaran';
-            _isLoading = false;
-          });
+          _cubit.setError(result['message'] ?? 'Gagal membuat pembayaran');
         }
       }
     } catch (e) {
-      setState(() {
-        _hasError = true;
-        _errorMessage = 'Terjadi kesalahan: $e';
-        _isLoading = false;
-      });
+      _cubit.setError('Terjadi kesalahan: $e');
     }
   }
 
   Future<void> _openPaymentInBrowser() async {
-    if (_paymentUrl == null) return;
+    if (_state.paymentUrl == null) return;
 
     try {
-      final uri = Uri.parse(_paymentUrl!);
+      final uri = Uri.parse(_state.paymentUrl!);
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
-        setState(() {
-          _paymentOpenedInBrowser = true;
-        });
+        _cubit.setPaymentOpenedInBrowser(true);
       } else {
-        setState(() {
-          _hasError = true;
-          _errorMessage = 'Tidak dapat membuka halaman pembayaran';
-        });
+        _cubit.setError('Tidak dapat membuka halaman pembayaran');
       }
     } catch (e) {
-      setState(() {
-        _hasError = true;
-        _errorMessage = 'Gagal membuka browser: $e';
-      });
+      _cubit.setError('Gagal membuka browser: $e');
     }
   }
 
   void _initWebView() {
-    if (_paymentUrl == null) return;
+    if (_state.paymentUrl == null) return;
 
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
@@ -120,14 +106,10 @@ class _MidtransPaymentScreenState extends State<MidtransPaymentScreen> {
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageStarted: (String url) {
-            setState(() {
-              _isLoading = true;
-            });
+            _cubit.setLoading(true);
           },
           onPageFinished: (String url) {
-            setState(() {
-              _isLoading = false;
-            });
+            _cubit.setLoading(false);
           },
           onWebResourceError: (WebResourceError error) {
             print('WebView Error: ${error.description}');
@@ -172,7 +154,7 @@ class _MidtransPaymentScreenState extends State<MidtransPaymentScreen> {
           },
         ),
       )
-      ..loadRequest(Uri.parse(_paymentUrl!));
+        ..loadRequest(Uri.parse(_state.paymentUrl!));
   }
 
   Future<void> _handlePaymentCallback(String url) async {
@@ -329,10 +311,17 @@ class _MidtransPaymentScreenState extends State<MidtransPaymentScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Scaffold(
-        appBar: _buildAppBar(context),
-        body: _buildBody(),
+    return BlocProvider.value(
+      value: _cubit,
+      child: BlocBuilder<MidtransPaymentCubit, MidtransPaymentState>(
+        builder: (context, state) {
+          return SafeArea(
+            child: Scaffold(
+              appBar: _buildAppBar(context),
+              body: _buildBody(state),
+            ),
+          );
+        },
       ),
     );
   }
@@ -397,12 +386,12 @@ class _MidtransPaymentScreenState extends State<MidtransPaymentScreen> {
     );
   }
 
-  Widget _buildBody() {
-    if (_hasError) {
+  Widget _buildBody(MidtransPaymentState state) {
+    if (state.hasError) {
       return _buildErrorState();
     }
 
-    if (_isLoading && _paymentUrl == null) {
+    if (state.isLoading && state.paymentUrl == null) {
       return _buildLoadingState();
     }
 
@@ -413,9 +402,9 @@ class _MidtransPaymentScreenState extends State<MidtransPaymentScreen> {
 
     return Stack(
       children: [
-        if (_paymentUrl != null && _controller != null)
+        if (state.paymentUrl != null && _controller != null)
           WebViewWidget(controller: _controller!),
-        if (_isLoading)
+        if (state.isLoading)
           Container(
             color: Colors.white.withOpacity(0.8),
             child: Center(
@@ -448,13 +437,15 @@ class _MidtransPaymentScreenState extends State<MidtransPaymentScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              _paymentOpenedInBrowser ? Icons.open_in_browser : Icons.payment,
+              _state.paymentOpenedInBrowser
+                  ? Icons.open_in_browser
+                  : Icons.payment,
               size: 80,
               color: theme.colorScheme.primary,
             ),
             SizedBox(height: 24),
             Text(
-              _paymentOpenedInBrowser
+              _state.paymentOpenedInBrowser
                   ? 'Pembayaran Dibuka di Browser'
                   : 'Siap untuk Pembayaran',
               style: TextStyle(
@@ -464,18 +455,18 @@ class _MidtransPaymentScreenState extends State<MidtransPaymentScreen> {
             ),
             SizedBox(height: 16),
             Text(
-              _paymentOpenedInBrowser
+              _state.paymentOpenedInBrowser
                   ? 'Halaman pembayaran telah dibuka di tab/window baru. '
                       'Silakan selesaikan pembayaran di sana.'
                   : 'Klik tombol di bawah untuk membuka halaman pembayaran.',
-              textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.grey[600],
               ),
+              textAlign: TextAlign.center,
             ),
             SizedBox(height: 32),
-            if (!_paymentOpenedInBrowser)
+            if (!_state.paymentOpenedInBrowser)
               ElevatedButton.icon(
                 icon: Icon(Icons.open_in_browser, color: Colors.white),
                 label: Text(
@@ -488,7 +479,7 @@ class _MidtransPaymentScreenState extends State<MidtransPaymentScreen> {
                 ),
                 onPressed: _openPaymentInBrowser,
               ),
-            if (_paymentOpenedInBrowser) ...[
+            if (_state.paymentOpenedInBrowser) ...[
               Container(
                 padding: EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -620,7 +611,7 @@ class _MidtransPaymentScreenState extends State<MidtransPaymentScreen> {
             ),
             SizedBox(height: 12),
             Text(
-              _errorMessage,
+              _state.errorMessage,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
@@ -641,10 +632,8 @@ class _MidtransPaymentScreenState extends State<MidtransPaymentScreen> {
                     backgroundColor: theme.colorScheme.primary,
                   ),
                   onPressed: () {
-                    setState(() {
-                      _hasError = false;
-                      _isLoading = true;
-                    });
+                    _cubit.clearError();
+                    _cubit.setLoading(true);
                     _initPayment();
                   },
                   child: Text(

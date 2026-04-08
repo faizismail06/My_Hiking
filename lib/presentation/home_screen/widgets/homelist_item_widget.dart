@@ -126,7 +126,7 @@ class HomelistItemWidget extends StatelessWidget {
               Padding(
                 padding: EdgeInsets.only(left: 4.h, right: 4.h),
                 child: Text(
-                  'Risk: ${recommendation.riskLevel.toUpperCase()} | Skor: ${recommendation.finalScore.toStringAsFixed(2)}',
+                  'Risk: ${recommendation.riskLevel.toUpperCase()}',
                   style: CustomTextStyles.bodySmallGray800,
                 ),
               ),

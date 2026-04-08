@@ -99,6 +99,19 @@ class LoginScreen extends StatelessWidget {
                       ),
                     ),
                   ),
+                  SizedBox(height: 10.h),
+                  _buildGoogleButton(context),
+                  SizedBox(height: 10.h),
+                  Row(
+                    children: [
+                      Expanded(child: Divider()),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 10.h),
+                        child: Text("OR"),
+                      ),
+                      Expanded(child: Divider()),
+                    ],
+                  ),       
                   _buildEmailInputSection(context),
                   SizedBox(height: 10.h),
                   Align(
@@ -116,7 +129,7 @@ class LoginScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  SizedBox(height: 40.h),
+                  SizedBox(height: 20.h),
                   CustomElevatedButton(
                     text: "lbl_masuk".tr,
                     margin: EdgeInsets.symmetric(horizontal: 66.h),
@@ -125,14 +138,56 @@ class LoginScreen extends StatelessWidget {
                     },
                   ),
                   SizedBox(height: 12.h),
-                  _buildGoogleButton(context),
-                  SizedBox(height: 102.h),
                 ],
               ),
             ),
           ),
         ),
         bottomNavigationBar: _buildRegistrationPrompt(context),
+      ),
+    );
+  }
+
+  Widget _buildGoogleButton(BuildContext context) {
+    return SizedBox(
+      width: double.maxFinite,
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 66.h),
+        child: OutlinedButton(
+          onPressed: () => onTapGoogleSignIn(context),
+          style: OutlinedButton.styleFrom(
+            backgroundColor: Colors.white,
+            foregroundColor: const Color(0xFF1F1F1F),
+            minimumSize: Size(double.maxFinite, 44.h),
+            side: const BorderSide(color: Color(0xFF747775), width: 1),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(999.h),
+            ),
+            padding: EdgeInsets.symmetric(horizontal: 12.h, vertical: 10.h),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'G',
+                style: TextStyle(
+                  color: const Color(0xFF4285F4),
+                  fontSize: 18.fSize,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              SizedBox(width: 8.h),
+              Text(
+                'Sign in with Google',
+                style: TextStyle(
+                  color: const Color(0xFF1F1F1F),
+                  fontSize: 14.fSize,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -145,7 +200,7 @@ class LoginScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(height: 20.h),
+          SizedBox(height: 5.h),
           Text(
             "Email".tr,
             style: theme.textTheme.labelMedium,
@@ -255,50 +310,6 @@ class LoginScreen extends StatelessWidget {
             ),
           )
         ],
-      ),
-    );
-  }
-
-  Widget _buildGoogleButton(BuildContext context) {
-    return SizedBox(
-      width: double.maxFinite,
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 66.h),
-        child: OutlinedButton(
-          onPressed: () => onTapGoogleSignIn(context),
-          style: OutlinedButton.styleFrom(
-            backgroundColor: Colors.white,
-            foregroundColor: const Color(0xFF1F1F1F),
-            minimumSize: Size(double.maxFinite, 44.h),
-            side: const BorderSide(color: Color(0xFF747775), width: 1),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(999.h),
-            ),
-            padding: EdgeInsets.symmetric(horizontal: 12.h, vertical: 10.h),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'G',
-                style: TextStyle(
-                  color: const Color(0xFF4285F4),
-                  fontSize: 18.fSize,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              SizedBox(width: 8.h),
-              Text(
-                'Sign in with Google',
-                style: TextStyle(
-                  color: const Color(0xFF1F1F1F),
-                  fontSize: 14.fSize,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

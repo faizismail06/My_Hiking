@@ -194,11 +194,6 @@ class TrailPreviewScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  'Titik ditampilkan: ${preview.displayPoints}/${preview.totalPoints} | Sumber: ${preview.source}',
-                  style: const TextStyle(fontSize: 12, color: Colors.black87),
-                ),
               ],
             ),
           ),
@@ -267,7 +262,7 @@ class TrailPreviewScreen extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(icon, color: color, size: 18),
-        const SizedBox(width: 6),
+        const SizedBox(width: 16),
         Text(label, style: const TextStyle(fontSize: 12)),
       ],
     );

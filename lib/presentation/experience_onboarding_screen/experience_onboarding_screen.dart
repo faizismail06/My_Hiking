@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:myhiking/api/api_service.dart';
+import 'package:myhiking/presentation/experience_onboarding_screen/bloc/experience_onboarding_cubit.dart';
+import 'package:myhiking/presentation/experience_onboarding_screen/bloc/experience_onboarding_state.dart';
+import '../../core/app_export.dart';
 
 class ExperienceOnboardingScreen extends StatefulWidget {
   const ExperienceOnboardingScreen({super.key});
@@ -13,13 +16,13 @@ class _ExperienceOnboardingScreenState extends State<ExperienceOnboardingScreen>
   final _formKey = GlobalKey<FormState>();
   final _jumlahPendakianController = TextEditingController();
   final _jumlahSummitController = TextEditingController();
-
-  bool _isSubmitting = false;
+  final ExperienceOnboardingCubit _cubit = ExperienceOnboardingCubit();
 
   @override
   void dispose() {
     _jumlahPendakianController.dispose();
     _jumlahSummitController.dispose();
+    _cubit.close();
     super.dispose();
   }
 
@@ -40,7 +43,7 @@ class _ExperienceOnboardingScreenState extends State<ExperienceOnboardingScreen>
       return;
     }
 
-    setState(() => _isSubmitting = true);
+    _cubit.setSubmitting(true);
 
     try {
       final response = await ApiService().submitOnboardingExperience(
@@ -86,7 +89,7 @@ class _ExperienceOnboardingScreenState extends State<ExperienceOnboardingScreen>
       _showSnack('Terjadi kesalahan saat menyimpan onboarding experience.');
     } finally {
       if (mounted) {
-        setState(() => _isSubmitting = false);
+        _cubit.setSubmitting(false);
       }
     }
   }
@@ -99,111 +102,118 @@ class _ExperienceOnboardingScreenState extends State<ExperienceOnboardingScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Onboarding Experience'),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.amber.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.amber.shade200),
-                ),
-                child: Row(
+    return BlocProvider.value(
+      value: _cubit,
+      child: BlocBuilder<ExperienceOnboardingCubit, ExperienceOnboardingState>(
+        builder: (context, state) {
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('Onboarding Experience'),
+            ),
+            body: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Form(
+                key: _formKey,
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.warning_amber_rounded, color: Colors.orange),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Isi data pengalaman pendakian untuk menentukan tier awal Anda.',
-                        style: TextStyle(color: Colors.orange.shade900),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.amber.shade200),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.warning_amber_rounded, color: Colors.orange),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Isi data pengalaman pendakian untuk menentukan tier awal Anda.',
+                              style: TextStyle(color: Colors.orange.shade900),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    TextFormField(
+                      controller: _jumlahPendakianController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Jumlah pendakian sebelumnya',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Jumlah pendakian wajib diisi.';
+                        }
+                        final parsed = int.tryParse(value.trim());
+                        if (parsed == null || parsed < 0) {
+                          return 'Isi angka valid (>= 0).';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: _jumlahSummitController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Jumlah summit',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Jumlah summit wajib diisi.';
+                        }
+                        final parsed = int.tryParse(value.trim());
+                        if (parsed == null || parsed < 0) {
+                          return 'Isi angka valid (>= 0).';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: state.isSubmitting ? null : _submit,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1B734A),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
+                        icon: state.isSubmitting
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.flag_rounded, color: Colors.white),
+                        label: Text(
+                          state.isSubmitting ? 'Menyimpan...' : 'Simpan Onboarding',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 18),
-              TextFormField(
-                controller: _jumlahPendakianController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Jumlah pendakian sebelumnya',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Jumlah pendakian wajib diisi.';
-                  }
-                  final parsed = int.tryParse(value.trim());
-                  if (parsed == null || parsed < 0) {
-                    return 'Isi angka valid (>= 0).';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 14),
-              TextFormField(
-                controller: _jumlahSummitController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Jumlah summit',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Jumlah summit wajib diisi.';
-                  }
-                  final parsed = int.tryParse(value.trim());
-                  if (parsed == null || parsed < 0) {
-                    return 'Isi angka valid (>= 0).';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _isSubmitting ? null : _submit,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1B734A), // Warna hijau tombol Anda
-                    foregroundColor: Colors.white,            // <--- INI KUNCINYA agar teks & ikon jadi PUTIH
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20), // Biar melengkung sesuai gambar
-                    ),
-                  ),
-                  icon: _isSubmitting
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white, // Loader juga harus putih
-                          ),
-                        )
-                      : const Icon(Icons.flag_rounded, color: Colors.white),
-                  label: Text(
-                    _isSubmitting ? 'Menyimpan...' : 'Simpan Onboarding',
-                    style: const TextStyle(
-                      color: Colors.white, 
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }

@@ -10,6 +10,8 @@ import '../../core/app_export.dart';
 import '../../core/utils/web_file_downloader_stub.dart'
   if (dart.library.html) '../../core/utils/web_file_downloader_web.dart';
 import '../offline_tracking_screen/offline_tracking_screen.dart';
+import 'bloc/ticket_action_cubit.dart';
+import 'bloc/ticket_action_state.dart';
 
 class TicketActionScreen extends StatefulWidget {
   final int orderId;
@@ -30,10 +32,11 @@ class TicketActionScreen extends StatefulWidget {
 }
 
 class _TicketActionScreenState extends State<TicketActionScreen> {
-  bool _isPanicLoading = false;
-  bool _isRouteDownloadLoading = false;
+  final TicketActionCubit _cubit = TicketActionCubit();
   String? _selectedEmergencyType;
   final TextEditingController _descriptionController = TextEditingController();
+
+  TicketActionState get _state => _cubit.state;
 
   final List<String> _emergencyTypes = [
     'Hipotermia',
@@ -48,6 +51,7 @@ class _TicketActionScreenState extends State<TicketActionScreen> {
   @override
   void dispose() {
     _descriptionController.dispose();
+    _cubit.close();
     super.dispose();
   }
 
@@ -150,13 +154,11 @@ class _TicketActionScreenState extends State<TicketActionScreen> {
   }
 
   Future<void> _downloadOrderedRoute() async {
-    if (_isRouteDownloadLoading) {
+    if (_state.isRouteDownloadLoading) {
       return;
     }
 
-    setState(() {
-      _isRouteDownloadLoading = true;
-    });
+    _cubit.setRouteDownloadLoading(true);
 
     try {
       final orderResponse = await ApiService().fetchPesanan(widget.orderId);
@@ -249,11 +251,7 @@ class _TicketActionScreenState extends State<TicketActionScreen> {
         ),
       );
     } finally {
-      if (mounted) {
-        setState(() {
-          _isRouteDownloadLoading = false;
-        });
-      }
+      if (mounted) _cubit.setRouteDownloadLoading(false);
     }
   }
 
@@ -456,17 +454,13 @@ class _TicketActionScreenState extends State<TicketActionScreen> {
   }
 
   Future<void> _sendPanicRequest() async {
-    setState(() {
-      _isPanicLoading = true;
-    });
+    _cubit.setPanicLoading(true);
 
     try {
       // Get current location
       final position = await _getCurrentLocation();
       if (position == null) {
-        setState(() {
-          _isPanicLoading = false;
-        });
+        _cubit.setPanicLoading(false);
         return;
       }
 
@@ -479,9 +473,7 @@ class _TicketActionScreenState extends State<TicketActionScreen> {
             backgroundColor: Colors.red,
           ),
         );
-        setState(() {
-          _isPanicLoading = false;
-        });
+        _cubit.setPanicLoading(false);
         return;
       }
 
@@ -493,9 +485,7 @@ class _TicketActionScreenState extends State<TicketActionScreen> {
             backgroundColor: Colors.red,
           ),
         );
-        setState(() {
-          _isPanicLoading = false;
-        });
+        _cubit.setPanicLoading(false);
         return;
       }
 
@@ -531,9 +521,7 @@ class _TicketActionScreenState extends State<TicketActionScreen> {
         ),
       );
     } finally {
-      setState(() {
-        _isPanicLoading = false;
-      });
+      _cubit.setPanicLoading(false);
       _selectedEmergencyType = null;
       _descriptionController.clear();
     }
@@ -595,10 +583,14 @@ class _TicketActionScreenState extends State<TicketActionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Scaffold(
-        backgroundColor: appTheme.gray50,
-        appBar: AppBar(
+    return BlocProvider.value(
+      value: _cubit,
+      child: BlocBuilder<TicketActionCubit, TicketActionState>(
+        builder: (context, state) {
+          return SafeArea(
+            child: Scaffold(
+              backgroundColor: appTheme.gray50,
+              appBar: AppBar(
           backgroundColor: theme.colorScheme.primary,
           leading: IconButton(
             icon: Icon(Icons.arrow_back, color: Colors.white),
@@ -743,7 +735,7 @@ class _TicketActionScreenState extends State<TicketActionScreen> {
                 title: 'Download Jalur (GPX)',
                 subtitle: 'Simpan jalur pendakian yang dipesan untuk offline',
                 color: Colors.teal,
-                isLoading: _isRouteDownloadLoading,
+                isLoading: state.isRouteDownloadLoading,
                 onTap: _downloadOrderedRoute,
               ),
 
@@ -776,7 +768,7 @@ class _TicketActionScreenState extends State<TicketActionScreen> {
                   title: 'PANIC / SOS',
                   subtitle: 'Kirim permintaan bantuan darurat',
                   color: Colors.red,
-                  isLoading: _isPanicLoading,
+                  isLoading: state.isPanicLoading,
                   onTap: _showPanicDialog,
                 ),
                 SizedBox(height: 20),
@@ -832,6 +824,9 @@ class _TicketActionScreenState extends State<TicketActionScreen> {
             ],
           ),
         ),
+            ),
+          );
+        },
       ),
     );
   }

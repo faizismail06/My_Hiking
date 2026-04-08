@@ -3,34 +3,9 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../api/api_service.dart';
 import '../../core/app_export.dart';
 import '../midtrans_payment_screen/midtrans_payment_screen.dart';
-
-/// Model untuk pesan chat
-class ChatMessage {
-  final String message;
-  final bool isUser;
-  final DateTime timestamp;
-  final String? downloadUrl;
-  final String? paymentUrl;
-  final int? orderId;
-  final int? transactionId;
-
-  ChatMessage({
-    required this.message,
-    required this.isUser,
-    DateTime? timestamp,
-    this.downloadUrl,
-    this.paymentUrl,
-    this.orderId,
-    this.transactionId,
-  }) : timestamp = timestamp ?? DateTime.now();
-
-  Map<String, dynamic> toJson() => {
-        'message': message,
-        'isUser': isUser,
-        if (orderId != null) 'order_id': orderId,
-        if (transactionId != null) 'transaction_id': transactionId,
-      };
-}
+import 'bloc/chatbot_cubit.dart';
+import 'bloc/chatbot_state.dart';
+import 'models/chat_message.dart';
 
 /// Chatbot Screen - UI modern untuk chatbot pendakian gunung
 /// Mendukung 3 role: pendaki, admin, penjaga
@@ -58,21 +33,24 @@ class ChatbotScreen extends StatefulWidget {
 class _ChatbotScreenState extends State<ChatbotScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  final List<ChatMessage> _messages = [];
+  final ChatbotCubit _cubit = ChatbotCubit();
   final ApiService _apiService = ApiService();
-  bool _isLoading = false;
-  bool _isServerConnected = false;
-  int? _userId;
-  int? _currentHistoryId;
-  List<Map<String, dynamic>> _chatHistories = [];
-  List<Map<String, dynamic>> _friends = [];
-  final Set<int> _selectedMemberIds = <int>{};
-  final Map<int, String> _selectedMemberNames = <int, String>{};
+
+  ChatbotState get _state => _cubit.state;
+  List<ChatMessage> get _messages => _state.messages;
+  bool get _isLoading => _state.isLoading;
+  bool get _isServerConnected => _state.isServerConnected;
+  int? get _userId => _state.userId;
+  int? get _currentHistoryId => _state.currentHistoryId;
+  List<Map<String, dynamic>> get _chatHistories => _state.chatHistories;
+  List<Map<String, dynamic>> get _friends => _state.friends;
+  Set<int> get _selectedMemberIds => _state.selectedMemberIds;
+  Map<int, String> get _selectedMemberNames => _state.selectedMemberNames;
 
   @override
   void initState() {
     super.initState();
-    _userId = widget.userId;
+    _cubit.setUserId(widget.userId);
     _checkServerConnection();
     _loadUserIdIfNeeded();
     _addWelcomeMessage();
@@ -83,6 +61,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     _autoSaveHistory();
     _messageController.dispose();
     _scrollController.dispose();
+    _cubit.close();
     super.dispose();
   }
 
@@ -98,9 +77,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       if (token != null) {
         final response = await _apiService.getUserProfile(token);
         if (response['success']) {
-          setState(() {
-            _userId = response['data']['id'];
-          });
+          _cubit.setUserId(response['data']['id']);
           await _loadFriends();
           _loadChatHistories();
         }
@@ -115,9 +92,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     try {
       final result = await _apiService.getFriends(_userId!);
       if (result['success'] == true && result['data'] is List) {
-        setState(() {
-          _friends = List<Map<String, dynamic>>.from(result['data']);
-        });
+        _cubit.setFriends(List<Map<String, dynamic>>.from(result['data']));
       }
     } catch (e) {
       print('Error loading friends: $e');
@@ -133,9 +108,8 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         role: widget.role,
       );
       if (result['success'] == true && result['data'] != null) {
-        setState(() {
-          _chatHistories = List<Map<String, dynamic>>.from(result['data']);
-        });
+        _cubit
+            .setChatHistories(List<Map<String, dynamic>>.from(result['data']));
       }
     } catch (e) {
       print('Error loading chat histories: $e');
@@ -148,16 +122,15 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       final result = await _apiService.getChatHistory(historyId);
       if (result['success'] == true && result['data'] != null) {
         final messages = result['data']['messages'] as List;
-        setState(() {
-          _messages.clear();
-          _currentHistoryId = historyId;
-          for (var msg in messages) {
-            _messages.add(ChatMessage(
-              message: msg['message'] ?? '',
-              isUser: msg['isUser'] ?? false,
-            ));
-          }
-        });
+        final rebuiltMessages = <ChatMessage>[];
+        for (var msg in messages) {
+          rebuiltMessages.add(ChatMessage(
+            message: msg['message'] ?? '',
+            isUser: msg['isUser'] ?? false,
+          ));
+        }
+        _cubit.setCurrentHistoryId(historyId);
+        _cubit.replaceMessages(rebuiltMessages);
         _scrollToBottom();
       }
     } catch (e) {
@@ -185,9 +158,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       if (result['success'] == true && result['history_id'] != null) {
         final historyId = result['history_id'];
         if (historyId is int && _currentHistoryId != historyId) {
-          setState(() {
-            _currentHistoryId = historyId;
-          });
+          _cubit.setCurrentHistoryId(historyId);
         }
       }
     } catch (e) {
@@ -201,11 +172,9 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       await _apiService.deleteChatHistory(historyId, userId: _userId);
       _loadChatHistories();
       if (_currentHistoryId == historyId) {
-        setState(() {
-          _currentHistoryId = null;
-          _messages.clear();
-          _addWelcomeMessage();
-        });
+        _cubit.setCurrentHistoryId(null);
+        _cubit.clearMessages();
+        _addWelcomeMessage();
       }
     } catch (e) {
       print('Error deleting history: $e');
@@ -215,20 +184,16 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   /// Mulai chat baru
   void _startNewChat() {
     _autoSaveHistory();
-    setState(() {
-      _currentHistoryId = null;
-      _messages.clear();
-      _addWelcomeMessage();
-    });
+    _cubit.setCurrentHistoryId(null);
+    _cubit.clearMessages();
+    _addWelcomeMessage();
     Navigator.pop(context); // Close drawer
   }
 
   /// Cek koneksi ke server chatbot
   Future<void> _checkServerConnection() async {
     final isHealthy = await _apiService.isChatbotServerHealthy();
-    setState(() {
-      _isServerConnected = isHealthy;
-    });
+    _cubit.setServerConnected(isHealthy);
   }
 
   /// Info role untuk judul
@@ -303,7 +268,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
             'Silakan tanya apa saja!';
     }
 
-    _messages.add(ChatMessage(
+    _cubit.addMessage(ChatMessage(
       message: welcomeMsg,
       isUser: false,
     ));
@@ -330,11 +295,9 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       }
     }
 
-    setState(() {
-      _messages.add(ChatMessage(message: message, isUser: true));
-      _messageController.clear();
-      _isLoading = true;
-    });
+    _cubit.addMessage(ChatMessage(message: message, isUser: true));
+    _messageController.clear();
+    _cubit.setLoading(true);
 
     _scrollToBottom();
 
@@ -357,29 +320,27 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       selectedMemberNames: _selectedMemberNames.values.toList(),
     );
 
-    setState(() {
-      _isLoading = false;
-      if (response['success']) {
-        _messages.add(ChatMessage(
-          message: response['message'],
-          isUser: false,
-          downloadUrl: response['download_url'],
-          paymentUrl: response['payment_url'],
-          orderId: response['order_id'] is int
-              ? response['order_id']
-              : int.tryParse(response['order_id']?.toString() ?? ''),
-          transactionId: response['transaction_id'] is int
-              ? response['transaction_id']
-              : int.tryParse(response['transaction_id']?.toString() ?? ''),
-        ));
-      } else {
-        _messages.add(ChatMessage(
-          message: response['message'] ??
-              'Maaf, terjadi kesalahan. Silakan coba lagi.',
-          isUser: false,
-        ));
-      }
-    });
+    _cubit.setLoading(false);
+    if (response['success']) {
+      _cubit.addMessage(ChatMessage(
+        message: response['message'],
+        isUser: false,
+        downloadUrl: response['download_url'],
+        paymentUrl: response['payment_url'],
+        orderId: response['order_id'] is int
+            ? response['order_id']
+            : int.tryParse(response['order_id']?.toString() ?? ''),
+        transactionId: response['transaction_id'] is int
+            ? response['transaction_id']
+            : int.tryParse(response['transaction_id']?.toString() ?? ''),
+      ));
+    } else {
+      _cubit.addMessage(ChatMessage(
+        message: response['message'] ??
+            'Maaf, terjadi kesalahan. Silakan coba lagi.',
+        isUser: false,
+      ));
+    }
 
     _scrollToBottom();
 
@@ -389,10 +350,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
     // Setelah booking jadi, reset pilihan anggota agar tidak kebawa ke booking berikutnya.
     if (response['order_id'] != null) {
-      setState(() {
-        _selectedMemberIds.clear();
-        _selectedMemberNames.clear();
-      });
+      _cubit.clearSelectedMembers();
     }
   }
 
@@ -631,14 +589,10 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       onPressed: () {
-                        setState(() {
-                          _selectedMemberIds
-                            ..clear()
-                            ..addAll(tempSelectedIds);
-                          _selectedMemberNames
-                            ..clear()
-                            ..addAll(tempSelectedNames);
-                        });
+                        _cubit.setSelectedMembers(
+                          ids: tempSelectedIds,
+                          names: tempSelectedNames,
+                        );
                         Navigator.pop(context);
                       },
                       icon: const Icon(Icons.check, color: Colors.white),
@@ -711,12 +665,10 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           gatewayMessage: result['message']?.toString(),
         );
 
-        setState(() {
-          _messages.add(ChatMessage(
-            message: statusMsg,
-            isUser: false,
-          ));
-        });
+        _cubit.addMessage(ChatMessage(
+          message: statusMsg,
+          isUser: false,
+        ));
         _scrollToBottom();
       }
     }
@@ -1154,10 +1106,14 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: theme.colorScheme.onPrimary,
-      drawer: _buildHistoryDrawer(),
-      appBar: AppBar(
+    return BlocProvider.value(
+      value: _cubit,
+      child: BlocBuilder<ChatbotCubit, ChatbotState>(
+        builder: (context, state) {
+          return Scaffold(
+            backgroundColor: theme.colorScheme.onPrimary,
+            drawer: _buildHistoryDrawer(),
+            appBar: AppBar(
         backgroundColor: _rolePrimaryColor,
         elevation: 0,
         leading: IconButton(
@@ -1260,7 +1216,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           ),
         ],
       ),
-      body: Column(
+            body: Column(
         children: [
           // Header gradient
           Container(
@@ -1434,16 +1390,16 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                   return Chip(
                     label: Text('$name (#$id)'),
                     onDeleted: () {
-                      setState(() {
-                        _selectedMemberIds.remove(id);
-                        _selectedMemberNames.remove(id);
-                      });
+                      _cubit.removeSelectedMember(id);
                     },
                   );
                 }).toList(),
               ),
             ),
         ],
+            ),
+          );
+        },
       ),
     );
   }
