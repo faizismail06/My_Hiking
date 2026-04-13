@@ -17,7 +17,8 @@ class AppbarTitle extends StatelessWidget {
         child: Text(
           text,
           style: CustomTextStyles.titleMediumManrope.copyWith(
-            color: theme.colorScheme.primary,
+            color: appTheme.green600,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ),

@@ -33,8 +33,7 @@ class TiketSayaBloc extends Bloc<TiketSayaEvent, TiketSayaState> {
 
       // Split orders into active and completed
       final activeTickets = allOrders
-          .where((o) =>
-              o.status != 'Selesai')
+          .where((o) => o.status != 'Selesai' && o.status != 'Dibatalkan')
           .toList();
 
       final completedHikes = allOrders

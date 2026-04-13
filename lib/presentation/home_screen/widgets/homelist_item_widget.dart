@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:ui' as ui; // Tambahan untuk efek blur glassmorphism
 import 'package:myhiking/api/api_service.dart';
 import 'package:myhiking/presentation/detail_mountain_screen/bloc/detail_mountain_bloc.dart';
 import 'package:myhiking/presentation/detail_mountain_screen/detail_mountain_screen.dart';
@@ -18,202 +19,193 @@ class HomelistItemWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
-    String imageUrl = (homelistItemModelObj.gambar ??
-        ''); // Menggabungkan base URL dengan nama gambar
-
-
+    String imageUrl = (homelistItemModelObj.gambar ?? '');
 
     final recommendation = homelistItemModelObj.dss;
 
-    return Card(
-      color: isRecommended ? const Color(0xFFF2FBF7) : Colors.grey[100],
-      elevation: isRecommended ? 3 : 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(
-          color: isRecommended
-              ? const Color(0xFF1B8A5A).withOpacity(0.35)
-              : Colors.transparent,
-          width: 1.2,
-        ),
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24.h),
+        color: Colors.white,
+        border: Border.all(color: Colors.grey.withOpacity(0.1), width: 1), // Micro-border
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04), // Shadow lebih lembut
+            blurRadius: 24.h,
+            spreadRadius: 0,
+            offset: Offset(0, 8.h), // Elevasi floating
+          ),
+        ],
       ),
-      child: Container(
-        width: double.maxFinite,
-        padding: EdgeInsets.all(10.h),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (isRecommended)
-              Container(
-                margin: EdgeInsets.only(bottom: 8.h, left: 4.h),
-                padding: EdgeInsets.symmetric(horizontal: 10.h, vertical: 4.h),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1B8A5A).withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(999.h),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.auto_awesome, color: const Color(0xFF1B8A5A), size: 14.h),
-                    SizedBox(width: 6.h),
-                    Text(
-                      'Direkomendasikan DSS',
-                      style: TextStyle(
-                        color: const Color(0xFF1B8A5A),
-                        fontSize: 11.fSize,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            SizedBox(height: 4.h),
-            SizedBox(
-              height: 172.h,
-              width: double.maxFinite,
-              child: Stack(
-                alignment: Alignment.center,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24.h),
+        child: InkWell(
+          onTap: () {
+            onTapImgGunung(context, homelistItemModelObj);
+          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Image Section
+              Stack(
                 children: [
-                  InkWell(
-                    onTap: () {
-                      onTapImgGunung(context, homelistItemModelObj);
-                    },
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
+                  Container(
+                    width: double.maxFinite,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                    ),
+                    child: AspectRatio(
+                      aspectRatio: 16 / 9,
                       child: Image.network(
                         imageUrl,
-                        height: 172.h,
-                        width: double.maxFinite,
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) {
                           return Container(
-                            height: 172.h,
-                            width: double.maxFinite,
-                            decoration: BoxDecoration(
-                              color: Colors.grey,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: const Center(
-                              child: Text('Gambar tidak tersedia'),
+                            color: Colors.grey[100],
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.image_not_supported_rounded, color: Colors.grey[400], size: 32.h),
+                                SizedBox(height: 8.h),
+                                Text('Gambar tidak tersedia', style: TextStyle(color: Colors.grey[500], fontSize: 12.fSize)),
+                              ],
                             ),
                           );
                         },
                       ),
                     ),
                   ),
+                  // Recommended Badge (Glassmorphism)
+                  if (isRecommended)
+                    Positioned(
+                      top: 16.h,
+                      right: 16.h,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12.h),
+                        child: BackdropFilter(
+                          filter: ui.ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 12.h,
+                              vertical: 6.h,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1B8A5A).withOpacity(0.85),
+                              borderRadius: BorderRadius.circular(12.h),
+                              border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.star_rounded,
+                                  color: Colors.amberAccent,
+                                  size: 16.h,
+                                ),
+                                SizedBox(width: 6.h),
+                                Text(
+                                  'Rekomendasi DSS',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11.fSize,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.3,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
-            ),
-            SizedBox(height: 14.h),
-            Padding(
-              padding: EdgeInsets.only(left: 4.h),
-              child: Text(
-                homelistItemModelObj.namaGunung!,
-                style: theme.textTheme.titleMedium,
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.only(left: 4.h),
-              child: Text(
-                homelistItemModelObj.province?.name ??
-                    'Provinsi Tidak Tersedia',
-                style: CustomTextStyles.bodyMediumGray600,
-              ),
-            ),
-            if (isRecommended && recommendation != null) ...[
-              SizedBox(height: 8.h),
+              // Content Section
               Padding(
-                padding: EdgeInsets.only(left: 4.h, right: 4.h),
-                child: Text(
-                  'Risk: ${recommendation.riskLevel.toUpperCase()}',
-                  style: CustomTextStyles.bodySmallGray800,
+                padding: EdgeInsets.all(16.h),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      homelistItemModelObj.namaGunung ?? 'Nama Tidak Tersedia',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16.fSize,
+                        letterSpacing: 0.2,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    SizedBox(height: 8.h),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.location_on_rounded,
+                          size: 16.h,
+                          color: const Color(0xFF1B8A5A).withOpacity(0.7),
+                        ),
+                        SizedBox(width: 6.h),
+                        Expanded(
+                          child: Text(
+                            homelistItemModelObj.province?.name ??
+                                'Provinsi Tidak Tersedia',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 13.fSize,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (isRecommended && recommendation != null) ...[
+                      SizedBox(height: 12.h),
+                      Row(
+                        children: [
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 10.h,
+                              vertical: 6.h,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1B8A5A).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8.h),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.analytics_rounded, size: 14.h, color: const Color(0xFF1B8A5A)),
+                                SizedBox(width: 4.h),
+                                Text(
+                                  'Risk: ${recommendation.riskLevel.toUpperCase()}',
+                                  style: TextStyle(
+                                    fontSize: 12.fSize,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF1B8A5A),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ],
-            SizedBox(height: 4.h),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-// onTapImgSlamet(BuildContext context) {
-//   NavigatorService.pushNamed(AppRoutes.detailMountainScreen);
-// }
-// Future<void> onTapImgGunung(
-//     BuildContext context, HomelistItemModel homelistItemModelObj) async {
-//   final idGunung = homelistItemModelObj.id;
-
-//   if (idGunung != null) {
-//     final token = await ApiService().getToken();
-
-//     if (token == null) {
-//       ScaffoldMessenger.of(context).showSnackBar(
-//         SnackBar(content: Text('Silahkan login terlebih dahulu')),
-//       );
-//       return;
-//     }
-
-//     try {
-//       final response = await ApiService().getUser(token);
-
-//       if (response['success']) {
-//         final userData = response['data'];
-//         final userId = userData['id'];
-
-//         if (userData['nik'] == null ||
-//             userData['phone'] == null ||
-//             userData['emergency_phone'] == null ||
-//             userData['address'] == null ||
-//             userData['nik'].toString().isEmpty ||
-//             userData['phone'].toString().isEmpty ||
-//             userData['emergency_phone'].toString().isEmpty ||
-//             userData['address'].toString().isEmpty) {
-//           showDialog(
-//             context: context,
-//             barrierDismissible: true,
-//             builder: (_) => Dialog(
-//               insetPadding: EdgeInsets.symmetric(horizontal: 40.h),
-//               shape: RoundedRectangleBorder(
-//                 borderRadius: BorderRadius.circular(14),
-//               ),
-//               child: PopUpLengkapiDataDiriDialog(
-//                 userId: userData['id'],
-//               ),
-//             ),
-//           );
-//           return;
-//         }
-//         Navigator.push(
-//           context,
-//           MaterialPageRoute(
-//             builder: (context) => BlocProvider(
-//               create: (context) => DetailMountainBloc(apiService: ApiService())
-//                 ..add(DetailMountainInitialEvent(idGunung)),
-//               child: DetailMountainScreen(idGunung: idGunung),
-//             ),
-//           ),
-//         );
-//       }
-//     } catch (e) {
-//       print('Error getting user data: $e');
-//       ScaffoldMessenger.of(context).showSnackBar(
-//         SnackBar(content: Text('Terjadi kesalahan saat mengambil data user')),
-//       );
-//     }
-//   } else {
-//     print('Mountain ID tidak ditemukan');
-//   }
-// }
-
 Future<void> onTapImgGunung(
     BuildContext context, HomelistItemModel homelistItemModelObj) async {
   final idGunung = homelistItemModelObj.id;
 
   if (idGunung != null) {
-    // Langsung pindah ke halaman Detail Mountain tanpa cek NIK, Token, dll.
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -226,7 +218,6 @@ Future<void> onTapImgGunung(
     );
   } else {
     print('Mountain ID tidak ditemukan');
-    // Opsional: beri tahu user jika ID kosong
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Data gunung tidak valid')),
     );

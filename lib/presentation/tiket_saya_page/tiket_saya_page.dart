@@ -205,7 +205,7 @@ class _TiketSayaPageState extends State<TiketSayaPage> {
     );
   }
 
-  void _handleTicketTap(TiketItemModel model, TiketSayaState state) {
+  Future<void> _handleTicketTap(TiketItemModel model, TiketSayaState state) async {
     int parsedId = int.tryParse(model.id ?? '') ?? 0;
     if (parsedId <= 0) return;
 
@@ -234,7 +234,7 @@ class _TiketSayaPageState extends State<TiketSayaPage> {
       formattedDate = model.tanggalNaik ?? '';
     }
 
-    Navigator.of(context, rootNavigator: true).pushNamed(
+    final result = await Navigator.of(context, rootNavigator: true).pushNamed(
       AppRoutes.ticketActionScreen,
       arguments: {
         'orderId': parsedId,
@@ -243,5 +243,9 @@ class _TiketSayaPageState extends State<TiketSayaPage> {
         'hikingDate': formattedDate,
       },
     );
+
+    if (result == true && mounted && userId.isNotEmpty) {
+      context.read<TiketSayaBloc>().add(TiketSayaUserIdEvent(userId));
+    }
   }
 }

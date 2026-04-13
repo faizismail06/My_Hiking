@@ -17,13 +17,17 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   HomeBloc(HomeState initialState) : super(initialState) {
     on<HomeInitialEvent>(_onInitialize);
     on<HomeSearchEvent>(_onSearch);
+    on<HomeFilterProvinceEvent>(_onFilterProvince);
   }
 
   Future<void> _onInitialize(
     HomeInitialEvent event,
     Emitter<HomeState> emit,
   ) async {
-    emit(state.copyWith(searchController: TextEditingController()));
+    emit(state.copyWith(
+      searchController: TextEditingController(),
+      isLoadingRecommended: true,
+    ));
 
     HomeFeedResult? cachedFeed;
 
@@ -45,6 +49,9 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     } catch (e) {
       if (cachedFeed == null) {
         print('Error fetching data: $e');
+        emit(state.copyWith(isLoadingRecommended: false));
+      } else {
+        emit(state.copyWith(isLoadingRecommended: false));
       }
     }
   }
@@ -64,7 +71,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       ));
     } else {
       final filteredList = state.allMountains
-          .where((item) => item.namaGunung?.toLowerCase().contains(query) ?? false)
+          .where(
+              (item) => item.namaGunung?.toLowerCase().contains(query) ?? false)
           .toList();
 
       final baseRecommended = state.baseRecommendedMountain;
@@ -81,11 +89,53 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     }
   }
 
+  Future<void> _onFilterProvince(
+    HomeFilterProvinceEvent event,
+    Emitter<HomeState> emit,
+  ) async {
+    final selectedProvince = event.province;
+
+    List<HomelistItemModel> filteredByProvince;
+    HomelistItemModel? filteredRecommended;
+
+    if (selectedProvince == null) {
+      // Show all mountains
+      filteredByProvince = state.baseAllMountains;
+      filteredRecommended = state.baseRecommendedMountain;
+    } else {
+      // Filter by province
+      filteredByProvince = state.baseAllMountains
+          .where((item) => item.province?.name == selectedProvince)
+          .toList();
+
+      // Also filter recommended if exists
+      filteredRecommended = state.baseRecommendedMountain != null &&
+              state.baseRecommendedMountain!.province?.name == selectedProvince
+          ? state.baseRecommendedMountain
+          : null;
+    }
+
+    emit(state.copyWith(
+      selectedProvince: selectedProvince,
+      recommendedMountain: filteredRecommended,
+      allMountains: filteredByProvince,
+      clearRecommendedMountain:
+          filteredRecommended == null && state.baseRecommendedMountain != null,
+      homeInitialModelObj: state.homeInitialModelObj?.copyWith(
+        homelistItemList: filteredByProvince,
+      ),
+    ));
+  }
+
   HomeFeedResult _parseHomeFeed(Map<String, dynamic> jsonData) {
-    final recommended = jsonData['recommended'] is Map<String, dynamic>
-        ? HomelistItemModel.fromJson(
-            jsonData['recommended'] as Map<String, dynamic>)
-        : null;
+    final rawRecommended = jsonData['recommended'];
+    final recommended = rawRecommended is Map<String, dynamic>
+        ? HomelistItemModel.fromJson(rawRecommended)
+        : rawRecommended is Map
+            ? HomelistItemModel.fromJson(
+                Map<String, dynamic>.from(rawRecommended),
+              )
+            : null;
     final rawMountains = jsonData['mountains'];
 
     final List<dynamic> mountainItems = rawMountains is List
@@ -108,6 +158,9 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       recommendedMountain: feed.recommended,
       baseRecommendedMountain: feed.recommended,
       allMountains: feed.mountains,
+      baseAllMountains: feed.mountains,
+      selectedProvince: null,
+      isLoadingRecommended: false,
       homeInitialModelObj: state.homeInitialModelObj?.copyWith(
         homelistItemList: feed.mountains,
       ),

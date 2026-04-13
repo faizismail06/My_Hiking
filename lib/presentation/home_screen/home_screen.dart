@@ -27,6 +27,7 @@ class HomeScreen extends StatelessWidget {
     return SafeArea(
       child: Scaffold(
         resizeToAvoidBottomInset: false,
+        backgroundColor: theme.colorScheme.onPrimary, // Pastikan background bersih
         body: Container(
           width: double.maxFinite,
           decoration: BoxDecoration(
@@ -41,7 +42,10 @@ class HomeScreen extends StatelessWidget {
                   onGenerateRoute: (routeSetting) => PageRouteBuilder(
                     pageBuilder: (ctx, ani, ani1) =>
                         getCurrentPage(context, routeSetting.name!),
-                    transitionDuration: const Duration(seconds: 0),
+                    transitionDuration: const Duration(milliseconds: 200), // Sedikit transisi agar lebih smooth
+                    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                      return FadeTransition(opacity: animation, child: child);
+                    },
                   ),
                 ),
               ),
@@ -49,7 +53,7 @@ class HomeScreen extends StatelessWidget {
             ],
           ),
         ),
-        // Floating Action Button untuk Chatbot
+        // Floating Action Button untuk Chatbot yang dimodernisasi
         floatingActionButton: _buildChatbotFAB(context),
         bottomNavigationBar: SizedBox(
           width: double.maxFinite,
@@ -59,35 +63,54 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  /// Widget untuk Chatbot FAB
+  /// Widget untuk Chatbot FAB Modern (Glowing effect)
   Widget _buildChatbotFAB(BuildContext context) {
     return Container(
       margin: EdgeInsets.only(bottom: 10.h),
-      child: FloatingActionButton(
-        onPressed: () {
-          Navigator.of(context, rootNavigator: true).pushNamed(
-            AppRoutes.chatbotScreen,
-          );
-        },
-        backgroundColor: theme.colorScheme.primary,
-        elevation: 6,
-        child: Container(
-          padding: EdgeInsets.all(12.h),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                theme.colorScheme.primary,
-                theme.colorScheme.primary.withValues(alpha: 0.8),
-              ],
+      child: Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: theme.colorScheme.primary.withOpacity(0.4),
+              blurRadius: 16.h,
+              spreadRadius: 2.h,
+              offset: Offset(0, 6.h),
             ),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            Icons.smart_toy_outlined,
-            color: Colors.white,
-            size: 28.h,
+          ],
+        ),
+        child: FloatingActionButton(
+          onPressed: () {
+            Navigator.of(context, rootNavigator: true).pushNamed(
+              AppRoutes.chatbotScreen,
+            );
+          },
+          backgroundColor: Colors.transparent, // Transparan agar gradient box terlihat
+          elevation: 0, // Matikan default elevation untuk custom shadow
+          child: Container(
+            width: double.maxFinite,
+            height: double.maxFinite,
+            padding: EdgeInsets.all(12.h),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  theme.colorScheme.primary.withOpacity(0.9),
+                  const Color(0xFF1B8A5A),
+                ],
+              ),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white.withOpacity(0.2),
+                width: 1.5,
+              ),
+            ),
+            child: Icon(
+              Icons.smart_toy_outlined,
+              color: Colors.white,
+              size: 26.h,
+            ),
           ),
         ),
       ),
@@ -107,7 +130,6 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  /// Handling route based on bottom click actions
   String getCurrentRoute(BottomBarEnum type) {
     switch (type) {
       case BottomBarEnum.Favorite:
@@ -121,7 +143,6 @@ class HomeScreen extends StatelessWidget {
     }
   }
 
-  /// Handling page based on route
   Widget getCurrentPage(BuildContext context, String currentRoute) {
     switch (currentRoute) {
       case AppRoutes.homeInitialPage:

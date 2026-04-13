@@ -8,7 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../api/api_service.dart';
 import '../../core/app_export.dart';
 import '../../core/utils/web_file_downloader_stub.dart'
-  if (dart.library.html) '../../core/utils/web_file_downloader_web.dart';
+    if (dart.library.html) '../../core/utils/web_file_downloader_web.dart';
 import '../offline_tracking_screen/offline_tracking_screen.dart';
 import 'bloc/ticket_action_cubit.dart';
 import 'bloc/ticket_action_state.dart';
@@ -99,15 +99,19 @@ class _TicketActionScreenState extends State<TicketActionScreen> {
     final buffer = StringBuffer();
 
     buffer.writeln('<?xml version="1.0" encoding="UTF-8"?>');
-    buffer.writeln('<gpx version="1.1" creator="MyHiking" xmlns="http://www.topografix.com/GPX/1/1">');
+    buffer.writeln(
+        '<gpx version="1.1" creator="MyHiking" xmlns="http://www.topografix.com/GPX/1/1">');
     buffer.writeln('  <metadata>');
-    buffer.writeln('    <name>${_escapeXml('$mountainName - $trailName')}</name>');
+    buffer.writeln(
+        '    <name>${_escapeXml('$mountainName - $trailName')}</name>');
     buffer.writeln('    <time>$nowIso</time>');
     buffer.writeln('  </metadata>');
 
     for (final post in posts) {
-      final lat = double.tryParse((post['lat'] ?? post['latitude'] ?? '').toString());
-      final lng = double.tryParse((post['lng'] ?? post['lon'] ?? post['longitude'] ?? '').toString());
+      final lat =
+          double.tryParse((post['lat'] ?? post['latitude'] ?? '').toString());
+      final lng = double.tryParse(
+          (post['lng'] ?? post['lon'] ?? post['longitude'] ?? '').toString());
       if (lat == null || lng == null) {
         continue;
       }
@@ -123,12 +127,16 @@ class _TicketActionScreenState extends State<TicketActionScreen> {
     }
 
     buffer.writeln('  <trk>');
-    buffer.writeln('    <name>${_escapeXml('$mountainName - $trailName')}</name>');
+    buffer.writeln(
+        '    <name>${_escapeXml('$mountainName - $trailName')}</name>');
     buffer.writeln('    <trkseg>');
 
     for (final point in points) {
-      final lat = double.tryParse((point['lat'] ?? point['latitude'] ?? '').toString());
-      final lng = double.tryParse((point['lng'] ?? point['lon'] ?? point['longitude'] ?? '').toString());
+      final lat =
+          double.tryParse((point['lat'] ?? point['latitude'] ?? '').toString());
+      final lng = double.tryParse(
+          (point['lng'] ?? point['lon'] ?? point['longitude'] ?? '')
+              .toString());
       if (lat == null || lng == null) {
         continue;
       }
@@ -176,7 +184,8 @@ class _TicketActionScreenState extends State<TicketActionScreen> {
         trailId: trailId,
       );
 
-      final routePreview = previewResponse['route_preview'] as Map<String, dynamic>?;
+      final routePreview =
+          previewResponse['route_preview'] as Map<String, dynamic>?;
       final pointsRaw = (routePreview?['points'] as List?) ?? const [];
       if (pointsRaw.isEmpty) {
         throw Exception('Preview jalur belum tersedia untuk rute ini');
@@ -192,7 +201,8 @@ class _TicketActionScreenState extends State<TicketActionScreen> {
           .toList();
 
       final trailName = (order?['trail']?['nama'] ?? 'jalur').toString();
-      final mountainName = (order?['mountain']?['nama'] ?? widget.mountainName).toString();
+      final mountainName =
+          (order?['mountain']?['nama'] ?? widget.mountainName).toString();
 
       final gpxContent = _buildGpxContent(
         mountainName: mountainName,
@@ -200,9 +210,11 @@ class _TicketActionScreenState extends State<TicketActionScreen> {
         points: points,
         posts: posts,
       );
-      final safeMountain = mountainName.replaceAll(RegExp(r'[^a-zA-Z0-9]+'), '_');
+      final safeMountain =
+          mountainName.replaceAll(RegExp(r'[^a-zA-Z0-9]+'), '_');
       final safeTrail = trailName.replaceAll(RegExp(r'[^a-zA-Z0-9]+'), '_');
-      final fileName = 'jalur_${safeMountain}_${safeTrail}_${widget.orderId}.gpx';
+      final fileName =
+          'jalur_${safeMountain}_${safeTrail}_${widget.orderId}.gpx';
 
       if (kIsWeb) {
         await downloadTextFileOnWeb(
@@ -255,6 +267,94 @@ class _TicketActionScreenState extends State<TicketActionScreen> {
     }
   }
 
+  bool _canCancelOrder() {
+    final status = widget.status.toLowerCase();
+    return status == 'booking' || status == 'bayar';
+  }
+
+  void _showCancelOrderDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Text('Batalkan Pesanan?'),
+        content: const Text(
+          'Pesanan yang dibatalkan tidak dapat dikembalikan. Lanjutkan pembatalan?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Tidak'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _cancelOrder();
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text(
+              'Ya, Batalkan',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _cancelOrder() async {
+    if (_state.isCancelOrderLoading) {
+      return;
+    }
+
+    _cubit.setCancelOrderLoading(true);
+
+    try {
+      final result = await ApiService().cancelOrder(widget.orderId);
+      if (!mounted) {
+        return;
+      }
+
+      if (result['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              result['message']?.toString() ?? 'Pesanan berhasil dibatalkan.',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.of(context).pop(true);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              result['message']?.toString() ?? 'Gagal membatalkan pesanan.',
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Terjadi kesalahan saat membatalkan pesanan: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        _cubit.setCancelOrderLoading(false);
+      }
+    }
+  }
+
   Future<Position?> _getCurrentLocation() async {
     bool serviceEnabled;
     LocationPermission permission;
@@ -289,7 +389,8 @@ class _TicketActionScreenState extends State<TicketActionScreen> {
     if (permission == LocationPermission.deniedForever) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Izin lokasi ditolak permanen. Mohon izinkan di pengaturan.'),
+          content: Text(
+              'Izin lokasi ditolak permanen. Mohon izinkan di pengaturan.'),
           backgroundColor: Colors.red,
         ),
       );
@@ -325,7 +426,8 @@ class _TicketActionScreenState extends State<TicketActionScreen> {
               ),
               title: Row(
                 children: [
-                  Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
+                  Icon(Icons.warning_amber_rounded,
+                      color: Colors.red, size: 28),
                   SizedBox(width: 10),
                   Text(
                     'PANIC / DARURAT',
@@ -398,7 +500,8 @@ class _TicketActionScreenState extends State<TicketActionScreen> {
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.info_outline, color: Colors.orange.shade700),
+                          Icon(Icons.info_outline,
+                              color: Colors.orange.shade700),
                           SizedBox(width: 10),
                           Expanded(
                             child: Text(
@@ -508,7 +611,8 @@ class _TicketActionScreenState extends State<TicketActionScreen> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(response['message'] ?? 'Gagal mengirim permintaan darurat'),
+            content: Text(
+                response['message'] ?? 'Gagal mengirim permintaan darurat'),
             backgroundColor: Colors.red,
           ),
         );
@@ -591,239 +695,252 @@ class _TicketActionScreenState extends State<TicketActionScreen> {
             child: Scaffold(
               backgroundColor: appTheme.gray50,
               appBar: AppBar(
-          backgroundColor: theme.colorScheme.primary,
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
-          ),
-          title: Text(
-            'Detail Tiket',
-            style: TextStyle(color: Colors.white),
-          ),
-          centerTitle: true,
-        ),
-        body: Padding(
-          padding: EdgeInsets.all(20.h),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Order Info Card
-              Container(
-                width: double.infinity,
+                backgroundColor: theme.colorScheme.primary,
+                leading: IconButton(
+                  icon: Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                title: Text(
+                  'Detail Tiket',
+                  style: TextStyle(color: Colors.white),
+                ),
+                centerTitle: true,
+              ),
+              body: ListView(
                 padding: EdgeInsets.all(20.h),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.1),
-                      spreadRadius: 2,
-                      blurRadius: 8,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.primary.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(
-                            Icons.terrain,
-                            color: theme.colorScheme.primary,
-                            size: 32,
-                          ),
-                        ),
-                        SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                widget.mountainName,
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              SizedBox(height: 4),
-                              Text(
-                                widget.hikingDate,
-                                style: TextStyle(
-                                  color: Colors.grey.shade600,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          ),
+                children: [
+                  // Order Info Card
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(20.h),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.1),
+                          spreadRadius: 2,
+                          blurRadius: 8,
+                          offset: Offset(0, 4),
                         ),
                       ],
                     ),
-                    SizedBox(height: 16),
-                    Divider(),
-                    SizedBox(height: 16),
-                    Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Order ID: ',
-                          style: TextStyle(color: Colors.grey.shade600),
-                        ),
-                        Text(
-                          '#${widget.orderId}',
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Text(
-                          'Status: ',
-                          style: TextStyle(color: Colors.grey.shade600),
-                        ),
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _getStatusColor(widget.status).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            widget.status,
-                            style: TextStyle(
-                              color: _getStatusColor(widget.status),
-                              fontWeight: FontWeight.w600,
-                              fontSize: 12,
+                        Row(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color:
+                                    theme.colorScheme.primary.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                Icons.terrain,
+                                color: theme.colorScheme.primary,
+                                size: 32,
+                              ),
                             ),
-                          ),
+                            SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    widget.mountainName,
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  Text(
+                                    widget.hikingDate,
+                                    style: TextStyle(
+                                      color: Colors.grey.shade600,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 16),
+                        Divider(),
+                        SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Text(
+                              'Order ID: ',
+                              style: TextStyle(color: Colors.grey.shade600),
+                            ),
+                            Text(
+                              '#${widget.orderId}',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Text(
+                              'Status: ',
+                              style: TextStyle(color: Colors.grey.shade600),
+                            ),
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _getStatusColor(widget.status)
+                                    .withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                widget.status,
+                                style: TextStyle(
+                                  color: _getStatusColor(widget.status),
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
-                ),
-              ),
-
-              SizedBox(height: 30),
-
-              // View Ticket Button
-              _buildActionButton(
-                icon: Icons.qr_code_2,
-                title: 'Lihat Tiket',
-                subtitle: 'Tampilkan QR Code untuk check-in',
-                color: theme.colorScheme.primary,
-                onTap: () {
-                  Navigator.pushNamed(
-                    context,
-                    AppRoutes.ticketScreen,
-                    arguments: widget.orderId,
-                  );
-                },
-              ),
-
-              SizedBox(height: 16),
-
-              _buildActionButton(
-                icon: Icons.route,
-                title: 'Download Jalur (GPX)',
-                subtitle: 'Simpan jalur pendakian yang dipesan untuk offline',
-                color: Colors.teal,
-                isLoading: state.isRouteDownloadLoading,
-                onTap: _downloadOrderedRoute,
-              ),
-
-              SizedBox(height: 16),
-
-              _buildActionButton(
-                icon: Icons.explore,
-                title: 'Tracking Offline + Kompas',
-                subtitle: 'Upload GPX, tracking GPS, dan kompas real-time',
-                color: Colors.indigo,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => OfflineTrackingScreen(
-                        orderId: widget.orderId,
-                        mountainName: widget.mountainName,
-                      ),
-                    ),
-                  );
-                },
-              ),
-
-              SizedBox(height: 16),
-
-              // Panic Button - Only show when status is "Sedang Mendaki"
-              if (widget.status == 'Sedang Mendaki') ...[
-                _buildActionButton(
-                  icon: Icons.sos,
-                  title: 'PANIC / SOS',
-                  subtitle: 'Kirim permintaan bantuan darurat',
-                  color: Colors.red,
-                  isLoading: state.isPanicLoading,
-                  onTap: _showPanicDialog,
-                ),
-                SizedBox(height: 20),
-                // Warning info
-                Container(
-                  padding: EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.red.shade200),
                   ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.warning_amber_rounded,
-                        color: Colors.red.shade700,
+
+                  SizedBox(height: 30),
+
+                  // View Ticket Button
+                  _buildActionButton(
+                    icon: Icons.qr_code_2,
+                    title: 'Lihat Tiket',
+                    subtitle: 'Tampilkan QR Code untuk check-in',
+                    color: theme.colorScheme.primary,
+                    onTap: () {
+                      Navigator.pushNamed(
+                        context,
+                        AppRoutes.ticketScreen,
+                        arguments: widget.orderId,
+                      );
+                    },
+                  ),
+
+                  SizedBox(height: 16),
+
+                  _buildActionButton(
+                    icon: Icons.route,
+                    title: 'Download Jalur (GPX)',
+                    subtitle:
+                        'Simpan jalur pendakian yang dipesan untuk offline',
+                    color: Colors.teal,
+                    isLoading: state.isRouteDownloadLoading,
+                    onTap: _downloadOrderedRoute,
+                  ),
+
+                  if (_canCancelOrder()) ...[
+                    SizedBox(height: 16),
+                    _buildActionButton(
+                      icon: Icons.cancel_outlined,
+                      title: 'Batalkan Pesanan',
+                      subtitle: 'Batalkan pesanan ini sebelum jadwal pendakian',
+                      color: Colors.red,
+                      isLoading: state.isCancelOrderLoading,
+                      onTap: _showCancelOrderDialog,
+                    ),
+                  ],
+
+                  SizedBox(height: 16),
+
+                  _buildActionButton(
+                    icon: Icons.explore,
+                    title: 'Tracking Offline + Kompas',
+                    subtitle: 'Upload GPX, tracking GPS, dan kompas real-time',
+                    color: Colors.indigo,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => OfflineTrackingScreen(
+                            orderId: widget.orderId,
+                            mountainName: widget.mountainName,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+
+                  SizedBox(height: 16),
+
+                  // Panic Button - Only show when status is "Sedang Mendaki"
+                  if (widget.status == 'Sedang Mendaki') ...[
+                    _buildActionButton(
+                      icon: Icons.sos,
+                      title: 'PANIC / SOS',
+                      subtitle: 'Kirim permintaan bantuan darurat',
+                      color: Colors.red,
+                      isLoading: state.isPanicLoading,
+                      onTap: _showPanicDialog,
+                    ),
+                    SizedBox(height: 20),
+                    // Warning info
+                    Container(
+                      padding: EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.red.shade200),
                       ),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Gunakan tombol PANIC hanya dalam keadaan darurat. Tim SAR akan segera dikirim ke lokasi Anda.',
-                          style: TextStyle(
-                            fontSize: 12,
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.warning_amber_rounded,
                             color: Colors.red.shade700,
                           ),
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Gunakan tombol PANIC hanya dalam keadaan darurat. Tim SAR akan segera dikirim ke lokasi Anda.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.red.shade700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  SizedBox(height: 20),
+
+                  // Google Form Button (for checkout/feedback)
+                  if (widget.status == 'Sedang Mendaki')
+                    Center(
+                      child: TextButton.icon(
+                        onPressed: () async {
+                          const url = 'https://forms.gle/24H6HALhYRYEXVLS8';
+                          final uri = Uri.parse(url);
+                          if (await canLaunchUrl(uri)) {
+                            await launchUrl(uri,
+                                mode: LaunchMode.externalApplication);
+                          }
+                        },
+                        icon: Icon(Icons.assignment_outlined),
+                        label: Text('Isi Form Feedback'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.grey.shade600,
                         ),
                       ),
-                    ],
-                  ),
-                ),
-              ],
-
-              Spacer(),
-
-              // Google Form Button (for checkout/feedback)
-              if (widget.status == 'Sedang Mendaki')
-                Center(
-                  child: TextButton.icon(
-                    onPressed: () async {
-                      const url = 'https://forms.gle/24H6HALhYRYEXVLS8';
-                      final uri = Uri.parse(url);
-                      if (await canLaunchUrl(uri)) {
-                        await launchUrl(uri, mode: LaunchMode.externalApplication);
-                      }
-                    },
-                    icon: Icon(Icons.assignment_outlined),
-                    label: Text('Isi Form Feedback'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.grey.shade600,
                     ),
-                  ),
-                ),
-            ],
-          ),
-        ),
+                ],
+              ),
             ),
           );
         },
@@ -927,6 +1044,8 @@ class _TicketActionScreenState extends State<TicketActionScreen> {
         return Colors.orange;
       case 'Selesai':
         return Colors.green;
+      case 'Dibatalkan':
+        return Colors.red;
       default:
         return Colors.grey;
     }

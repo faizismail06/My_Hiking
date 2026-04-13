@@ -67,9 +67,112 @@ class BookingDecisionResult {
 }
 
 class ApiService {
+  static const String _homeFeedCachePrefix = 'home_feed_cache_v1_';
+
   Future<String?> getToken() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     return prefs.getString('token');
+  }
+
+  Future<String?> _resolveHomeFeedCacheKey() async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) {
+      return null;
+    }
+    return '$_homeFeedCachePrefix${token.hashCode}';
+  }
+
+  Future<bool> hasHomeFeedCache() async {
+    final key = await _resolveHomeFeedCacheKey();
+    if (key == null) {
+      return false;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(key) != null;
+  }
+
+  Future<Map<String, dynamic>?> getCachedHomeFeed() async {
+    final key = await _resolveHomeFeedCacheKey();
+    if (key == null) {
+      return null;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    final cached = prefs.getString(key);
+    if (cached == null || cached.isEmpty) {
+      return null;
+    }
+
+    try {
+      final decoded = jsonDecode(cached);
+      if (decoded is Map<String, dynamic>) {
+        if (decoded['payload'] is Map<String, dynamic>) {
+          return decoded['payload'] as Map<String, dynamic>;
+        }
+        return decoded;
+      }
+
+      if (decoded is Map) {
+        final converted = Map<String, dynamic>.from(decoded);
+        if (converted['payload'] is Map) {
+          return Map<String, dynamic>.from(converted['payload'] as Map);
+        }
+        return converted;
+      }
+    } catch (_) {
+      return null;
+    }
+
+    return null;
+  }
+
+  Future<void> cacheHomeFeed(Map<String, dynamic> payload) async {
+    final key = await _resolveHomeFeedCacheKey();
+    if (key == null) {
+      return;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      key,
+      jsonEncode({
+        'cached_at': DateTime.now().toIso8601String(),
+        'payload': payload,
+      }),
+    );
+  }
+
+  Future<Map<String, dynamic>> fetchHomeFeedFromServer() async {
+    final token = await getToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/mountains/home-feed'),
+      headers: {
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Gagal memuat home feed. Status: ${response.statusCode}',
+      );
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is Map<String, dynamic>) {
+      return decoded;
+    }
+    if (decoded is Map) {
+      return Map<String, dynamic>.from(decoded);
+    }
+
+    throw Exception('Format home feed tidak valid.');
+  }
+
+  Future<Map<String, dynamic>> warmHomeFeedCache() async {
+    final payload = await fetchHomeFeedFromServer();
+    await cacheHomeFeed(payload);
+    return payload;
   }
 
   Future<Map<String, dynamic>> loginWithGoogle(String idToken) async {
@@ -386,6 +489,50 @@ class ApiService {
       return json.decode(response.body);
     } else {
       throw Exception('Failed to load pesanan');
+    }
+  }
+
+  Future<Map<String, dynamic>> cancelOrder(int orderId) async {
+    try {
+      final token = await getToken();
+      final response = await http.delete(
+        Uri.parse('$baseUrl/orders/$orderId'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      Map<String, dynamic> responseData = {};
+      try {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map<String, dynamic>) {
+          responseData = decoded;
+        } else if (decoded is Map) {
+          responseData = Map<String, dynamic>.from(decoded);
+        }
+      } catch (_) {
+        responseData = {};
+      }
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'message':
+              responseData['message']?.toString() ?? 'Pesanan berhasil dibatalkan.',
+        };
+      }
+
+      return {
+        'success': false,
+        'message': responseData['message']?.toString() ??
+            'Gagal membatalkan pesanan (status ${response.statusCode}).',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Terjadi kesalahan: $e',
+      };
     }
   }
 

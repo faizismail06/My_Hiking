@@ -90,6 +90,7 @@ flutter:
   assets:
     - assets/
     - assets/images/
+    - assets/images/siluetgunung.jpeg
     - assets/images/img_home.png
     - assets/images/img_image_156x316.png
 

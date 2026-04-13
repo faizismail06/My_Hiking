@@ -196,12 +196,14 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
       decoration: BoxDecoration(
         color: isActive ? theme.colorScheme.primary : appTheme.gray5001,
         borderRadius: BorderRadius.circular(14.h),
-        border: isActive ? null : Border.all(color: appTheme.blueGray100, width: 2.h),
+        border: isActive
+            ? null
+            : Border.all(color: appTheme.blueGray100, width: 2.h),
       ),
       child: Center(
         child: Text(
           label,
-          style: isActive 
+          style: isActive
               ? CustomTextStyles.titleMediumOnPrimary_2
               : TextStyle(color: appTheme.blueGray100),
         ),
@@ -228,7 +230,8 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
           children: [
             Row(
               children: [
-                Icon(Icons.landscape, color: theme.colorScheme.primary, size: 24),
+                Icon(Icons.landscape,
+                    color: theme.colorScheme.primary, size: 24),
                 SizedBox(width: 8),
                 Text(
                   'Ringkasan Pesanan',
@@ -341,7 +344,8 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                     padding: EdgeInsets.symmetric(vertical: 8.h),
                     child: Row(
                       children: [
-                        Icon(_getPaymentIcon(entry.key), size: 18, color: Colors.grey[600]),
+                        Icon(_getPaymentIcon(entry.key),
+                            size: 18, color: Colors.grey[600]),
                         SizedBox(width: 8),
                         Text(
                           _getTypeTitle(entry.key),
@@ -354,7 +358,8 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                       ],
                     ),
                   ),
-                  ...entry.value.map((method) => _buildPaymentMethodItem(method)),
+                  ...entry.value
+                      .map((method) => _buildPaymentMethodItem(method)),
                   SizedBox(height: 8.h),
                 ],
               );
@@ -367,7 +372,7 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
 
   Widget _buildPaymentMethodItem(Map<String, dynamic> method) {
     bool isSelected = _selectedPaymentMethod == method['id'];
-    
+
     return InkWell(
       onTap: () {
         setState(() {
@@ -383,7 +388,9 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
             width: isSelected ? 2 : 1,
           ),
           borderRadius: BorderRadius.circular(8),
-          color: isSelected ? theme.colorScheme.primary.withOpacity(0.05) : Colors.white,
+          color: isSelected
+              ? theme.colorScheme.primary.withOpacity(0.05)
+              : Colors.white,
         ),
         child: Row(
           children: [
@@ -393,7 +400,9 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isSelected ? theme.colorScheme.primary : Colors.grey[400]!,
+                  color: isSelected
+                      ? theme.colorScheme.primary
+                      : Colors.grey[400]!,
                   width: 2,
                 ),
               ),
@@ -420,7 +429,9 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
-                      color: isSelected ? theme.colorScheme.primary : Colors.black87,
+                      color: isSelected
+                          ? theme.colorScheme.primary
+                          : Colors.black87,
                     ),
                   ),
                   if (method['description'] != null)
@@ -435,7 +446,8 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
               ),
             ),
             if (isSelected)
-              Icon(Icons.check_circle, color: theme.colorScheme.primary, size: 20),
+              Icon(Icons.check_circle,
+                  color: theme.colorScheme.primary, size: 20),
           ],
         ),
       ),
@@ -443,8 +455,9 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
   }
 
   Widget _buildPaymentButton(BuildContext context) {
-    bool canPay = _selectedPaymentMethod != null && !_isProcessing && _orderData != null;
-    
+    bool canPay =
+        _selectedPaymentMethod != null && !_isProcessing && _orderData != null;
+
     return Container(
       padding: EdgeInsets.all(16.h),
       decoration: BoxDecoration(
@@ -472,25 +485,39 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                 ),
               ),
             ),
-          CustomElevatedButton(
+          SizedBox(
+            width: double.infinity,
             height: 52.h,
-            text: _isProcessing ? "MEMPROSES..." : "BAYAR SEKARANG",
-            onPressed: canPay ? () => _processPayment(context) : null,
-            buttonStyle: canPay
-                ? CustomButtonStyles.fillPrimary
-                : CustomButtonStyles.fillGray,
-            buttonTextStyle: CustomTextStyles.labelLarge13,
-            leftIcon: _isProcessing 
-                ? Container(
-                    margin: EdgeInsets.only(right: 8),
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  )
-                : Icon(Icons.payment, color: Colors.white, size: 20),
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor:
+                    canPay ? theme.colorScheme.primary : Colors.grey,
+                disabledBackgroundColor: Colors.grey,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: canPay ? () => _processPayment(context) : null,
+              icon: _isProcessing
+                  ? Container(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : Icon(Icons.payment, color: Colors.white, size: 20),
+              label: Text(
+                _isProcessing ? "MEMPROSES..." : "BAYAR SEKARANG",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Manrope',
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -499,7 +526,7 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
 
   Future<void> _processPayment(BuildContext context) async {
     if (_selectedPaymentMethod == null) return;
-    
+
     setState(() {
       _isProcessing = true;
     });
@@ -513,7 +540,8 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
 
       if (!mounted) return;
 
-      if (paymentResult['success'] == true && paymentResult['redirect_url'] != null) {
+      if (paymentResult['success'] == true &&
+          paymentResult['redirect_url'] != null) {
         // Navigate to Midtrans payment screen
         final result = await Navigator.push<Map<String, dynamic>>(
           context,
@@ -534,7 +562,8 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(paymentResult['message'] ?? 'Gagal membuat pembayaran'),
+              content:
+                  Text(paymentResult['message'] ?? 'Gagal membuat pembayaran'),
               backgroundColor: Colors.red,
             ),
           );
@@ -559,18 +588,17 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
     }
   }
 
-  void _handlePaymentResult(BuildContext context, Map<String, dynamic> result, int orderId) {
+  void _handlePaymentResult(
+      BuildContext context, Map<String, dynamic> result, int orderId) {
     final status = result['status'] ?? 'pending';
 
     if (status == 'success') {
       // Payment success - navigate to home screen and show success message
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (context) => HomeScreen.builder(context),
-        ),
-        (route) => false, // Remove all previous routes
+      Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil(
+        AppRoutes.homeScreen,
+        (route) => false,
       );
-      
+
       // Show success snackbar after navigation
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -583,13 +611,11 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
       });
     } else if (status == 'pending') {
       // Payment pending - navigate to home screen
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (context) => HomeScreen.builder(context),
-        ),
+      Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil(
+        AppRoutes.homeScreen,
         (route) => false,
       );
-      
+
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

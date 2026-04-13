@@ -353,8 +353,7 @@ class LoginScreen extends StatelessWidget {
           SharedPreferences prefs = await SharedPreferences.getInstance();
           await prefs.setString('token', responseData['token']);
 
-          // Navigate to homeScreen after successful login
-          NavigatorService.pushNamed(AppRoutes.homeScreen);
+          await _navigateToHomeWithDssWarmup(context);
         } else {
           // Jika login gagal, tampilkan pop-up error
           final errorData = jsonDecode(response.body);
@@ -438,7 +437,7 @@ class LoginScreen extends StatelessWidget {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('token', token);
 
-      NavigatorService.pushNamed(AppRoutes.homeScreen);
+      await _navigateToHomeWithDssWarmup(context);
     } on SocketException {
       _showErrorDialog(context, 'Tidak ada koneksi internet.');
     } on MissingPluginException {
@@ -459,6 +458,60 @@ class LoginScreen extends StatelessWidget {
     return defaultTargetPlatform == TargetPlatform.android ||
         defaultTargetPlatform == TargetPlatform.iOS ||
         defaultTargetPlatform == TargetPlatform.macOS;
+  }
+
+  Future<void> _navigateToHomeWithDssWarmup(BuildContext context) async {
+    bool dialogShown = false;
+
+    try {
+      final hasCache = await _apiService.hasHomeFeedCache();
+      if (!hasCache && context.mounted) {
+        dialogShown = true;
+        _showDssWarmupDialog(context);
+      }
+
+      await _apiService.warmHomeFeedCache();
+    } catch (e) {
+      debugPrint('DSS warmup error: $e');
+    } finally {
+      if (dialogShown && context.mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+    }
+
+    if (context.mounted) {
+      NavigatorService.pushNamed(AppRoutes.homeScreen);
+    }
+  }
+
+  void _showDssWarmupDialog(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return PopScope(
+          canPop: false,
+          child: AlertDialog(
+            content: Row(
+              children: [
+                const SizedBox(
+                  height: 24,
+                  width: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2.5),
+                ),
+                SizedBox(width: 14.h),
+                Expanded(
+                  child: Text(
+                    'Menyiapkan rekomendasi jalur DSS, mohon tunggu...',
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   /// Navigates to the registScreen when the action is triggered.

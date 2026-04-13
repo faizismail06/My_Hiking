@@ -12,4 +12,8 @@ class TicketActionCubit extends Cubit<TicketActionState> {
   void setRouteDownloadLoading(bool value) {
     emit(state.copyWith(isRouteDownloadLoading: value));
   }
+
+  void setCancelOrderLoading(bool value) {
+    emit(state.copyWith(isCancelOrderLoading: value));
+  }
 }

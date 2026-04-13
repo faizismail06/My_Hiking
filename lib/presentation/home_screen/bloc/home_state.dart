@@ -10,7 +10,10 @@ class HomeState extends Equatable {
     this.recommendedMountain,
     this.baseRecommendedMountain,
     this.allMountains = const [],
-    this.errorMessage, // Menambahkan errorMessage
+    this.errorMessage,
+    this.selectedProvince,
+    this.baseAllMountains = const [],
+    this.isLoadingRecommended = false,
   });
 
   TextEditingController? searchController;
@@ -19,7 +22,10 @@ class HomeState extends Equatable {
   HomelistItemModel? recommendedMountain;
   HomelistItemModel? baseRecommendedMountain;
   List<HomelistItemModel> allMountains;
-  String? errorMessage; // Field untuk menyimpan pesan error
+  List<HomelistItemModel> baseAllMountains;
+  String? errorMessage;
+  String? selectedProvince;
+  bool isLoadingRecommended;
 
   @override
   List<Object?> get props => [
@@ -29,7 +35,10 @@ class HomeState extends Equatable {
         recommendedMountain,
         baseRecommendedMountain,
         allMountains,
+        baseAllMountains,
         errorMessage,
+        selectedProvince,
+        isLoadingRecommended,
       ];
 
   HomeState copyWith({
@@ -39,9 +48,12 @@ class HomeState extends Equatable {
     HomelistItemModel? recommendedMountain,
     HomelistItemModel? baseRecommendedMountain,
     List<HomelistItemModel>? allMountains,
+    List<HomelistItemModel>? baseAllMountains,
     bool clearRecommendedMountain = false,
     bool clearBaseRecommendedMountain = false,
     String? errorMessage,
+    String? selectedProvince,
+    bool? isLoadingRecommended,
   }) {
     return HomeState(
       searchController: searchController ?? this.searchController,
@@ -54,7 +66,10 @@ class HomeState extends Equatable {
           ? null
           : (baseRecommendedMountain ?? this.baseRecommendedMountain),
       allMountains: allMountains ?? this.allMountains,
-      errorMessage: errorMessage ?? this.errorMessage, // Update copyWith
+      baseAllMountains: baseAllMountains ?? this.baseAllMountains,
+      errorMessage: errorMessage ?? this.errorMessage,
+      selectedProvince: selectedProvince ?? this.selectedProvince,
+      isLoadingRecommended: isLoadingRecommended ?? this.isLoadingRecommended,
     );
   }
 }

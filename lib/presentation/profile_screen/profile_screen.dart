@@ -97,16 +97,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return SafeArea(
             child: Scaffold(
           backgroundColor: appTheme.gray50,
-          body: Container(
-            width: double.maxFinite,
-            padding: EdgeInsets.only(top: 20.h),
-            child: Column(
-              mainAxisSize: MainAxisSize.max,
-              children: [
-                _buildProfileHeader(context),
-                SizedBox(height: 44.h),
-                _buildProfileSettings(context),
-              ],
+          body: SingleChildScrollView(
+            child: Container(
+              width: double.maxFinite,
+              padding: EdgeInsets.symmetric(horizontal: 0, vertical: 24.h),
+              child: Column(
+                mainAxisSize: MainAxisSize.max,
+                children: [
+                  _buildProfileHeader(context),
+                  SizedBox(height: 32.h),
+                  _buildProfileSettings(context),
+                  SizedBox(height: 20.h),
+                ],
+              ),
             ),
           ),
         ));
@@ -266,16 +269,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildProfileSettings(BuildContext context) {
     return Container(
       width: double.maxFinite,
-      margin: EdgeInsets.symmetric(horizontal: 24.h),
+      padding: EdgeInsets.symmetric(horizontal: 16.h),
       child: Column(
         children: [
+          // Data Profile Option
           GestureDetector(
             onTap: () => onTapProfileone(context),
             child: Container(
-              padding: EdgeInsets.all(12.h),
+              padding: EdgeInsets.symmetric(horizontal: 16.h, vertical: 16.h),
               decoration: BoxDecoration(
                 color: theme.colorScheme.onPrimary,
-                borderRadius: BorderRadiusStyle.roundedBorder14,
+                borderRadius: BorderRadius.circular(16.h),
                 border: Border.all(
                   color: theme.colorScheme.onPrimary,
                   width: 1.h,
@@ -284,49 +288,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   BoxShadow(
                     color: appTheme.blueGray40019.withOpacity(0.08),
                     spreadRadius: 2.h,
-                    blurRadius: 2.h,
+                    blurRadius: 8.h,
                     offset: const Offset(0, 4),
                   ),
                 ],
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Card(
-                    clipBehavior: Clip.antiAlias,
-                    elevation: 0,
-                    margin: EdgeInsets.only(left: 4.h, bottom: 2.h),
-                    color: appTheme.blueGray50,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadiusStyle.roundedBorder14,
-                    ),
-                    child: Container(
-                      height: 24.h,
-                      width: 24.h,
-                      decoration: BoxDecoration(
-                        color: appTheme.blueGray50,
-                        borderRadius: BorderRadiusStyle.roundedBorder14,
+                  Row(
+                    children: [
+                      Container(
+                        height: 28.h,
+                        width: 28.h,
+                        decoration: BoxDecoration(
+                          color: appTheme.blueGray50,
+                          borderRadius: BorderRadius.circular(8.h),
+                        ),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            CustomImageView(
+                              imagePath: ImageConstant.imgOutlineUsers,
+                              height: 22.h,
+                              width: double.maxFinite,
+                            ),
+                          ],
+                        ),
                       ),
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          CustomImageView(
-                            imagePath: ImageConstant.imgOutlineUsers,
-                            height: 20.h,
-                            width: double.maxFinite,
-                          ),
-                        ],
+                      SizedBox(width: 16.h),
+                      Text(
+                        "lbl_data_profile".tr,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                  Padding(
-                    padding: EdgeInsets.only(left: 14.h),
-                    child: Text(
-                      "lbl_data_profile".tr,
-                      style: theme.textTheme.bodyLarge,
-                    ),
-                  ),
-                  const Spacer(),
                   CustomImageView(
                     imagePath: ImageConstant.imgArrowRight,
                     height: 24.h,
@@ -336,110 +334,131 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
           ),
-          SizedBox(height: 10.h),
+
+          SizedBox(height: 14.h),
+
+          // Transaction Option
           GestureDetector(
             onTap: () => onTapRiwayatTransaksi(context),
             child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 10.h, vertical: 12.h),
+              padding: EdgeInsets.symmetric(horizontal: 16.h, vertical: 16.h),
               decoration: BoxDecoration(
                 color: theme.colorScheme.onPrimary,
-                borderRadius: BorderRadiusStyle.roundedBorder14,
-                border:
-                    Border.all(color: theme.colorScheme.onPrimary, width: 1.h),
+                borderRadius: BorderRadius.circular(16.h),
+                border: Border.all(
+                  color: theme.colorScheme.onPrimary,
+                  width: 1.h,
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: appTheme.blueGray40019.withOpacity(0.08),
                     spreadRadius: 2.h,
-                    blurRadius: 2.h,
+                    blurRadius: 8.h,
                     offset: const Offset(0, 4),
                   ),
                 ],
               ),
               width: double.maxFinite,
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Padding(
-                    padding: EdgeInsets.only(left: 6.h),
-                    child: CustomIconButton(
-                      height: 24.h,
-                      width: 24.h,
-                      padding: EdgeInsets.all(4.h),
-                      decoration: IconButtonStyleHelper.fillBlueGray,
-                      child: CustomImageView(
-                        imagePath: ImageConstant.imgClock,
+                  Row(
+                    children: [
+                      Container(
+                        height: 28.h,
+                        width: 28.h,
+                        decoration: BoxDecoration(
+                          color: appTheme.blueGray50,
+                          borderRadius: BorderRadius.circular(8.h),
+                        ),
+                        child: Center(
+                          child: CustomImageView(
+                            imagePath: ImageConstant.imgClock,
+                            height: 18.h,
+                            width: 18.h,
+                          ),
+                        ),
                       ),
-                    ),
+                      SizedBox(width: 16.h),
+                      Text(
+                        "Riwayat Transaksi",
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
-                  Padding(
-                    padding: EdgeInsets.only(left: 14.h),
-                    child: Text(
-                      "Riwayat Transaksi",
-                      style: theme.textTheme.bodyLarge,
-                    ),
-                  ),
-                  const Spacer(),
                   CustomImageView(
                     imagePath: ImageConstant.imgArrowRight,
                     height: 24.h,
                     width: 24.h,
-                    alignment: Alignment.bottomCenter,
                   ),
                 ],
               ),
             ),
           ),
-          SizedBox(height: 10.h),
+
+          SizedBox(height: 14.h),
+
+          // Logout Option
           GestureDetector(
-              onTap: () => onLogout(context),
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 10.h, vertical: 12.h),
-                decoration: BoxDecoration(
+            onTap: () => onLogout(context),
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 16.h, vertical: 16.h),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.onPrimary,
+                borderRadius: BorderRadius.circular(16.h),
+                border: Border.all(
                   color: theme.colorScheme.onPrimary,
-                  borderRadius: BorderRadiusStyle.roundedBorder14,
-                  border: Border.all(
-                      color: theme.colorScheme.onPrimary, width: 1.h),
-                  boxShadow: [
-                    BoxShadow(
-                      color: appTheme.blueGray40019.withOpacity(0.08),
-                      spreadRadius: 2.h,
-                      blurRadius: 2.h,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+                  width: 1.h,
                 ),
-                width: double.maxFinite,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Padding(
-                      padding: EdgeInsets.only(left: 6.h),
-                      child: CustomIconButton(
-                        height: 24.h,
-                        width: 24.h,
+                boxShadow: [
+                  BoxShadow(
+                    color: appTheme.blueGray40019.withOpacity(0.08),
+                    spreadRadius: 2.h,
+                    blurRadius: 8.h,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              width: double.maxFinite,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      CustomIconButton(
+                        height: 28.h,
+                        width: 28.h,
                         padding: EdgeInsets.all(4.h),
-                        decoration: IconButtonStyleHelper.fillBlueGray,
-                        child: Icon(Icons.logout,
-                            color: theme.colorScheme.primary, size: 18),
+                        decoration: BoxDecoration(
+                          color: appTheme.blueGray50,
+                          borderRadius: BorderRadius.circular(8.h),
+                        ),
+                        child: Icon(
+                          Icons.logout,
+                          color: theme.colorScheme.primary,
+                          size: 18,
+                        ),
                       ),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.only(left: 14.h),
-                      child: Text(
+                      SizedBox(width: 16.h),
+                      Text(
                         "Log Out".tr,
-                        style: theme.textTheme.bodyLarge,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                    const Spacer(),
-                    CustomImageView(
-                      imagePath: ImageConstant.imgArrowRight,
-                      height: 24.h,
-                      width: 24.h,
-                      alignment: Alignment.bottomCenter,
-                    ),
-                  ],
-                ),
-              ))
+                    ],
+                  ),
+                  CustomImageView(
+                    imagePath: ImageConstant.imgArrowRight,
+                    height: 24.h,
+                    width: 24.h,
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
