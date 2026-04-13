@@ -27,13 +27,20 @@ class HomelistItemWidget extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24.h),
         color: Colors.white,
-        border: Border.all(color: Colors.grey.withOpacity(0.1), width: 1), // Micro-border
+        border: Border.all(
+            color: Colors.grey.withOpacity(0.1), width: 1), // Micro-border
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04), // Shadow lebih lembut
-            blurRadius: 24.h,
-            spreadRadius: 0,
-            offset: Offset(0, 8.h), // Elevasi floating
+            color: Colors.black.withOpacity(0.09),
+            blurRadius: 28.h,
+            spreadRadius: 0.5,
+            offset: Offset(0, 10.h),
+          ),
+          BoxShadow(
+            color: const Color(0xFF1B8A5A).withOpacity(0.08),
+            blurRadius: 18.h,
+            spreadRadius: -2,
+            offset: Offset(0, 6.h),
           ),
         ],
       ),
@@ -65,9 +72,13 @@ class HomelistItemWidget extends StatelessWidget {
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.image_not_supported_rounded, color: Colors.grey[400], size: 32.h),
+                                Icon(Icons.image_not_supported_rounded,
+                                    color: Colors.grey[400], size: 32.h),
                                 SizedBox(height: 8.h),
-                                Text('Gambar tidak tersedia', style: TextStyle(color: Colors.grey[500], fontSize: 12.fSize)),
+                                Text('Gambar tidak tersedia',
+                                    style: TextStyle(
+                                        color: Colors.grey[500],
+                                        fontSize: 12.fSize)),
                               ],
                             ),
                           );
@@ -92,7 +103,9 @@ class HomelistItemWidget extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: const Color(0xFF1B8A5A).withOpacity(0.85),
                               borderRadius: BorderRadius.circular(12.h),
-                              border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+                              border: Border.all(
+                                  color: Colors.white.withOpacity(0.3),
+                                  width: 1),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -174,7 +187,8 @@ class HomelistItemWidget extends StatelessWidget {
                             ),
                             child: Row(
                               children: [
-                                Icon(Icons.analytics_rounded, size: 14.h, color: const Color(0xFF1B8A5A)),
+                                Icon(Icons.analytics_rounded,
+                                    size: 14.h, color: const Color(0xFF1B8A5A)),
                                 SizedBox(width: 4.h),
                                 Text(
                                   'Risk: ${recommendation.riskLevel.toUpperCase()}',
