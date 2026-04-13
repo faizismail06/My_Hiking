@@ -21,12 +21,16 @@ class RiwayatTransaksiBloc
   ) async {
     emit(state.copyWith(isLoading: true));
     try {
-      final completedHikes = await _fetchCompletedOrders(event.userId);
+      final allHistoryOrders = await _fetchHistoryOrders(event.userId);
+      final completedHikes = allHistoryOrders
+          .where((item) => (item.status ?? '') == 'Selesai')
+          .toList();
 
       emit(state.copyWith(
         userId: event.userId,
         isLoading: false,
         completedHikesList: completedHikes,
+        historyOrdersList: allHistoryOrders,
         errorMessage: '',
       ));
     } catch (e) {
@@ -37,7 +41,7 @@ class RiwayatTransaksiBloc
     }
   }
 
-  Future<List<TiketItemModel>> _fetchCompletedOrders(String userId) async {
+  Future<List<TiketItemModel>> _fetchHistoryOrders(String userId) async {
     final response = await http.get(Uri.parse('$baseUrl/orders'));
 
     if (response.statusCode == 200) {
@@ -46,7 +50,7 @@ class RiwayatTransaksiBloc
       final filteredData = data
           .where((item) =>
               item['id_user'].toString() == userId &&
-              item['status'] == 'Selesai')
+              (item['status'] == 'Selesai' || item['status'] == 'Expired'))
           .toList()
         ..sort((a, b) {
           final aId = int.tryParse(a['id'].toString()) ?? 0;
@@ -54,9 +58,7 @@ class RiwayatTransaksiBloc
           return bId.compareTo(aId); // newest first
         });
 
-      return filteredData
-          .map((item) => TiketItemModel.fromJson(item))
-          .toList();
+      return filteredData.map((item) => TiketItemModel.fromJson(item)).toList();
     } else {
       throw Exception('Failed to load orders');
     }
@@ -66,6 +68,9 @@ class RiwayatTransaksiBloc
     RiwayatTransaksiInitialEvent event,
     Emitter<RiwayatTransaksiState> emit,
   ) {
-    emit(state.copyWith(completedHikesList: []));
+    emit(state.copyWith(
+      completedHikesList: [],
+      historyOrdersList: [],
+    ));
   }
 }

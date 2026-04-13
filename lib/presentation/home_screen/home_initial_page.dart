@@ -10,6 +10,7 @@ import 'models/home_initial_model.dart';
 import 'models/homelist_item_model.dart';
 import 'widgets/homelist_item_widget.dart';
 import 'package:myhiking/api/api_service.dart';
+import 'quick_access_handler_page.dart';
 
 class HomeInitialPage extends StatefulWidget {
   const HomeInitialPage({super.key});
@@ -46,6 +47,17 @@ class HomeInitialPageState extends State<HomeInitialPage> {
     _getUser();
     _prepareHeroBackground();
     _scrollController.addListener(_onScroll);
+  }
+
+  Future<void> _openQuickAccess(QuickAccessAction action) async {
+    await Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(
+        builder: (context) => QuickAccessHandlerPage(
+          action: action,
+          initialUserId: userId,
+        ),
+      ),
+    );
   }
 
   void _prepareHeroBackground() {
@@ -306,12 +318,26 @@ class HomeInitialPageState extends State<HomeInitialPage> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           _buildQuickAction(
-                              Icons.local_activity_rounded, "Tiket", () {}),
-                          _buildQuickAction(Icons.map_rounded, "Maps", () {}),
-                          _buildQuickAction(null, "Darurat", () {},
-                              isAlert: true),
+                              Icons.local_activity_rounded,
+                              "Tiket",
+                              () => _openQuickAccess(QuickAccessAction.ticket)),
+                          _buildQuickAction(Icons.map_rounded, "Maps",
+                              () => _openQuickAccess(QuickAccessAction.maps)),
                           _buildQuickAction(
-                              Icons.cloud_rounded, "Cuaca", () {}),
+                            null,
+                            "SOS",
+                            () => _openQuickAccess(QuickAccessAction.sos),
+                            isAlert: true,
+                          ),
+                          _buildQuickAction(Icons.cloud_rounded, "Cuaca", () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Fitur cuaca sedang disiapkan.',
+                                ),
+                              ),
+                            );
+                          }),
                         ],
                       ),
                     ),
@@ -325,8 +351,12 @@ class HomeInitialPageState extends State<HomeInitialPage> {
     );
   }
 
-  Widget _buildQuickAction(IconData? icon, String label, VoidCallback onTap,
-      {bool isAlert = false}) {
+  Widget _buildQuickAction(
+    IconData? icon,
+    String label,
+    VoidCallback onTap, {
+    bool isAlert = false,
+  }) {
     return Material(
       color: Colors.transparent,
       child: InkWell(

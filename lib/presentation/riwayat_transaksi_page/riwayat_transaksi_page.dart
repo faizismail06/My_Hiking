@@ -12,9 +12,8 @@ class RiwayatTransaksiPage extends StatefulWidget {
 
   static Widget builder(BuildContext context) {
     return BlocProvider<RiwayatTransaksiBloc>(
-      create: (context) =>
-          RiwayatTransaksiBloc(const RiwayatTransaksiState())
-            ..add(RiwayatTransaksiInitialEvent()),
+      create: (context) => RiwayatTransaksiBloc(const RiwayatTransaksiState())
+        ..add(RiwayatTransaksiInitialEvent()),
       child: const RiwayatTransaksiPage(),
     );
   }
@@ -83,13 +82,14 @@ class _RiwayatTransaksiPageState extends State<RiwayatTransaksiPage> {
             if (state.isLoading) {
               return Center(
                 child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                      Colors.green.shade900),
+                  valueColor:
+                      AlwaysStoppedAnimation<Color>(Colors.green.shade900),
                 ),
               );
             }
 
             final completedHikes = state.completedHikesList;
+            final historyOrders = state.historyOrdersList;
 
             // Calculate unique mountains
             final uniqueMountains = completedHikes
@@ -118,11 +118,11 @@ class _RiwayatTransaksiPageState extends State<RiwayatTransaksiPage> {
                   ),
                   SizedBox(height: 20.h),
                   // Section title
-                  if (completedHikes.isNotEmpty)
+                  if (historyOrders.isNotEmpty)
                     Padding(
                       padding: EdgeInsets.only(left: 4.h, bottom: 12.h),
                       child: Text(
-                        'Pendakian Selesai',
+                        'Riwayat Pendakian',
                         style: TextStyle(
                           fontSize: 16.fSize,
                           fontWeight: FontWeight.w700,
@@ -131,13 +131,13 @@ class _RiwayatTransaksiPageState extends State<RiwayatTransaksiPage> {
                       ),
                     ),
                   // Hiking records or empty state
-                  if (completedHikes.isEmpty)
+                  if (historyOrders.isEmpty)
                     _buildEmptyState()
                   else
                     ...List.generate(
-                      completedHikes.length,
+                      historyOrders.length,
                       (index) => HikingRecordCardWidget(
-                        model: completedHikes[index],
+                        model: historyOrders[index],
                         index: index,
                       ),
                     ),

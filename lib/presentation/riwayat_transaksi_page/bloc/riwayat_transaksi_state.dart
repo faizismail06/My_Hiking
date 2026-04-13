@@ -2,6 +2,7 @@ part of 'riwayat_transaksi_bloc.dart';
 
 class RiwayatTransaksiState extends Equatable {
   final List<TiketItemModel> completedHikesList;
+  final List<TiketItemModel> historyOrdersList;
   final String? userId;
   final String? userName;
   final String? userTier;
@@ -11,6 +12,7 @@ class RiwayatTransaksiState extends Equatable {
 
   const RiwayatTransaksiState({
     this.completedHikesList = const [],
+    this.historyOrdersList = const [],
     this.userId,
     this.userName,
     this.userTier,
@@ -21,6 +23,7 @@ class RiwayatTransaksiState extends Equatable {
 
   RiwayatTransaksiState copyWith({
     List<TiketItemModel>? completedHikesList,
+    List<TiketItemModel>? historyOrdersList,
     String? userId,
     String? userName,
     String? userTier,
@@ -30,6 +33,7 @@ class RiwayatTransaksiState extends Equatable {
   }) {
     return RiwayatTransaksiState(
       completedHikesList: completedHikesList ?? this.completedHikesList,
+      historyOrdersList: historyOrdersList ?? this.historyOrdersList,
       userId: userId ?? this.userId,
       userName: userName ?? this.userName,
       userTier: userTier ?? this.userTier,
@@ -42,6 +46,7 @@ class RiwayatTransaksiState extends Equatable {
   @override
   List<Object?> get props => [
         completedHikesList,
+        historyOrdersList,
         userId,
         userName,
         userTier,

@@ -33,12 +33,16 @@ class TiketSayaBloc extends Bloc<TiketSayaEvent, TiketSayaState> {
 
       // Split orders into active and completed
       final activeTickets = allOrders
-          .where((o) => o.status != 'Selesai' && o.status != 'Dibatalkan')
+          .where(
+            (o) =>
+                o.status != 'Selesai' &&
+                o.status != 'Dibatalkan' &&
+                o.status != 'Expired',
+          )
           .toList();
 
-      final completedHikes = allOrders
-          .where((o) => o.status == 'Selesai')
-          .toList();
+      final completedHikes =
+          allOrders.where((o) => o.status == 'Selesai').toList();
 
       // Build a transaction map keyed by pesanan_id for quick lookup
       final Map<int, TransaksiItemModel> txMap = {};
@@ -72,18 +76,15 @@ class TiketSayaBloc extends Bloc<TiketSayaEvent, TiketSayaState> {
     if (response.statusCode == 200) {
       final data = json.decode(response.body)['data'] as List;
 
-      final filteredData = data
-          .where((item) => item['id_user'].toString() == userId)
-          .toList()
-        ..sort((a, b) {
-          final aId = int.tryParse(a['id'].toString()) ?? 0;
-          final bId = int.tryParse(b['id'].toString()) ?? 0;
-          return bId.compareTo(aId); // newest first
-        });
+      final filteredData =
+          data.where((item) => item['id_user'].toString() == userId).toList()
+            ..sort((a, b) {
+              final aId = int.tryParse(a['id'].toString()) ?? 0;
+              final bId = int.tryParse(b['id'].toString()) ?? 0;
+              return bId.compareTo(aId); // newest first
+            });
 
-      return filteredData
-          .map((item) => TiketItemModel.fromJson(item))
-          .toList();
+      return filteredData.map((item) => TiketItemModel.fromJson(item)).toList();
     } else {
       throw Exception('Failed to load orders');
     }

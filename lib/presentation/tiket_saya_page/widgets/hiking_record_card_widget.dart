@@ -144,33 +144,7 @@ class HikingRecordCardWidget extends StatelessWidget {
                         ),
                       ),
                       // Completed badge
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                            horizontal: 10.h, vertical: 5.h),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF059669).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(20.h),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.check_circle_rounded,
-                              color: const Color(0xFF059669),
-                              size: 14.h,
-                            ),
-                            SizedBox(width: 4.h),
-                            Text(
-                              'Selesai',
-                              style: TextStyle(
-                                fontSize: 11.fSize,
-                                fontWeight: FontWeight.w700,
-                                color: const Color(0xFF059669),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      _buildStatusBadge(),
                     ],
                   ),
                   SizedBox(height: 14.h),
@@ -221,6 +195,42 @@ class HikingRecordCardWidget extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge() {
+    final status = (model.status ?? '').trim();
+    final isExpired = status == 'Expired';
+    final color = isExpired ? const Color(0xFFB45309) : const Color(0xFF059669);
+    final icon =
+        isExpired ? Icons.schedule_rounded : Icons.check_circle_rounded;
+    final label = status.isEmpty ? 'Selesai' : status;
+
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 10.h, vertical: 5.h),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(20.h),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            color: color,
+            size: 14.h,
+          ),
+          SizedBox(width: 4.h),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11.fSize,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
       ),
     );
   }
