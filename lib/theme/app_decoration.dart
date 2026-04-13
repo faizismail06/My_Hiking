@@ -36,12 +36,90 @@ class AppDecoration {
       );
 
   // Gradient decorations
+  static BoxDecoration get gradientPrimaryGreen => BoxDecoration(
+        gradient: LinearGradient(
+          begin: const Alignment(-1, 0),
+          end: const Alignment(1, 0),
+          colors: [
+            appTheme.green600,
+            appTheme.emerald400,
+          ],
+        ),
+      );
+
+  static BoxDecoration get gradientGreenToEmerald => BoxDecoration(
+        gradient: LinearGradient(
+          begin: const Alignment(0, -1),
+          end: const Alignment(0, 1),
+          colors: [
+            const Color(0XFF1DB854),
+            const Color(0XFF0D7E4A),
+          ],
+        ),
+      );
+
+  static BoxDecoration get gradientVibrantGreen => BoxDecoration(
+        gradient: LinearGradient(
+          begin: const Alignment(-0.5, -1),
+          end: const Alignment(1, 1),
+          colors: [
+            const Color(0XFF4ECB71),
+            const Color(0XFF1DB854),
+            const Color(0XFF0D7E4A),
+          ],
+        ),
+      );
+
   static BoxDecoration get gradientGrayToGray => BoxDecoration(
         gradient: LinearGradient(
           begin: const Alignment(0.43, 0.79),
           end: const Alignment(0.43, 0.05),
           colors: [appTheme.gray50, appTheme.gray50.withOpacity(0)],
         ),
+      );
+
+  static BoxDecoration get modernShadowCard => BoxDecoration(
+        color: theme.colorScheme.onPrimary,
+        borderRadius: BorderRadius.circular(16.h),
+        boxShadow: [
+          BoxShadow(
+            color: appTheme.green600.withOpacity(0.12),
+            spreadRadius: 0,
+            blurRadius: 8.h,
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: appTheme.black900.withOpacity(0.05),
+            spreadRadius: 0,
+            blurRadius: 2.h,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      );
+
+  // Modern Dark Theme Decorations
+  static BoxDecoration get darkGradientGreen => BoxDecoration(
+        gradient: LinearGradient(
+          begin: const Alignment(-1, 0),
+          end: const Alignment(1, 0),
+          colors: [
+            const Color(0XFF4ECB71),
+            const Color(0XFF2ECC71),
+          ],
+        ),
+      );
+
+  static BoxDecoration get darkModernCard => BoxDecoration(
+        color: const Color(0XFF1A2D24),
+        borderRadius: BorderRadius.circular(16.h),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0XFF4ECB71).withOpacity(0.1),
+            spreadRadius: 0,
+            blurRadius: 8.h,
+            offset: const Offset(0, 4),
+          ),
+        ],
       );
 
   // Outline decorations

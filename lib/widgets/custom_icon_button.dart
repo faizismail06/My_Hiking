@@ -3,8 +3,16 @@ import '../core/app_export.dart';
 
 extension IconButtonStyleHelper on CustomIconButton {
   static BoxDecoration get fillBlueGray => BoxDecoration(
-        color: appTheme.blueGray50,
+        color: appTheme.green50,
         borderRadius: BorderRadius.circular(12.h),
+        boxShadow: [
+          BoxShadow(
+            color: appTheme.green600.withOpacity(0.1),
+            spreadRadius: 0,
+            blurRadius: 8.h,
+            offset: const Offset(0, 2),
+          ),
+        ],
       );
 }
 
@@ -48,10 +56,16 @@ class CustomIconButton extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16.h),
                 boxShadow: [
                   BoxShadow(
-                    color: theme.colorScheme.secondaryContainer,
-                    spreadRadius: 2.h,
+                    color: appTheme.green600.withOpacity(0.15),
+                    spreadRadius: 0,
+                    blurRadius: 12.h,
+                    offset: const Offset(0, 6),
+                  ),
+                  BoxShadow(
+                    color: appTheme.black900.withOpacity(0.05),
+                    spreadRadius: 0,
                     blurRadius: 2.h,
-                    offset: const Offset(0, 16),
+                    offset: const Offset(0, 1),
                   ),
                 ],
               ),

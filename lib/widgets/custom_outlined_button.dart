@@ -8,7 +8,8 @@ class CustomOutlinedButton extends BaseButton {
   final Widget? rightIcon;
   final Widget? label;
 
-  const CustomOutlinedButton({super.key,
+  const CustomOutlinedButton({
+    super.key,
     this.decoration,
     this.leftIcon,
     this.rightIcon,
@@ -40,7 +41,7 @@ class CustomOutlinedButton extends BaseButton {
         margin: margin,
         decoration: decoration,
         child: OutlinedButton(
-          style: buttonStyle,
+          style: buttonStyle ?? _defaultButtonStyle,
           onPressed: isDisabled ?? false ? null : onPressed ?? () {},
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -55,5 +56,17 @@ class CustomOutlinedButton extends BaseButton {
             ],
           ),
         ),
+      );
+
+  ButtonStyle get _defaultButtonStyle => OutlinedButton.styleFrom(
+        side: BorderSide(
+          color: appTheme.green600,
+          width: 1.5,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12.h),
+        ),
+        backgroundColor: Colors.transparent,
+        padding: EdgeInsets.zero,
       );
 }

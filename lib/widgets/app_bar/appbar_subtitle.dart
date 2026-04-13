@@ -6,7 +6,8 @@ class AppbarSubtitleOne extends StatelessWidget {
   final Function? onTap;
   final EdgeInsetsGeometry? margin;
 
-  const AppbarSubtitleOne({super.key, required this.text, this.onTap, this.margin});
+  const AppbarSubtitleOne(
+      {super.key, required this.text, this.onTap, this.margin});
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +18,8 @@ class AppbarSubtitleOne extends StatelessWidget {
         child: Text(
           text,
           style: CustomTextStyles.titleMediumGray900.copyWith(
-            color: appTheme.gray900,
+            color: appTheme.green800,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ),

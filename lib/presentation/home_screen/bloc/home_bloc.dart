@@ -17,13 +17,17 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   HomeBloc(HomeState initialState) : super(initialState) {
     on<HomeInitialEvent>(_onInitialize);
     on<HomeSearchEvent>(_onSearch);
+    on<HomeFilterProvinceEvent>(_onFilterProvince);
   }
 
   Future<void> _onInitialize(
     HomeInitialEvent event,
     Emitter<HomeState> emit,
   ) async {
-    emit(state.copyWith(searchController: TextEditingController()));
+    emit(state.copyWith(
+      searchController: TextEditingController(),
+      isLoadingRecommended: true,
+    ));
 
     try {
       final feed = await fetchHomeFeed();
@@ -31,6 +35,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         recommendedMountain: feed.recommended,
         baseRecommendedMountain: feed.recommended,
         allMountains: feed.mountains,
+        baseAllMountains: feed.mountains,
+        isLoadingRecommended: false,
         homeInitialModelObj: state.homeInitialModelObj?.copyWith(
           homelistItemList: feed.mountains,
         ),
@@ -38,6 +44,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     } catch (e) {
       // Tangani kesalahan jika API tidak berhasil diambil
       print('Error fetching data: $e');
+      emit(state.copyWith(isLoadingRecommended: false));
     }
   }
 
@@ -56,7 +63,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       ));
     } else {
       final filteredList = state.allMountains
-          .where((item) => item.namaGunung?.toLowerCase().contains(query) ?? false)
+          .where(
+              (item) => item.namaGunung?.toLowerCase().contains(query) ?? false)
           .toList();
 
       final baseRecommended = state.baseRecommendedMountain;
@@ -73,6 +81,44 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     }
   }
 
+  Future<void> _onFilterProvince(
+    HomeFilterProvinceEvent event,
+    Emitter<HomeState> emit,
+  ) async {
+    final selectedProvince = event.province;
+
+    List<HomelistItemModel> filteredByProvince;
+    HomelistItemModel? filteredRecommended;
+
+    if (selectedProvince == null) {
+      // Show all mountains
+      filteredByProvince = state.baseAllMountains;
+      filteredRecommended = state.baseRecommendedMountain;
+    } else {
+      // Filter by province
+      filteredByProvince = state.baseAllMountains
+          .where((item) => item.province?.name == selectedProvince)
+          .toList();
+
+      // Also filter recommended if exists
+      filteredRecommended = state.baseRecommendedMountain != null &&
+              state.baseRecommendedMountain!.province?.name == selectedProvince
+          ? state.baseRecommendedMountain
+          : null;
+    }
+
+    emit(state.copyWith(
+      selectedProvince: selectedProvince,
+      recommendedMountain: filteredRecommended,
+      allMountains: filteredByProvince,
+      clearRecommendedMountain:
+          filteredRecommended == null && state.baseRecommendedMountain != null,
+      homeInitialModelObj: state.homeInitialModelObj?.copyWith(
+        homelistItemList: filteredByProvince,
+      ),
+    ));
+  }
+
   Future<HomeFeedResult> fetchHomeFeed() async {
     final token = await ApiService().getToken();
     final response = await http.get(
@@ -85,20 +131,22 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     if (response.statusCode == 200) {
       final Map<String, dynamic> jsonData = json.decode(response.body);
       final recommended = jsonData['recommended'] is Map<String, dynamic>
-          ? HomelistItemModel.fromJson(jsonData['recommended'] as Map<String, dynamic>)
+          ? HomelistItemModel.fromJson(
+              jsonData['recommended'] as Map<String, dynamic>)
           : null;
       final rawMountains = jsonData['mountains'];
 
       final List<dynamic> mountainItems = rawMountains is List
-        ? rawMountains
-        : rawMountains is Map
-          ? rawMountains.values.toList()
-          : const [];
+          ? rawMountains
+          : rawMountains is Map
+              ? rawMountains.values.toList()
+              : const [];
 
       final mountains = mountainItems
-        .whereType<Map>()
-        .map((item) => HomelistItemModel.fromJson(Map<String, dynamic>.from(item)))
-        .toList();
+          .whereType<Map>()
+          .map((item) =>
+              HomelistItemModel.fromJson(Map<String, dynamic>.from(item)))
+          .toList();
 
       return HomeFeedResult(recommended: recommended, mountains: mountains);
     } else {

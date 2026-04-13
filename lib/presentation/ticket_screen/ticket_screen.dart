@@ -283,15 +283,16 @@ class _TicketScreenState extends State<TicketScreen> {
                                           child: Divider(),
                                         ),
                                         SizedBox(height: 12.h),
-                                        CustomElevatedButton(
-                                          height: 50.h,
-                                          text: ticket.canPrintTicket
-                                              ? "Download Tiket".tr
-                                              : "Bayar Dulu",
-                                          buttonStyle: CustomButtonStyles
-                                              .outlineBlueGrayC,
-                                          buttonTextStyle: CustomTextStyles
-                                              .titleMediumManropeOnPrimary,
+                                        ElevatedButton(
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.black,
+                                            minimumSize:
+                                                Size(double.infinity, 50.h),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                          ),
                                           onPressed: () async {
                                             if (!ticket.canPrintTicket) {
                                               ScaffoldMessenger.of(context)
@@ -339,10 +340,17 @@ class _TicketScreenState extends State<TicketScreen> {
                                               }
                                             });
                                           },
-                                          // icon: const Icon(
-                                          //   Icons.file_download_outlined,
-                                          //   color: Colors.white,
-                                          // ),
+                                          child: Text(
+                                            ticket.canPrintTicket
+                                                ? "Download Tiket".tr
+                                                : "Bayar Dulu",
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              fontFamily: 'Manrope',
+                                            ),
+                                          ),
                                         ),
                                         SizedBox(height: 6.h),
                                       ],
