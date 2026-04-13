@@ -6,14 +6,14 @@ import '../../../core/app_export.dart';
 import '../models/home_initial_model.dart';
 import '../models/home_model.dart';
 import '../models/homelist_item_model.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 
 part 'home_event.dart';
 part 'home_state.dart';
 
 /// A bloc that manages the state of a Home according to the event that is dispatched to it.
 class HomeBloc extends Bloc<HomeEvent, HomeState> {
+  final ApiService _apiService = ApiService();
+
   HomeBloc(HomeState initialState) : super(initialState) {
     on<HomeInitialEvent>(_onInitialize);
     on<HomeSearchEvent>(_onSearch);
@@ -25,19 +25,27 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   ) async {
     emit(state.copyWith(searchController: TextEditingController()));
 
+    HomeFeedResult? cachedFeed;
+
     try {
-      final feed = await fetchHomeFeed();
-      emit(state.copyWith(
-        recommendedMountain: feed.recommended,
-        baseRecommendedMountain: feed.recommended,
-        allMountains: feed.mountains,
-        homeInitialModelObj: state.homeInitialModelObj?.copyWith(
-          homelistItemList: feed.mountains,
-        ),
-      ));
+      final cachedPayload = await _apiService.getCachedHomeFeed();
+      if (cachedPayload != null) {
+        cachedFeed = _parseHomeFeed(cachedPayload);
+        emit(_buildStateWithFeed(cachedFeed));
+      }
     } catch (e) {
-      // Tangani kesalahan jika API tidak berhasil diambil
-      print('Error fetching data: $e');
+      print('Error reading cached home feed: $e');
+    }
+
+    try {
+      final freshPayload = await _apiService.fetchHomeFeedFromServer();
+      await _apiService.cacheHomeFeed(freshPayload);
+      final freshFeed = _parseHomeFeed(freshPayload);
+      emit(_buildStateWithFeed(freshFeed));
+    } catch (e) {
+      if (cachedFeed == null) {
+        print('Error fetching data: $e');
+      }
     }
   }
 
@@ -73,37 +81,37 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     }
   }
 
-  Future<HomeFeedResult> fetchHomeFeed() async {
-    final token = await ApiService().getToken();
-    final response = await http.get(
-      Uri.parse('$baseUrl/mountains/home-feed'),
-      headers: {
-        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
-      },
-    );
+  HomeFeedResult _parseHomeFeed(Map<String, dynamic> jsonData) {
+    final recommended = jsonData['recommended'] is Map<String, dynamic>
+        ? HomelistItemModel.fromJson(
+            jsonData['recommended'] as Map<String, dynamic>)
+        : null;
+    final rawMountains = jsonData['mountains'];
 
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> jsonData = json.decode(response.body);
-      final recommended = jsonData['recommended'] is Map<String, dynamic>
-          ? HomelistItemModel.fromJson(jsonData['recommended'] as Map<String, dynamic>)
-          : null;
-      final rawMountains = jsonData['mountains'];
-
-      final List<dynamic> mountainItems = rawMountains is List
+    final List<dynamic> mountainItems = rawMountains is List
         ? rawMountains
         : rawMountains is Map
-          ? rawMountains.values.toList()
-          : const [];
+            ? rawMountains.values.toList()
+            : const [];
 
-      final mountains = mountainItems
+    final mountains = mountainItems
         .whereType<Map>()
-        .map((item) => HomelistItemModel.fromJson(Map<String, dynamic>.from(item)))
+        .map((item) =>
+            HomelistItemModel.fromJson(Map<String, dynamic>.from(item)))
         .toList();
 
-      return HomeFeedResult(recommended: recommended, mountains: mountains);
-    } else {
-      throw Exception('Failed to load data');
-    }
+    return HomeFeedResult(recommended: recommended, mountains: mountains);
+  }
+
+  HomeState _buildStateWithFeed(HomeFeedResult feed) {
+    return state.copyWith(
+      recommendedMountain: feed.recommended,
+      baseRecommendedMountain: feed.recommended,
+      allMountains: feed.mountains,
+      homeInitialModelObj: state.homeInitialModelObj?.copyWith(
+        homelistItemList: feed.mountains,
+      ),
+    );
   }
 }
 
