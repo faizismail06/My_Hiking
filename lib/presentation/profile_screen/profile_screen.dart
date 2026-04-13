@@ -338,7 +338,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           SizedBox(height: 10.h),
           GestureDetector(
-            onTap: () => onTapTransaction(context),
+            onTap: () => onTapRiwayatTransaksi(context),
             child: Container(
               padding: EdgeInsets.symmetric(horizontal: 10.h, vertical: 12.h),
               decoration: BoxDecoration(
@@ -374,7 +374,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Padding(
                     padding: EdgeInsets.only(left: 14.h),
                     child: Text(
-                      "lbl_cek_transaksi".tr,
+                      "Riwayat Transaksi",
                       style: theme.textTheme.bodyLarge,
                     ),
                   ),
@@ -459,8 +459,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void onTapTransaction(BuildContext context) {
-    NavigatorService.pushNamed(AppRoutes.transactionPage);
+  void onTapRiwayatTransaksi(BuildContext context) {
+    NavigatorService.pushNamed(AppRoutes.riwayatTransaksiPage);
   }
 
   void onLogout(BuildContext context) {

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:myhiking/presentation/history_page/history_page.dart';
 import 'package:myhiking/presentation/transaction_page/transaction_page.dart';
+import 'package:myhiking/presentation/tiket_saya_page/tiket_saya_page.dart';
+import 'package:myhiking/presentation/riwayat_transaksi_page/riwayat_transaksi_page.dart';
 import '../presentation/app_navigation_screen/app_navigation_screen.dart';
 import '../presentation/home_screen/home_screen.dart';
 import '../presentation/booking_screen/booking_screen.dart';
@@ -50,6 +52,8 @@ class AppRoutes {
   static const String ticketScreen = '/ticket_screen';
   static const String ticketActionScreen = '/ticket_action_screen';
   static const String historyPage = '/history_page';
+  static const String tiketSayaPage = '/tiket_saya_page';
+  static const String riwayatTransaksiPage = '/riwayat_transaksi_page';
   static const String friendScreen = '/friend_screen';
   static const String chatbotScreen = '/chatbot_screen';
   static const String experienceOnboardingScreen = '/experience_onboarding_screen';
@@ -138,6 +142,8 @@ class AppRoutes {
         initialRoute: LandingScreen.builder,
         transactionPage: TransactionPage.builder,
         historyPage: HistoryPage.builder,
+        tiketSayaPage: TiketSayaPage.builder,
+        riwayatTransaksiPage: RiwayatTransaksiPage.builder,
         friendScreen: (context) {
           final userId = ModalRoute.of(context)?.settings.arguments as int?;
 

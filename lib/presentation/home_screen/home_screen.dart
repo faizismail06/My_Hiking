@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:myhiking/presentation/profile_screen/profile_screen.dart';
 import '../../core/app_export.dart';
 import '../../widgets/custom_bottom_bar.dart';
-import '../history_page/history_page.dart';
+import '../tiket_saya_page/tiket_saya_page.dart';
 import 'home_initial_page.dart';
 import 'bloc/home_bloc.dart';
 import 'models/home_model.dart';
@@ -113,7 +113,7 @@ class HomeScreen extends StatelessWidget {
       case BottomBarEnum.Favorite:
         return AppRoutes.homeInitialPage;
       case BottomBarEnum.Iconmap:
-        return AppRoutes.historyPage;
+        return AppRoutes.tiketSayaPage;
       case BottomBarEnum.Iconprofile:
         return AppRoutes.profileScreen;
       default:
@@ -126,8 +126,8 @@ class HomeScreen extends StatelessWidget {
     switch (currentRoute) {
       case AppRoutes.homeInitialPage:
         return HomeInitialPage.builder(context);
-      case AppRoutes.historyPage:
-        return HistoryPage.builder(context);
+      case AppRoutes.tiketSayaPage:
+        return TiketSayaPage.builder(context);
       case AppRoutes.profileScreen:
         return ProfileScreen.builder(context);
       default:
