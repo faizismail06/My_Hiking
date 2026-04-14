@@ -11,7 +11,21 @@ class ResRouteCentres {
     required this.data,
   });
 
-  factory ResRouteCentres.fromJson(Map<String, dynamic> json) {\n    // Handle null mountain data safely\n    final mountainData = json['mountain'] as Map<String, dynamic>? ?? {};\n    final jalurList = mountainData['data'] as List? ?? [];\n    \n    return ResRouteCentres(\n      status: (json['status'] as bool?) ?? false,\n      message: (json['message'] as String?) ?? '',\n      gunung: Gunung.fromJson(mountainData),\n      data: jalurList.isNotEmpty\n          ? List<Jalur>.from(jalurList.map((x) => Jalur.fromJson(x as Map<String, dynamic>)))\n          : [],\n    );\n  }
+  factory ResRouteCentres.fromJson(Map<String, dynamic> json) {
+    final mountainData =
+        (json['mountain'] as Map<String, dynamic>?) ?? <String, dynamic>{};
+    final jalurList = (mountainData['data'] as List?) ?? const [];
+
+    return ResRouteCentres(
+      status: (json['status'] as bool?) ?? false,
+      message: (json['message'] as String?) ?? '',
+      gunung: Gunung.fromJson(mountainData),
+      data: jalurList
+          .whereType<Map>()
+          .map((x) => Jalur.fromJson(Map<String, dynamic>.from(x)))
+          .toList(),
+    );
+  }
 
   Map<String, dynamic> toJson() {
     return {
@@ -109,12 +123,16 @@ class ResDetailRouteCentres {
   });
 
   factory ResDetailRouteCentres.fromJson(Map<String, dynamic> json) {
+    final trailData =
+        (json['trail'] as Map<String, dynamic>?) ?? <String, dynamic>{};
+    final mountainData =
+        (trailData['mountain'] as Map<String, dynamic>?) ?? <String, dynamic>{};
+
     return ResDetailRouteCentres(
-      status: json['status'] ?? false,
-      message: json['message'] ?? '',
-      jalur: Jalur.fromJson(json['trail']),
-      gunung: Gunung.fromJson(
-          json['trail']['mountain']), // Ambil mountain dari dalam trail
+      status: (json['status'] as bool?) ?? false,
+      message: (json['message'] as String?) ?? '',
+      jalur: Jalur.fromJson(trailData),
+      gunung: Gunung.fromJson(mountainData),
       dss: json['dss'] != null ? DssEvaluation.fromJson(json['dss']) : null,
     );
   }
@@ -412,7 +430,7 @@ class Jalur {
       id: json['id'] ?? 0,
       nama: json['nama'] ?? '',
       deskripsi: json['deskripsi'],
-      mapBasecamp: json['map_basecamp'],
+      mapBasecamp: (json['map_basecamp'] ?? '').toString(),
       village: json['village'],
       district: json['district'],
       regency: json['regency'],

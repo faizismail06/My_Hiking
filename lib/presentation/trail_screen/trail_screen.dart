@@ -268,7 +268,8 @@ class _TrailScreenState extends State<TrailScreen> {
   }
 
   /// **Header Section with Image**
-  Widget _buildHeaderSection(BuildContext context, TrailScreenModel trailModel, Jalur? jalur) {
+  Widget _buildHeaderSection(
+      BuildContext context, TrailScreenModel trailModel, Jalur? jalur) {
     final imageUrl = trailModel.gambar ??
         'assets/images/placeholder.png'; // Default placeholder image
 
@@ -290,6 +291,19 @@ class _TrailScreenState extends State<TrailScreen> {
               height: 600.h, // Adjusted height as per the second image
               width: double.infinity,
               fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  height: 600.h,
+                  width: double.infinity,
+                  color: appTheme.gray300,
+                  alignment: Alignment.center,
+                  child: Icon(
+                    Icons.image_not_supported,
+                    color: appTheme.gray500,
+                    size: 34.h,
+                  ),
+                );
+              },
             ),
           ),
           // Back button positioned at the top-left
@@ -309,8 +323,8 @@ class _TrailScreenState extends State<TrailScreen> {
             ),
           ),
           // Weather badge positioned at the top-right
-          if (jalur != null && 
-              jalur.latitude != null && 
+          if (jalur != null &&
+              jalur.latitude != null &&
               jalur.longitude != null)
             Positioned(
               top: 16.h,
@@ -327,7 +341,8 @@ class _TrailScreenState extends State<TrailScreen> {
   }
 
   // **Trail Details Section**
-  Widget _buildTrailDetailSection(BuildContext context, TrailScreenModel trailModel) {
+  Widget _buildTrailDetailSection(
+      BuildContext context, TrailScreenModel trailModel) {
     return Container(
         padding: EdgeInsets.all(16.h),
         decoration: BoxDecoration(
@@ -364,7 +379,8 @@ class _TrailScreenState extends State<TrailScreen> {
         ));
   }
 
-  Widget _buildDssRecommendationCard(BuildContext context, TrailScreenModel trailModel) {
+  Widget _buildDssRecommendationCard(
+      BuildContext context, TrailScreenModel trailModel) {
     final dss = trailModel.dss;
     if (dss == null) {
       return SizedBox.shrink();
@@ -567,11 +583,7 @@ class _TrailScreenState extends State<TrailScreen> {
       text: "Lihat Preview Jalur Lengkap",
       leftIcon: Container(
         margin: EdgeInsets.only(right: 12.h),
-        child: Icon(
-          Icons.route_rounded,
-          size: 22.h,
-          color: Colors.white
-        ),
+        child: Icon(Icons.route_rounded, size: 22.h, color: Colors.white),
       ),
       buttonStyle: CustomButtonStyles.outlineBlackTL14,
       buttonTextStyle: CustomTextStyles.labelLargePrimarySemiBold.copyWith(
@@ -659,7 +671,8 @@ class _TrailScreenState extends State<TrailScreen> {
       final missingProfileFields = <String>[];
       if (_isMissing(userData['nik'])) missingProfileFields.add('NIK');
       if (_isMissing(userData['address'])) missingProfileFields.add('Alamat');
-      if (_isMissing(userData['phone'])) missingProfileFields.add('Nomor telepon');
+      if (_isMissing(userData['phone']))
+        missingProfileFields.add('Nomor telepon');
       if (_isMissing(userData['emergency_phone'])) {
         missingProfileFields.add('Kontak darurat');
       }
@@ -670,8 +683,7 @@ class _TrailScreenState extends State<TrailScreen> {
       if (normalizedLevel == 1 && missingProfileFields.isNotEmpty) {
         final openProfile = await _showWarningDialog(
           title: 'Data Profil Belum Lengkap',
-          message:
-              'Sebelum booking, lengkapi data profil terlebih dahulu.',
+          message: 'Sebelum booking, lengkapi data profil terlebih dahulu.',
           icon: Icons.report_problem_rounded,
           iconColor: Colors.orange,
           confirmText: 'Lengkapi Profil',
@@ -695,7 +707,8 @@ class _TrailScreenState extends State<TrailScreen> {
         return false;
       }
 
-      final onboarding = await ApiService().getOnboardingExperienceStatus(token);
+      final onboarding =
+          await ApiService().getOnboardingExperienceStatus(token);
       final data = (onboarding['data'] as Map<String, dynamic>?) ?? {};
 
       final isHiker = normalizedLevel == 1 || data['is_hiker'] == true;

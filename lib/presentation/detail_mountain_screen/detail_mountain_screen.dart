@@ -136,8 +136,8 @@ class _DetailMountainScreenState extends State<DetailMountainScreen> {
     );
   }
 
-  Widget _buildHeader(
-      BuildContext context, DetailMountainModel? detailMountain, Gunung? gunung) {
+  Widget _buildHeader(BuildContext context, DetailMountainModel? detailMountain,
+      Gunung? gunung) {
     return SizedBox(
       height: 396.h,
       width: double.maxFinite,
@@ -188,7 +188,6 @@ class _DetailMountainScreenState extends State<DetailMountainScreen> {
                       child: TrailScreen(
                         jalurId: route.id,
                         idGunung: widget.idGunung,
-
                       ),
                     ),
                   ),
@@ -246,7 +245,6 @@ class _DetailMountainScreenState extends State<DetailMountainScreen> {
       child: Column(
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -261,21 +259,23 @@ class _DetailMountainScreenState extends State<DetailMountainScreen> {
                   ),
                 ],
               ),
-              CustomElevatedButton(
-                height: 42.h,
-                width: 188.h,
-                text: detailMountain.province,
-                leftIcon: Container(
-                  margin: EdgeInsets.only(right: 12.h),
-                  child: CustomImageView(
-                    imagePath: ImageConstant.imgLinkedin,
-                    height: 20.h,
-                    width: 18.h,
-                    fit: BoxFit.contain,
+              SizedBox(width: 12.h),
+              Expanded(
+                child: CustomElevatedButton(
+                  height: 42.h,
+                  text: detailMountain.province,
+                  leftIcon: Container(
+                    margin: EdgeInsets.only(right: 12.h),
+                    child: CustomImageView(
+                      imagePath: ImageConstant.imgLinkedin,
+                      height: 20.h,
+                      width: 18.h,
+                      fit: BoxFit.contain,
+                    ),
                   ),
+                  buttonStyle: CustomButtonStyles.fillPrimaryTL8,
+                  buttonTextStyle: CustomTextStyles.titleMediumSemiBold,
                 ),
-                buttonStyle: CustomButtonStyles.fillPrimaryTL8,
-                buttonTextStyle: CustomTextStyles.titleMediumSemiBold,
               ),
             ],
           ),
@@ -319,8 +319,8 @@ class _DetailMountainScreenState extends State<DetailMountainScreen> {
                           onTap: () => onTapIconarrowone(context),
                         ),
                         // Weather badge on the right
-                        if (gunung != null && 
-                            gunung.latitude != null && 
+                        if (gunung != null &&
+                            gunung.latitude != null &&
                             gunung.longitude != null)
                           WeatherBadge(
                             latitude: gunung.latitude,
