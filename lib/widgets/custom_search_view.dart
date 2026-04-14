@@ -90,20 +90,17 @@ class CustomSearchView extends StatelessWidget {
 
   InputDecoration get decoration => InputDecoration(
         hintText: hintText ?? "",
-        hintStyle: hintStyle ??
-            CustomTextStyles.bodyMediumInterPrimary
-                .copyWith(color: Colors.grey.shade500),
+        hintStyle: hintStyle ?? CustomTextStyles.bodyMediumInterPrimary,
         prefixIcon: Padding(
-          padding: EdgeInsets.all(14.h),
+          padding: EdgeInsets.all(15.h),
           child: Icon(
             Icons.search,
-            color: appTheme.green600,
-            size: 20.h,
+            color: Colors.grey.shade600,
           ),
         ),
         prefixIconConstraints: prefixConstraints ??
             BoxConstraints(
-              maxHeight: 48.h,
+              maxHeight: 42.h,
             ),
         suffixIcon: suffix ??
             Container(
@@ -116,21 +113,21 @@ class CustomSearchView extends StatelessWidget {
             ),
         suffixIconConstraints: suffixConstraints ??
             BoxConstraints(
-              maxHeight: 48.h,
+              maxHeight: 42.h,
             ),
         isDense: true,
         contentPadding: contentPadding ??
             EdgeInsets.symmetric(
-              horizontal: 12.h,
-              vertical: 14.h,
+              horizontal: 10.h,
+              vertical: 12.h,
             ),
-        fillColor: fillColor ?? Color(0XFFF8FFFE),
+        fillColor: fillColor ?? theme.colorScheme.onPrimary,
         filled: filled,
         border: borderDecoration ??
             OutlineInputBorder(
               borderRadius: BorderRadius.circular(14.h),
               borderSide: BorderSide(
-                color: appTheme.green100.withOpacity(0.4),
+                color: appTheme.gray200,
                 width: 1,
               ),
             ),
@@ -138,7 +135,7 @@ class CustomSearchView extends StatelessWidget {
             OutlineInputBorder(
               borderRadius: BorderRadius.circular(14.h),
               borderSide: BorderSide(
-                color: appTheme.green100.withOpacity(0.3),
+                color: appTheme.gray200,
                 width: 1,
               ),
             ),
@@ -148,8 +145,8 @@ class CustomSearchView extends StatelessWidget {
                 ))
             .copyWith(
           borderSide: BorderSide(
-            color: appTheme.green600,
-            width: 1.5,
+            color: theme.colorScheme.primary,
+            width: 1,
           ),
         ),
       );

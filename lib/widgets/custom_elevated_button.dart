@@ -6,14 +6,11 @@ class CustomElevatedButton extends BaseButton {
   final BoxDecoration? decoration;
   final Widget? leftIcon;
   final Widget? rightIcon;
-  final bool useGradient;
 
-  const CustomElevatedButton({
-    super.key,
+  const CustomElevatedButton({super.key, 
     this.decoration,
     this.leftIcon,
     this.rightIcon,
-    this.useGradient = true,
     super.margin,
     super.onPressed,
     super.buttonStyle,
@@ -36,12 +33,12 @@ class CustomElevatedButton extends BaseButton {
   }
 
   Widget get buildElevatedButtonWidget => Container(
-        height: height ?? 48.h,
+        height: height ?? 34.h,
         width: width ?? double.maxFinite,
         margin: margin,
-        decoration: decoration ?? (useGradient ? _gradientDecoration : null),
+        decoration: decoration,
         child: ElevatedButton(
-          style: buttonStyle ?? _defaultButtonStyle,
+          style: buttonStyle,
           onPressed: isDisabled ?? false ? null : onPressed ?? () {},
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -56,35 +53,6 @@ class CustomElevatedButton extends BaseButton {
               rightIcon ?? const SizedBox.shrink(),
             ],
           ),
-        ),
-      );
-
-  BoxDecoration get _gradientDecoration => BoxDecoration(
-        gradient: LinearGradient(
-          begin: const Alignment(-1, 0),
-          end: const Alignment(1, 0),
-          colors: [
-            appTheme.green600,
-            appTheme.emerald400,
-          ],
-        ),
-        borderRadius: BorderRadius.circular(12.h),
-        boxShadow: [
-          BoxShadow(
-            color: appTheme.green600.withOpacity(0.3),
-            spreadRadius: 0,
-            blurRadius: 12.h,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      );
-
-  ButtonStyle get _defaultButtonStyle => ElevatedButton.styleFrom(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        padding: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12.h),
         ),
       );
 }

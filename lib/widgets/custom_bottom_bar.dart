@@ -34,24 +34,17 @@ class CustomBottomBarState extends State<CustomBottomBar> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 72.h,
-      margin: EdgeInsets.only(bottom: 12.h, left: 12.h, right: 12.h),
+      height: 68.h,
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20.h),
+        color: const Color(0XFFFFFFFF),
+        borderRadius: BorderRadius.circular(10.h),
         boxShadow: [
           BoxShadow(
-            color: appTheme.green600.withOpacity(0.15),
-            spreadRadius: 0,
-            blurRadius: 16.h,
-            offset: const Offset(0, 8),
-          ),
-          BoxShadow(
-            color: appTheme.black900.withOpacity(0.05),
-            spreadRadius: 0,
+            color: const Color(0X3F000000),
+            spreadRadius: 2.h,
             blurRadius: 2.h,
-            offset: const Offset(0, 1),
-          ),
+            offset: const Offset(0, -1),
+          )
         ],
       ),
       child: BottomNavigationBar(
@@ -64,55 +57,17 @@ class CustomBottomBarState extends State<CustomBottomBar> {
         type: BottomNavigationBarType.fixed,
         items: List.generate(bottomMenuList.length, (index) {
           return BottomNavigationBarItem(
-            icon: Padding(
-              padding: EdgeInsets.only(top: 8.h),
-              child: Container(
-                decoration: selectedIndex == index
-                    ? BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: const Alignment(-1, 0),
-                          end: const Alignment(1, 0),
-                          colors: [
-                            appTheme.green600,
-                            appTheme.emerald400,
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(12.h),
-                      )
-                    : null,
-                padding: EdgeInsets.symmetric(horizontal: 14.h, vertical: 8.h),
-                child: CustomImageView(
-                  imagePath: bottomMenuList[index].icon,
-                  height: _getIconHeight(index),
-                  width: _getIconWidth(index),
-                  color: selectedIndex == index
-                      ? Colors.white
-                      : const Color(0XFFCAD8EA),
-                ),
-              ),
+            icon: CustomImageView(
+              imagePath: bottomMenuList[index].icon,
+              height: _getIconHeight(index), // Set ukuran ikon
+              width: _getIconWidth(index), // Set ukuran ikon
+              color: const Color(0XFFCAD8EA),
             ),
-            activeIcon: Padding(
-              padding: EdgeInsets.only(top: 8.h),
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: const Alignment(-1, 0),
-                    end: const Alignment(1, 0),
-                    colors: [
-                      appTheme.green600,
-                      appTheme.emerald400,
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(12.h),
-                ),
-                padding: EdgeInsets.symmetric(horizontal: 14.h, vertical: 8.h),
-                child: CustomImageView(
-                  imagePath: bottomMenuList[index].activeIcon,
-                  height: _getIconHeight(index),
-                  width: _getIconWidth(index),
-                  color: Colors.white,
-                ),
-              ),
+            activeIcon: CustomImageView(
+              imagePath: bottomMenuList[index].activeIcon,
+              height: _getIconHeight(index), // Set ukuran ikon aktif
+              width: _getIconWidth(index), // Set ukuran ikon aktif
+              color: const Color(0XFF127857),
             ),
             label: '',
           );

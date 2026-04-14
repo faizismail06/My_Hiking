@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:ui' as ui;
 import '../api/api_service.dart';
 import '../core/app_export.dart';
 import '../models/weather_model.dart';
@@ -69,7 +68,7 @@ class _WeatherBadgeState extends State<WeatherBadge> {
 
   void _openForecastPage() {
     if (widget.latitude == null || widget.longitude == null) return;
-
+    
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -232,8 +231,7 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
       final currentResponse = results[0];
       final forecastResponse = results[1];
 
-      if (currentResponse['success'] == true &&
-          forecastResponse['success'] == true) {
+      if (currentResponse['success'] == true && forecastResponse['success'] == true) {
         setState(() {
           _currentWeather = WeatherModel.fromJson(currentResponse['data']);
           _forecast = WeatherForecastModel.fromJson(forecastResponse['data']);
@@ -242,8 +240,7 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
       } else {
         setState(() {
           _isLoading = false;
-          _error =
-              forecastResponse['message'] ?? 'Gagal memuat prakiraan cuaca';
+          _error = forecastResponse['message'] ?? 'Gagal memuat prakiraan cuaca';
         });
       }
     } catch (e) {
@@ -256,26 +253,15 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        image: DecorationImage(
-          image: AssetImage('images/backgroundcuaca.jpeg'),
-          fit: BoxFit.cover,
-        ),
-      ),
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: Column(
+    return Scaffold(
+      backgroundColor: appTheme.gray50,
+      body: SafeArea(
+        child: Column(
           children: [
             _buildHeader(),
             Expanded(
               child: _isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                        valueColor:
-                            AlwaysStoppedAnimation<Color>(Color(0xFF81B59C)),
-                      ),
-                    )
+                  ? const Center(child: CircularProgressIndicator())
                   : _error != null
                       ? _buildErrorState()
                       : _buildContent(),
@@ -288,18 +274,16 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
 
   Widget _buildHeader() {
     return Container(
-      padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top + 8.h, // Dikurangi agar lebih ke atas
-        bottom: 16.h, // Dikurangi padding bawah agar tidak terlalu lebar
-        left: 16.h,
-        right: 16.h,
-      ),
-      decoration: const BoxDecoration(
-        image: DecorationImage(
-          image: AssetImage('images/headercuaca.jpeg'),
-          fit: BoxFit.cover,
+      padding: EdgeInsets.symmetric(horizontal: 16.h, vertical: 12.h),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            theme.colorScheme.primary,
+            theme.colorScheme.primary.withOpacity(0.8),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
       ),
       child: Row(
         children: [
@@ -374,30 +358,24 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
           Icon(
             Icons.cloud_off,
             size: 64.h,
-            color: Colors.white70,
+            color: Colors.grey,
           ),
           SizedBox(height: 16.h),
           Text(
             _error!,
             style: TextStyle(
-              color: Colors.white,
+              color: Colors.grey[600],
               fontSize: 16.fSize,
             ),
           ),
           SizedBox(height: 24.h),
           ElevatedButton.icon(
             onPressed: _fetchData,
-            icon: const Icon(Icons.refresh, color: Colors.white),
-            label:
-                const Text('Coba Lagi', style: TextStyle(color: Colors.white)),
+            icon: const Icon(Icons.refresh),
+            label: const Text('Coba Lagi'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white.withOpacity(0.2),
+              backgroundColor: theme.colorScheme.primary,
               foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20.h),
-                side: BorderSide(color: Colors.white.withOpacity(0.5)),
-              ),
             ),
           ),
         ],
@@ -411,17 +389,17 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
         children: [
           // Current weather card
           if (_currentWeather != null) _buildCurrentWeatherCard(),
-
+          
           SizedBox(height: 16.h),
-
+          
           // 7-day forecast section
           _buildDailyForecastSection(),
-
+          
           SizedBox(height: 16.h),
-
+          
           // Hourly forecast for selected day
           _buildHourlyForecastSection(),
-
+          
           SizedBox(height: 24.h),
         ],
       ),
@@ -431,87 +409,91 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
   Widget _buildCurrentWeatherCard() {
     return Container(
       margin: EdgeInsets.all(16.h),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20.h),
-        child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
-          child: Container(
-            padding: EdgeInsets.all(20.h),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(20.h),
-              border:
-                  Border.all(color: Colors.white.withOpacity(0.2), width: 1),
-            ),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.access_time,
-                      color: Colors.white.withOpacity(0.9),
-                      size: 16.h,
-                    ),
-                    SizedBox(width: 6.h),
-                    Text(
-                      'Cuaca Saat Ini',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
-                        fontSize: 13.fSize,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 16.h),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      _currentWeather!.weatherIcon,
-                      style: TextStyle(fontSize: 64.fSize),
-                    ),
-                    SizedBox(width: 20.h),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '${_currentWeather!.temperature.toStringAsFixed(1)}',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 48.fSize,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              '°C',
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.9),
-                                fontSize: 24.fSize,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Text(
-                          _currentWeather!.weatherDescription,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18.fSize,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+      padding: EdgeInsets.all(20.h),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            theme.colorScheme.primary,
+            theme.colorScheme.primary.withOpacity(0.7),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
+        borderRadius: BorderRadius.circular(20.h),
+        boxShadow: [
+          BoxShadow(
+            color: theme.colorScheme.primary.withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.access_time,
+                color: Colors.white.withOpacity(0.9),
+                size: 16.h,
+              ),
+              SizedBox(width: 6.h),
+              Text(
+                'Cuaca Saat Ini',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.9),
+                  fontSize: 13.fSize,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 16.h),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                _currentWeather!.weatherIcon,
+                style: TextStyle(fontSize: 64.fSize),
+              ),
+              SizedBox(width: 20.h),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${_currentWeather!.temperature.toStringAsFixed(1)}',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 48.fSize,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        '°C',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 24.fSize,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Text(
+                    _currentWeather!.weatherDescription,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18.fSize,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -530,7 +512,7 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
             children: [
               Icon(
                 Icons.calendar_month,
-                color: Colors.white,
+                color: theme.colorScheme.primary,
                 size: 20.h,
               ),
               SizedBox(width: 8.h),
@@ -539,7 +521,7 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
                 style: TextStyle(
                   fontSize: 16.fSize,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: Colors.black87,
                 ),
               ),
             ],
@@ -555,7 +537,7 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
             itemBuilder: (context, index) {
               final day = _forecast!.daily[index];
               final isSelected = index == _selectedDayIndex;
-
+              
               return GestureDetector(
                 onTap: () {
                   setState(() {
@@ -567,15 +549,23 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
                   margin: EdgeInsets.symmetric(horizontal: 4.h),
                   padding: EdgeInsets.symmetric(horizontal: 8.h, vertical: 8.h),
                   decoration: BoxDecoration(
-                    color: isSelected
-                        ? Colors.white.withOpacity(0.3)
-                        : Colors.white.withOpacity(0.1),
+                    color: isSelected 
+                        ? theme.colorScheme.primary 
+                        : Colors.white,
                     borderRadius: BorderRadius.circular(16.h),
                     border: Border.all(
-                      color: isSelected
-                          ? Colors.white
-                          : Colors.white.withOpacity(0.2),
+                      color: isSelected 
+                          ? theme.colorScheme.primary 
+                          : Colors.grey.withOpacity(0.2),
                     ),
+                    boxShadow: [
+                      if (isSelected)
+                        BoxShadow(
+                          color: theme.colorScheme.primary.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                    ],
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -589,7 +579,7 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
                           style: TextStyle(
                             fontSize: 11.fSize,
                             fontWeight: FontWeight.w600,
-                            color: Colors.white,
+                            color: isSelected ? Colors.white : Colors.black87,
                           ),
                         ),
                       ),
@@ -607,7 +597,7 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
                           style: TextStyle(
                             fontSize: 10.fSize,
                             fontWeight: FontWeight.w500,
-                            color: Colors.white.withOpacity(0.9),
+                            color: isSelected ? Colors.white : Colors.black54,
                           ),
                         ),
                       ),
@@ -618,7 +608,7 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
             },
           ),
         ),
-
+        
         // Selected day details
         if (_forecast!.daily.isNotEmpty)
           _buildSelectedDayDetails(_forecast!.daily[_selectedDayIndex]),
@@ -629,102 +619,96 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
   Widget _buildSelectedDayDetails(DailyForecast day) {
     return Container(
       margin: EdgeInsets.all(16.h),
-      child: ClipRRect(
+      padding: EdgeInsets.all(16.h),
+      decoration: BoxDecoration(
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16.h),
-        child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
-          child: Container(
-            padding: EdgeInsets.all(16.h),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(16.h),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.2),
-              ),
-            ),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      day.isToday
-                          ? 'Hari Ini'
-                          : '${day.fullDayName}, ${day.formattedDate}',
-                      style: TextStyle(
-                        fontSize: 16.fSize,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    Text(
-                      day.weatherIcon,
-                      style: TextStyle(fontSize: 32.fSize),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 12.h),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildDetailItem(
-                        icon: Icons.thermostat,
-                        label: 'Maks',
-                        value: '${day.maxTemp.toStringAsFixed(1)}°C',
-                        color: Colors.red[400]!,
-                      ),
-                    ),
-                    Expanded(
-                      child: _buildDetailItem(
-                        icon: Icons.thermostat_outlined,
-                        label: 'Min',
-                        value: '${day.minTemp.toStringAsFixed(1)}°C',
-                        color: Colors.blue[400]!,
-                      ),
-                    ),
-                    Expanded(
-                      child: _buildDetailItem(
-                        icon: Icons.water_drop,
-                        label: 'Hujan',
-                        value: '${day.precipitationProbability}%',
-                        color: Colors.blue[600]!,
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 12.h),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildDetailItem(
-                        icon: Icons.wb_sunny,
-                        label: 'Terbit',
-                        value: day.formattedSunrise,
-                        color: Colors.orange[400]!,
-                      ),
-                    ),
-                    Expanded(
-                      child: _buildDetailItem(
-                        icon: Icons.wb_twilight,
-                        label: 'Terbenam',
-                        value: day.formattedSunset,
-                        color: Colors.deepOrange[400]!,
-                      ),
-                    ),
-                    Expanded(
-                      child: _buildDetailItem(
-                        icon: Icons.cloud,
-                        label: 'Kondisi',
-                        value: day.shortDescription,
-                        color: Colors.white70,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
-        ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                day.isToday ? 'Hari Ini' : '${day.fullDayName}, ${day.formattedDate}',
+                style: TextStyle(
+                  fontSize: 16.fSize,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              Text(
+                day.weatherIcon,
+                style: TextStyle(fontSize: 32.fSize),
+              ),
+            ],
+          ),
+          SizedBox(height: 12.h),
+          Row(
+            children: [
+              Expanded(
+                child: _buildDetailItem(
+                  icon: Icons.thermostat,
+                  label: 'Maks',
+                  value: '${day.maxTemp.toStringAsFixed(1)}°C',
+                  color: Colors.red[400]!,
+                ),
+              ),
+              Expanded(
+                child: _buildDetailItem(
+                  icon: Icons.thermostat_outlined,
+                  label: 'Min',
+                  value: '${day.minTemp.toStringAsFixed(1)}°C',
+                  color: Colors.blue[400]!,
+                ),
+              ),
+              Expanded(
+                child: _buildDetailItem(
+                  icon: Icons.water_drop,
+                  label: 'Hujan',
+                  value: '${day.precipitationProbability}%',
+                  color: Colors.blue[600]!,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 12.h),
+          Row(
+            children: [
+              Expanded(
+                child: _buildDetailItem(
+                  icon: Icons.wb_sunny,
+                  label: 'Terbit',
+                  value: day.formattedSunrise,
+                  color: Colors.orange[400]!,
+                ),
+              ),
+              Expanded(
+                child: _buildDetailItem(
+                  icon: Icons.wb_twilight,
+                  label: 'Terbenam',
+                  value: day.formattedSunset,
+                  color: Colors.deepOrange[400]!,
+                ),
+              ),
+              Expanded(
+                child: _buildDetailItem(
+                  icon: Icons.cloud,
+                  label: 'Kondisi',
+                  value: day.shortDescription,
+                  color: Colors.grey[600]!,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -743,7 +727,7 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
           label,
           style: TextStyle(
             fontSize: 11.fSize,
-            color: Colors.white70,
+            color: Colors.grey[600],
           ),
         ),
         SizedBox(height: 2.h),
@@ -752,7 +736,7 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
           style: TextStyle(
             fontSize: 13.fSize,
             fontWeight: FontWeight.w600,
-            color: Colors.white,
+            color: Colors.black87,
           ),
           textAlign: TextAlign.center,
         ),
@@ -781,7 +765,7 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
             children: [
               Icon(
                 Icons.schedule,
-                color: Colors.white,
+                color: theme.colorScheme.primary,
                 size: 20.h,
               ),
               SizedBox(width: 8.h),
@@ -790,7 +774,7 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
                 style: TextStyle(
                   fontSize: 16.fSize,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: Colors.black87,
                 ),
               ),
             ],
@@ -806,18 +790,20 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
             itemBuilder: (context, index) {
               final hour = hourlyData[index];
               final isNow = hour.isNow;
-
+              
               return Container(
                 width: 75.h,
                 margin: EdgeInsets.symmetric(horizontal: 4.h),
                 padding: EdgeInsets.symmetric(horizontal: 8.h, vertical: 8.h),
                 decoration: BoxDecoration(
-                  color: isNow
-                      ? Colors.white.withOpacity(0.3)
-                      : Colors.white.withOpacity(0.1),
+                  color: isNow 
+                      ? theme.colorScheme.primary.withOpacity(0.1)
+                      : Colors.white,
                   borderRadius: BorderRadius.circular(12.h),
                   border: Border.all(
-                    color: isNow ? Colors.white : Colors.white.withOpacity(0.2),
+                    color: isNow 
+                        ? theme.colorScheme.primary 
+                        : Colors.grey.withOpacity(0.2),
                     width: isNow ? 2 : 1,
                   ),
                 ),
@@ -833,7 +819,7 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
                         style: TextStyle(
                           fontSize: 10.fSize,
                           fontWeight: isNow ? FontWeight.bold : FontWeight.w500,
-                          color: isNow ? Colors.white : Colors.white70,
+                          color: isNow ? theme.colorScheme.primary : Colors.black54,
                         ),
                       ),
                     ),
@@ -848,7 +834,7 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
                       style: TextStyle(
                         fontSize: 14.fSize,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: Colors.black87,
                       ),
                     ),
                     SizedBox(height: 2.h),
@@ -861,13 +847,13 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
                             Icon(
                               Icons.water_drop,
                               size: 10.h,
-                              color: Colors.lightBlueAccent,
+                              color: Colors.blue[400],
                             ),
                             Text(
                               '${hour.precipitationProbability}%',
                               style: TextStyle(
                                 fontSize: 9.fSize,
-                                color: Colors.lightBlueAccent,
+                                color: Colors.blue[400],
                               ),
                             ),
                           ],

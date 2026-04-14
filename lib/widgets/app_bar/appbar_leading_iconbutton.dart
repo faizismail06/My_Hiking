@@ -7,8 +7,7 @@ class AppbarLeadingIconbutton extends StatelessWidget {
   final Function? onTap;
   final EdgeInsetsGeometry? margin;
 
-  const AppbarLeadingIconbutton(
-      {super.key, this.imagePath, this.onTap, this.margin});
+  const AppbarLeadingIconbutton({super.key, this.imagePath, this.onTap, this.margin});
 
   @override
   Widget build(BuildContext context) {
@@ -19,21 +18,9 @@ class AppbarLeadingIconbutton extends StatelessWidget {
           onTap?.call();
         },
         child: CustomIconButton(
-          height: 48.h,
-          width: 48.h,
+          height: 40.h,
+          width: 40.h,
           padding: EdgeInsets.all(8.h),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.9),
-            borderRadius: BorderRadius.circular(14.h),
-            boxShadow: [
-              BoxShadow(
-                color: appTheme.black900.withOpacity(0.12),
-                spreadRadius: 0,
-                blurRadius: 8.h,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
           child: CustomImageView(
             imagePath: imagePath ?? ImageConstant.imgIconArrow,
           ),
