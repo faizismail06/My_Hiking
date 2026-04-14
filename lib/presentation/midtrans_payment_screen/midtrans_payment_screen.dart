@@ -206,7 +206,7 @@ class _MidtransPaymentScreenState extends State<MidtransPaymentScreen> {
       } catch (e) {
         print('Error checking status: $e');
         status = 'pending';
-        message = 'Silakan cek status di halaman transaksi';
+        message = 'Silakan cek status di halaman Tiket saya';
       }
     }
 
@@ -526,7 +526,7 @@ class _MidtransPaymentScreenState extends State<MidtransPaymentScreen> {
                     onPressed: () async {
                       String status = 'pending';
                       String message =
-                          'Silakan cek status di halaman transaksi';
+                          'Silakan cek status di halaman tiket saya';
 
                       if (widget.transactionId > 0) {
                         final result = await ApiService().checkMidtransStatus(
