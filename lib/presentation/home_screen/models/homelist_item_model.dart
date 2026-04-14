@@ -8,6 +8,9 @@ class HomelistItemModel {
   // String? province;
   Province? province;
   DssEvaluation? dss;
+  double? latitude;
+  double? longitude;
+  int? ketinggian;
 
   var title;
 
@@ -17,6 +20,9 @@ class HomelistItemModel {
     this.gambar,
     this.province,
     this.dss,
+    this.latitude,
+    this.longitude,
+    this.ketinggian,
   });
 
   factory HomelistItemModel.fromJson(Map<String, dynamic> json) {
@@ -26,6 +32,9 @@ class HomelistItemModel {
       id: json['id'],
       namaGunung: json['nama'] ?? 'Nama Gunung Tidak Tersedia',
       gambar: json['gambar'] ?? 'URL Gambar Tidak Tersedia',
+      latitude: json['latitude'] is String ? double.tryParse(json['latitude']) : (json['latitude'] as num?)?.toDouble(),
+      longitude: json['longitude'] is String ? double.tryParse(json['longitude']) : (json['longitude'] as num?)?.toDouble(),
+      ketinggian: json['ketinggian'] is String ? int.tryParse(json['ketinggian']) : (json['ketinggian'] as num?)?.toInt(),
       // province: json['province_name'] ?? 'Provinsi Tidak Tersedia',
       province: rawProvince is Map<String, dynamic>
           ? Province.fromJson(rawProvince)

@@ -11,6 +11,7 @@ import 'models/homelist_item_model.dart';
 import 'widgets/homelist_item_widget.dart';
 import 'package:myhiking/api/api_service.dart';
 import 'quick_access_handler_page.dart';
+import 'weather_screen.dart';
 
 class HomeInitialPage extends StatefulWidget {
   const HomeInitialPage({super.key});
@@ -330,11 +331,9 @@ class HomeInitialPageState extends State<HomeInitialPage> {
                             isAlert: true,
                           ),
                           _buildQuickAction(Icons.cloud_rounded, "Cuaca", () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Fitur cuaca sedang disiapkan.',
-                                ),
+                            Navigator.of(context, rootNavigator: true).push(
+                              MaterialPageRoute(
+                                builder: (context) => const WeatherScreen(),
                               ),
                             );
                           }),
