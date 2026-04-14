@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'dart:async';
 import 'dart:math';
 import 'dart:ui' as ui; // Tambahan untuk efek blur glassmorphism
 import '../../core/app_export.dart';
@@ -8,10 +9,12 @@ import '../../widgets/custom_search_view.dart';
 import 'bloc/home_bloc.dart';
 import 'models/home_initial_model.dart';
 import 'models/homelist_item_model.dart';
+import 'models/recommendation_model.dart';
 import 'widgets/homelist_item_widget.dart';
 import 'package:myhiking/api/api_service.dart';
 import 'quick_access_handler_page.dart';
 import 'weather_screen.dart';
+import '../trail_screen/trail_screen.dart';
 
 class HomeInitialPage extends StatefulWidget {
   const HomeInitialPage({super.key});
@@ -138,51 +141,66 @@ class HomeInitialPageState extends State<HomeInitialPage> {
     final maxScrollOffset = 120.0;
     final transparency = (_scrollOffset / maxScrollOffset).clamp(0.0, 1.0);
 
-    return CustomScrollView(
-      controller: _scrollController,
-      physics: const BouncingScrollPhysics(),
-      slivers: [
-        // Hero Header
-        SliverAppBar(
-          automaticallyImplyLeading: false,
-          expandedHeight: 280.h,
-          floating: false,
-          pinned: false,
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          flexibleSpace: FlexibleSpaceBar(
-            background: _buildHeroHeader(context),
+    return RefreshIndicator(
+      color: const Color(0xFF1B8A5A),
+      onRefresh: _refreshHomeFeed,
+      child: CustomScrollView(
+        controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
+        slivers: [
+          // Hero Header
+          SliverAppBar(
+            automaticallyImplyLeading: false,
+            expandedHeight: 280.h,
+            floating: false,
+            pinned: false,
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            flexibleSpace: FlexibleSpaceBar(
+              background: _buildHeroHeader(context),
+            ),
           ),
-        ),
 
-        // Sticky Unified Search & Filter Section (Modern)
-        SliverPersistentHeader(
-          pinned: true,
-          delegate: _SearchBarDelegate(
-            transparency: transparency,
-            context: context,
-            selectedProvince: selectedProvince,
-            onProvinceChange: (String? newValue) {
-              if (newValue != null) {
-                setState(() {
-                  selectedProvince = newValue;
-                });
-                context.read<HomeBloc>().add(
-                      HomeFilterProvinceEvent(
-                        province:
-                            newValue == 'Semua Provinsi' ? null : newValue,
-                      ),
-                    );
-              }
-            },
+          // Sticky Unified Search & Filter Section (Modern)
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _SearchBarDelegate(
+              transparency: transparency,
+              context: context,
+              selectedProvince: selectedProvince,
+              onProvinceChange: (String? newValue) {
+                if (newValue != null) {
+                  setState(() {
+                    selectedProvince = newValue;
+                  });
+                  context.read<HomeBloc>().add(
+                        HomeFilterProvinceEvent(
+                          province:
+                              newValue == 'Semua Provinsi' ? null : newValue,
+                        ),
+                      );
+                }
+              },
+            ),
           ),
-        ),
 
-        // Feed Content
-        SliverToBoxAdapter(
-          child: _buildHomeFeed(context),
-        ),
-      ],
+          // Feed Content
+          SliverToBoxAdapter(
+            child: _buildHomeFeed(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _refreshHomeFeed() async {
+    final completer = Completer<void>();
+    context.read<HomeBloc>().add(HomeRefreshEvent(completer: completer));
+    await completer.future.timeout(
+      const Duration(seconds: 20),
+      onTimeout: () => null,
     );
   }
 
@@ -422,9 +440,20 @@ class HomeInitialPageState extends State<HomeInitialPage> {
       child: BlocBuilder<HomeBloc, HomeState>(
         builder: (context, state) {
           final homeInitialModelObj = state.homeInitialModelObj;
-          final recommended = state.recommendedMountain;
           final mountains = homeInitialModelObj?.homelistItemList ?? [];
+          final recommendations = [...state.recommendations]
+            ..sort((a, b) => b.score.compareTo(a.score));
+          final topThree = recommendations.take(3).toList();
+
+          final mountainPool = <HomelistItemModel>[
+            if (state.baseRecommendedMountain != null)
+              state.baseRecommendedMountain!,
+            ...state.baseAllMountains,
+          ];
+
+          final recommendationError = state.recommendationError;
           final isLoading = state.isLoadingRecommended;
+            final otherMountains = mountains;
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -435,41 +464,76 @@ class HomeInitialPageState extends State<HomeInitialPage> {
               if (isLoading) ...[
                 _buildSectionHeader(
                     'Rekomendasi Untuk Anda', Icons.auto_awesome_rounded),
-                _buildShimmerLoadingCard(),
-                SizedBox(height: 16.h),
-              ] else if (recommended != null) ...[
+                _buildRecommendationLoading(),
+                SizedBox(height: 24.h),
+              ] else ...[
                 _buildSectionHeader(
                     'Rekomendasi Untuk Anda', Icons.auto_awesome_rounded),
-                HomelistItemWidget(
-                  recommended,
-                  isRecommended: true,
-                ),
+                if (topThree.isNotEmpty)
+                  ListView.separated(
+                    padding: EdgeInsets.zero,
+                    physics: const NeverScrollableScrollPhysics(),
+                    shrinkWrap: true,
+                    itemCount: topThree.length,
+                    separatorBuilder: (context, index) => SizedBox(height: 12.h),
+                    itemBuilder: (context, index) {
+                      final recommendation = topThree[index];
+                      final mountain = _findMountainByRecommendation(
+                        recommendation,
+                        mountainPool,
+                      );
+
+                      if (mountain == null) {
+                        return _buildRecommendationFallbackCard(recommendation);
+                      }
+
+                      return HomelistItemWidget(
+                        mountain,
+                        isRecommended: true,
+                        topsisRecommendation: recommendation,
+                        onTap: () => _openRecommendedRoute(
+                          context,
+                          recommendation,
+                          mountain,
+                        ),
+                      );
+                    },
+                  )
+                else if (recommendationError != null)
+                  _buildRecommendationError(
+                    recommendationError,
+                    onRetry: () => context.read<HomeBloc>().add(
+                          HomeRefreshEvent(),
+                        ),
+                  )
+                else
+                  _buildRecommendationEmpty(),
                 SizedBox(height: 24.h),
               ],
 
-              // Pilihan Lainnya Section Header
-              Text(
-                'Pilihan Lainnya',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 18.fSize,
-                  color: const Color(0xFF1B8A5A),
+              if (otherMountains.isNotEmpty) ...[
+                Text(
+                  'Pilihan Lainnya',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 18.fSize,
+                    color: const Color(0xFF1B8A5A),
+                  ),
                 ),
-              ),
-              SizedBox(height: 12.h),
+                SizedBox(height: 12.h),
+                ListView.separated(
+                  padding: EdgeInsets.zero,
+                  physics: const NeverScrollableScrollPhysics(),
+                  shrinkWrap: true,
+                  separatorBuilder: (context, index) => SizedBox(height: 16.h),
+                  itemCount: otherMountains.length,
+                  itemBuilder: (context, index) {
+                    return HomelistItemWidget(otherMountains[index]);
+                  },
+                ),
+              ],
 
-              ListView.separated(
-                padding: EdgeInsets.zero,
-                physics: const NeverScrollableScrollPhysics(),
-                shrinkWrap: true,
-                separatorBuilder: (context, index) => SizedBox(height: 16.h),
-                itemCount: mountains.length,
-                itemBuilder: (context, index) {
-                  HomelistItemModel model = mountains[index];
-                  return HomelistItemWidget(model);
-                },
-              ),
-              if (recommended == null && mountains.isEmpty && !isLoading)
+              if (topThree.isEmpty && otherMountains.isEmpty && !isLoading)
                 Padding(
                   padding: EdgeInsets.symmetric(vertical: 40.h),
                   child: Center(
@@ -479,7 +543,7 @@ class HomeInitialPageState extends State<HomeInitialPage> {
                             size: 64.h, color: Colors.grey[300]),
                         SizedBox(height: 16.h),
                         Text(
-                          'Belum ada data gunung tersedia.',
+                          'Belum ada rekomendasi tersedia.',
                           style: CustomTextStyles.bodyMediumGray500,
                         ),
                       ],
@@ -492,6 +556,242 @@ class HomeInitialPageState extends State<HomeInitialPage> {
         },
       ),
     );
+  }
+
+  HomelistItemModel? _findMountainByRecommendation(
+    RecommendationModel recommendation,
+    List<HomelistItemModel> mountains,
+  ) {
+    final target = _normalizeMountainName(recommendation.mountainName);
+
+    for (final mountain in mountains) {
+      final name = _normalizeMountainName(mountain.namaGunung ?? '');
+      if (name == target || name.contains(target) || target.contains(name)) {
+        return mountain;
+      }
+    }
+
+    return null;
+  }
+
+  void _openRecommendedRoute(
+    BuildContext context,
+    RecommendationModel recommendation,
+    HomelistItemModel mountain,
+  ) {
+    final idGunung = mountain.id;
+    final jalurId = recommendation.routeId;
+
+    if (idGunung == null || idGunung <= 0 || jalurId <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Data jalur rekomendasi belum valid.')),
+      );
+      return;
+    }
+
+    Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(
+        builder: (context) => TrailScreen(
+          jalurId: jalurId,
+          idGunung: idGunung,
+        ),
+      ),
+    );
+  }
+
+  String _normalizeMountainName(String value) {
+    return value
+        .toLowerCase()
+        .replaceAll('gunung', '')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+  }
+
+  Widget _buildRecommendationLoading() {
+    return Stack(
+      children: [
+        _buildShimmerLoadingCard(),
+        Positioned.fill(
+          child: Container(
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24.h),
+              color: Colors.white.withOpacity(0.35),
+            ),
+            child: const CircularProgressIndicator(
+              color: Color(0xFF1B8A5A),
+              strokeWidth: 2.8,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRecommendationError(
+    String message, {
+    required VoidCallback onRetry,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(16.h),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20.h),
+        color: Colors.white,
+        border: Border.all(color: Colors.red.withOpacity(0.15)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.warning_amber_rounded, color: Colors.red[400], size: 24.h),
+          SizedBox(width: 10.h),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                color: Colors.grey[800],
+                fontWeight: FontWeight.w600,
+                fontSize: 13.fSize,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: onRetry,
+            child: const Text('Muat Ulang'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecommendationEmpty() {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(16.h),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20.h),
+        color: Colors.white,
+        border: Border.all(color: Colors.grey.withOpacity(0.12)),
+      ),
+      child: Text(
+        'Belum ada rekomendasi jalur tersedia.',
+        style: TextStyle(
+          color: Colors.grey[700],
+          fontSize: 13.fSize,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecommendationFallbackCard(RecommendationModel item) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20.h),
+        color: Colors.white,
+        border: Border.all(color: Colors.grey.withOpacity(0.1), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 16.h,
+            offset: Offset(0, 6.h),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(16.h),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${_rankMedal(item.rank)} #${item.rank} ${item.mountainName}',
+              style: TextStyle(
+                fontSize: 16.fSize,
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFF1B8A5A),
+              ),
+            ),
+            SizedBox(height: 8.h),
+            Text(
+              'Route: ${item.routeName}',
+              style: TextStyle(
+                fontSize: 13.fSize,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[800],
+              ),
+            ),
+            SizedBox(height: 10.h),
+            Text(
+              'Data detail gunung belum tersedia, silakan refresh.',
+              style: TextStyle(
+                fontSize: 12.fSize,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey[600],
+              ),
+            ),
+            SizedBox(height: 10.h),
+            Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 10.h, vertical: 6.h),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1B8A5A).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10.h),
+                  ),
+                  child: Text(
+                    'Score: ${item.score.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      fontSize: 12.fSize,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF1B8A5A),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 8.h),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 10.h, vertical: 6.h),
+                  decoration: BoxDecoration(
+                    color: _riskColor(item.risk).withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(10.h),
+                  ),
+                  child: Text(
+                    'Risk: ${item.risk}',
+                    style: TextStyle(
+                      fontSize: 12.fSize,
+                      fontWeight: FontWeight.w700,
+                      color: _riskColor(item.risk),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _rankMedal(int rank) {
+    if (rank == 1) {
+      return '🥇';
+    }
+    if (rank == 2) {
+      return '🥈';
+    }
+    if (rank == 3) {
+      return '🥉';
+    }
+    return '🏔';
+  }
+
+  Color _riskColor(String risk) {
+    final value = risk.toUpperCase();
+    if (value == 'SAFE' || value == 'LOW') {
+      return const Color(0xFF1B8A5A);
+    }
+    if (value == 'MEDIUM') {
+      return const Color(0xFFF59E0B);
+    }
+    return const Color(0xFFDC2626);
   }
 
   /// Modern Section Header

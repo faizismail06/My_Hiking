@@ -13,6 +13,9 @@ class HomeState extends Equatable {
     this.errorMessage,
     this.selectedProvince,
     this.baseAllMountains = const [],
+    this.recommendations = const [],
+    this.baseRecommendations = const [],
+    this.recommendationError,
     this.isLoadingRecommended = false,
   });
 
@@ -23,7 +26,10 @@ class HomeState extends Equatable {
   HomelistItemModel? baseRecommendedMountain;
   List<HomelistItemModel> allMountains;
   List<HomelistItemModel> baseAllMountains;
+  List<RecommendationModel> recommendations;
+  List<RecommendationModel> baseRecommendations;
   String? errorMessage;
+  String? recommendationError;
   String? selectedProvince;
   bool isLoadingRecommended;
 
@@ -36,7 +42,10 @@ class HomeState extends Equatable {
         baseRecommendedMountain,
         allMountains,
         baseAllMountains,
+        recommendations,
+        baseRecommendations,
         errorMessage,
+        recommendationError,
         selectedProvince,
         isLoadingRecommended,
       ];
@@ -49,9 +58,13 @@ class HomeState extends Equatable {
     HomelistItemModel? baseRecommendedMountain,
     List<HomelistItemModel>? allMountains,
     List<HomelistItemModel>? baseAllMountains,
+    List<RecommendationModel>? recommendations,
+    List<RecommendationModel>? baseRecommendations,
     bool clearRecommendedMountain = false,
     bool clearBaseRecommendedMountain = false,
+    bool clearRecommendationError = false,
     String? errorMessage,
+    String? recommendationError,
     String? selectedProvince,
     bool? isLoadingRecommended,
   }) {
@@ -67,7 +80,12 @@ class HomeState extends Equatable {
           : (baseRecommendedMountain ?? this.baseRecommendedMountain),
       allMountains: allMountains ?? this.allMountains,
       baseAllMountains: baseAllMountains ?? this.baseAllMountains,
+      recommendations: recommendations ?? this.recommendations,
+      baseRecommendations: baseRecommendations ?? this.baseRecommendations,
       errorMessage: errorMessage ?? this.errorMessage,
+      recommendationError: clearRecommendationError
+          ? null
+          : (recommendationError ?? this.recommendationError),
       selectedProvince: selectedProvince ?? this.selectedProvince,
       isLoadingRecommended: isLoadingRecommended ?? this.isLoadingRecommended,
     );

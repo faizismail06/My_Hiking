@@ -15,6 +15,15 @@ class HomeInitialEvent extends HomeEvent {
   List<Object?> get props => [];
 }
 
+class HomeRefreshEvent extends HomeEvent {
+  final Completer<void>? completer;
+
+  HomeRefreshEvent({this.completer});
+
+  @override
+  List<Object?> get props => [completer];
+}
+
 class HomeSearchEvent extends HomeEvent {
   final String query;
 

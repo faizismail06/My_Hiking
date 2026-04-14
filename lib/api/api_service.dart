@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/http.dart';
 import 'package:myhiking/models/bookingModel.dart';
 import 'package:myhiking/models/model.dart';
+import 'package:myhiking/presentation/home_screen/models/recommendation_model.dart';
 import 'package:myhiking/presentation/data_profile_screen/models/res_user.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -173,6 +174,54 @@ class ApiService {
     final payload = await fetchHomeFeedFromServer();
     await cacheHomeFeed(payload);
     return payload;
+  }
+
+  Future<List<RecommendationModel>> fetchRecommendations({
+    int limit = 3,
+  }) async {
+    final token = await getToken();
+    final uri = Uri.parse('$baseUrl/recommendations?limit=$limit');
+
+    final response = await http.get(
+      uri,
+      headers: {
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Gagal memuat rekomendasi TOPSIS. Status: ${response.statusCode}',
+      );
+    }
+
+    final decoded = jsonDecode(response.body);
+    final payload = decoded is Map<String, dynamic>
+        ? decoded
+        : decoded is Map
+            ? Map<String, dynamic>.from(decoded)
+            : <String, dynamic>{};
+
+    final rawItems = payload['recommendations'];
+    final List<dynamic> items = rawItems is List ? rawItems : const [];
+
+    final parsed = <RecommendationModel>[];
+
+    for (int i = 0; i < items.length; i++) {
+      final item = items[i];
+      if (item is Map<String, dynamic>) {
+        parsed.add(RecommendationModel.fromJson(item, fallbackRank: i + 1));
+      } else if (item is Map) {
+        parsed.add(
+          RecommendationModel.fromJson(
+            Map<String, dynamic>.from(item),
+            fallbackRank: i + 1,
+          ),
+        );
+      }
+    }
+
+    return parsed;
   }
 
   Future<Map<String, dynamic>> loginWithGoogle(String idToken) async {

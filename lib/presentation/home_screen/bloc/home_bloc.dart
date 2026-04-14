@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
@@ -6,6 +8,7 @@ import '../../../core/app_export.dart';
 import '../models/home_initial_model.dart';
 import '../models/home_model.dart';
 import '../models/homelist_item_model.dart';
+import '../models/recommendation_model.dart';
 
 part 'home_event.dart';
 part 'home_state.dart';
@@ -16,6 +19,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
   HomeBloc(HomeState initialState) : super(initialState) {
     on<HomeInitialEvent>(_onInitialize);
+    on<HomeRefreshEvent>(_onRefresh);
     on<HomeSearchEvent>(_onSearch);
     on<HomeFilterProvinceEvent>(_onFilterProvince);
   }
@@ -24,36 +28,81 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     HomeInitialEvent event,
     Emitter<HomeState> emit,
   ) async {
+    await _loadHomeData(emit, useCache: true);
+  }
+
+  Future<void> _onRefresh(
+    HomeRefreshEvent event,
+    Emitter<HomeState> emit,
+  ) async {
+    try {
+      await _loadHomeData(emit, useCache: false);
+    } finally {
+      if (!(event.completer?.isCompleted ?? true)) {
+        event.completer?.complete();
+      }
+    }
+  }
+
+  Future<void> _loadHomeData(
+    Emitter<HomeState> emit, {
+    required bool useCache,
+  }) async {
     emit(state.copyWith(
       searchController: TextEditingController(),
       isLoadingRecommended: true,
+      clearRecommendationError: true,
     ));
 
     HomeFeedResult? cachedFeed;
 
-    try {
-      final cachedPayload = await _apiService.getCachedHomeFeed();
-      if (cachedPayload != null) {
-        cachedFeed = _parseHomeFeed(cachedPayload);
-        emit(_buildStateWithFeed(cachedFeed));
+    if (useCache) {
+      try {
+        final cachedPayload = await _apiService.getCachedHomeFeed();
+        if (cachedPayload != null) {
+          cachedFeed = _parseHomeFeed(cachedPayload);
+          emit(_buildStateWithFeed(cachedFeed, state.recommendations));
+        }
+      } catch (e) {
+        print('Error reading cached home feed: $e');
       }
-    } catch (e) {
-      print('Error reading cached home feed: $e');
     }
+
+    HomeFeedResult? currentFeed = cachedFeed;
 
     try {
       final freshPayload = await _apiService.fetchHomeFeedFromServer();
       await _apiService.cacheHomeFeed(freshPayload);
-      final freshFeed = _parseHomeFeed(freshPayload);
-      emit(_buildStateWithFeed(freshFeed));
+      currentFeed = _parseHomeFeed(freshPayload);
     } catch (e) {
-      if (cachedFeed == null) {
+      if (currentFeed == null) {
         print('Error fetching data: $e');
-        emit(state.copyWith(isLoadingRecommended: false));
+        emit(state.copyWith(
+          isLoadingRecommended: false,
+          recommendationError: 'Gagal memuat data home.',
+        ));
+        return;
       } else {
         emit(state.copyWith(isLoadingRecommended: false));
       }
     }
+
+    List<RecommendationModel> topRecommendations = state.baseRecommendations;
+    String? recommendationError;
+
+    try {
+      topRecommendations = await _apiService.fetchRecommendations(limit: 30);
+      topRecommendations = _sortAndRankRecommendations(topRecommendations);
+    } catch (e) {
+      recommendationError = 'Gagal memuat rekomendasi TOPSIS.';
+      print('Error fetching recommendations: $e');
+    }
+
+    emit(_buildStateWithFeed(
+      currentFeed,
+      topRecommendations,
+      recommendationError: recommendationError,
+    ));
   }
 
   Future<void> _onSearch(
@@ -153,10 +202,17 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     return HomeFeedResult(recommended: recommended, mountains: mountains);
   }
 
-  HomeState _buildStateWithFeed(HomeFeedResult feed) {
+  HomeState _buildStateWithFeed(
+    HomeFeedResult feed,
+    List<RecommendationModel> recommendations, {
+    String? recommendationError,
+  }) {
     return state.copyWith(
       recommendedMountain: feed.recommended,
       baseRecommendedMountain: feed.recommended,
+      recommendations: recommendations,
+      baseRecommendations: recommendations,
+      recommendationError: recommendationError,
       allMountains: feed.mountains,
       baseAllMountains: feed.mountains,
       selectedProvince: null,
@@ -165,6 +221,36 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         homelistItemList: feed.mountains,
       ),
     );
+  }
+
+  List<RecommendationModel> _sortAndRankRecommendations(
+    List<RecommendationModel> items,
+  ) {
+    final sorted = [...items]..sort((a, b) => b.score.compareTo(a.score));
+    final uniqueByMountain = <RecommendationModel>[];
+    final seenMountains = <String>{};
+
+    for (final item in sorted) {
+      final key = item.mountainName
+          .toLowerCase()
+          .replaceAll('gunung', '')
+          .replaceAll(RegExp(r'\s+'), ' ')
+          .trim();
+
+      if (key.isEmpty || seenMountains.contains(key)) {
+        continue;
+      }
+
+      seenMountains.add(key);
+      uniqueByMountain.add(item);
+    }
+
+    return uniqueByMountain.asMap().entries.map((entry) {
+      final index = entry.key;
+      final item = entry.value;
+
+      return item.copyWith(rank: index + 1);
+    }).toList();
   }
 }
 

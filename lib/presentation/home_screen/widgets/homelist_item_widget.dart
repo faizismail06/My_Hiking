@@ -5,6 +5,7 @@ import 'package:myhiking/presentation/detail_mountain_screen/bloc/detail_mountai
 import 'package:myhiking/presentation/detail_mountain_screen/detail_mountain_screen.dart';
 import '../../../core/app_export.dart';
 import '../models/homelist_item_model.dart';
+import '../models/recommendation_model.dart';
 
 // ignore_for_file: must_be_immutable
 class HomelistItemWidget extends StatelessWidget {
@@ -12,10 +13,14 @@ class HomelistItemWidget extends StatelessWidget {
     this.homelistItemModelObj, {
     super.key,
     this.isRecommended = false,
+    this.topsisRecommendation,
+    this.onTap,
   });
 
   HomelistItemModel homelistItemModelObj;
   final bool isRecommended;
+  final RecommendationModel? topsisRecommendation;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -48,6 +53,10 @@ class HomelistItemWidget extends StatelessWidget {
         borderRadius: BorderRadius.circular(24.h),
         child: InkWell(
           onTap: () {
+            if (onTap != null) {
+              onTap!.call();
+              return;
+            }
             onTapImgGunung(context, homelistItemModelObj);
           },
           child: Column(
@@ -117,7 +126,9 @@ class HomelistItemWidget extends StatelessWidget {
                                 ),
                                 SizedBox(width: 6.h),
                                 Text(
-                                  'Rekomendasi DSS',
+                                  topsisRecommendation != null
+                                      ? 'TOPSIS #${topsisRecommendation!.rank}'
+                                      : 'Rekomendasi DSS',
                                   style: TextStyle(
                                     color: Colors.white,
                                     fontSize: 11.fSize,
@@ -204,6 +215,60 @@ class HomelistItemWidget extends StatelessWidget {
                         ],
                       ),
                     ],
+                    if (isRecommended && topsisRecommendation != null) ...[
+                      SizedBox(height: 12.h),
+                      Text(
+                        'Route: ${topsisRecommendation!.routeName}',
+                        style: TextStyle(
+                          color: Colors.grey[700],
+                          fontSize: 13.fSize,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      SizedBox(height: 8.h),
+                      Row(
+                        children: [
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 10.h,
+                              vertical: 6.h,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1B8A5A).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8.h),
+                            ),
+                            child: Text(
+                              'Score: ${topsisRecommendation!.score.toStringAsFixed(2)}',
+                              style: TextStyle(
+                                fontSize: 12.fSize,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF1B8A5A),
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 8.h),
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 10.h,
+                              vertical: 6.h,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _riskColor(topsisRecommendation!.risk)
+                                  .withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(8.h),
+                            ),
+                            child: Text(
+                              'Risk: ${topsisRecommendation!.risk}',
+                              style: TextStyle(
+                                fontSize: 12.fSize,
+                                fontWeight: FontWeight.w700,
+                                color: _riskColor(topsisRecommendation!.risk),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -212,6 +277,17 @@ class HomelistItemWidget extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Color _riskColor(String risk) {
+    final value = risk.toUpperCase();
+    if (value == 'SAFE' || value == 'LOW') {
+      return const Color(0xFF1B8A5A);
+    }
+    if (value == 'MEDIUM') {
+      return const Color(0xFFF59E0B);
+    }
+    return const Color(0xFFDC2626);
   }
 }
 
