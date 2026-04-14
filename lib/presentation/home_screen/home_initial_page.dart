@@ -514,7 +514,7 @@ class HomeInitialPageState extends State<HomeInitialPage> {
 
           final recommendationError = state.recommendationError;
           final isLoading = state.isLoadingRecommended;
-            final otherMountains = mountains;
+          final otherMountains = mountains;
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -525,40 +525,66 @@ class HomeInitialPageState extends State<HomeInitialPage> {
               if (isLoading) ...[
                 _buildSectionHeader(
                     'Rekomendasi Untuk Anda', Icons.auto_awesome_rounded),
-                _buildRecommendationLoading(),
+                SizedBox(
+                  height: 340.h,
+                  child: ListView.separated(
+                    padding: EdgeInsets.symmetric(vertical: 4.h),
+                    scrollDirection: Axis.horizontal,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: 2,
+                    separatorBuilder: (context, index) => SizedBox(width: 12.h),
+                    itemBuilder: (context, index) {
+                      return SizedBox(
+                        width: 280.h,
+                        child: _buildRecommendationLoading(),
+                      );
+                    },
+                  ),
+                ),
                 SizedBox(height: 24.h),
               ] else ...[
                 _buildSectionHeader(
                     'Rekomendasi Untuk Anda', Icons.auto_awesome_rounded),
                 if (topThree.isNotEmpty)
-                  ListView.separated(
-                    padding: EdgeInsets.zero,
-                    physics: const NeverScrollableScrollPhysics(),
-                    shrinkWrap: true,
-                    itemCount: topThree.length,
-                    separatorBuilder: (context, index) => SizedBox(height: 12.h),
-                    itemBuilder: (context, index) {
-                      final recommendation = topThree[index];
-                      final mountain = _findMountainByRecommendation(
-                        recommendation,
-                        mountainPool,
-                      );
-
-                      if (mountain == null) {
-                        return _buildRecommendationFallbackCard(recommendation);
-                      }
-
-                      return HomelistItemWidget(
-                        mountain,
-                        isRecommended: true,
-                        topsisRecommendation: recommendation,
-                        onTap: () => _openRecommendedRoute(
-                          context,
+                  SizedBox(
+                    height: 340.h,
+                    child: ListView.separated(
+                      padding: EdgeInsets.symmetric(vertical: 4.h),
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: topThree.length,
+                      separatorBuilder: (context, index) =>
+                          SizedBox(width: 12.h),
+                      itemBuilder: (context, index) {
+                        final recommendation = topThree[index];
+                        final mountain = _findMountainByRecommendation(
                           recommendation,
-                          mountain,
-                        ),
-                      );
-                    },
+                          mountainPool,
+                        );
+
+                        if (mountain == null) {
+                          return SizedBox(
+                            width: 280.h,
+                            child: _buildRecommendationFallbackCard(
+                                recommendation),
+                          );
+                        }
+
+                        return SizedBox(
+                          width: 280.h,
+                          child: HomelistItemWidget(
+                            mountain,
+                            isRecommended: true,
+                            topsisRecommendation: recommendation,
+                            onTap: () => _openRecommendedRoute(
+                              context,
+                              recommendation,
+                              mountain,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   )
                 else if (recommendationError != null)
                   _buildRecommendationError(
@@ -793,7 +819,8 @@ class HomeInitialPageState extends State<HomeInitialPage> {
             Row(
               children: [
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: 10.h, vertical: 6.h),
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 10.h, vertical: 6.h),
                   decoration: BoxDecoration(
                     color: const Color(0xFF1B8A5A).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10.h),
@@ -809,7 +836,8 @@ class HomeInitialPageState extends State<HomeInitialPage> {
                 ),
                 SizedBox(width: 8.h),
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: 10.h, vertical: 6.h),
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 10.h, vertical: 6.h),
                   decoration: BoxDecoration(
                     color: _riskColor(item.risk).withOpacity(0.12),
                     borderRadius: BorderRadius.circular(10.h),

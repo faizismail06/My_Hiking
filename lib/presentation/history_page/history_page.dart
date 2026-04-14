@@ -211,6 +211,19 @@ class _HistoryPageState extends State<HistoryPage> {
       formattedDate = model.tanggalNaik ?? '';
     }
 
+    final normalizedStatus = status.toLowerCase();
+    if (normalizedStatus == 'cancel requested' || normalizedStatus == 'cancelled') {
+      Navigator.of(context, rootNavigator: true).pushNamed(
+        AppRoutes.refundRequestResultPage,
+        arguments: {
+          'orderId': parsedPesananId,
+          'mountainName': model.gunung ?? 'Gunung',
+          'hikingDate': formattedDate,
+        },
+      );
+      return;
+    }
+
     // Use root navigator to navigate outside the nested navigator
     Navigator.of(context, rootNavigator: true).pushNamed(
       AppRoutes.ticketActionScreen,

@@ -85,6 +85,10 @@ class RecentclimbinglistItemWidget extends StatelessWidget {
         return _buildBayarButton(context);
       case 'Booking':
         return _buildBookingButton(context);
+      case 'Cancel Requested':
+        return _buildStatusChip('Cancel Requested', Colors.orange);
+      case 'Cancelled':
+        return _buildStatusChip('Cancelled', Colors.red);
       case 'Sedang Mendaki':
         return _buildMendakiButton(context);
       case 'Selesai':
@@ -93,6 +97,23 @@ class RecentclimbinglistItemWidget extends StatelessWidget {
         return SizedBox(); // Return an empty widget if no match
     }
   }
+    Widget _buildStatusChip(String label, Color color) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: color,
+            fontWeight: FontWeight.w600,
+            fontSize: 12,
+          ),
+        ),
+      );
+    }
 
   // Button for unpaid order
   Widget _buildBayarButton(BuildContext context) {

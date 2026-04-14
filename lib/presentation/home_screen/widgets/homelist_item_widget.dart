@@ -181,7 +181,7 @@ class _HomelistItemWidgetState extends State<HomelistItemWidget> {
                                     SizedBox(width: 6.h),
                                     Text(
                                       widget.topsisRecommendation != null
-                                          ? 'TOPSIS #${widget.topsisRecommendation!.rank}'
+                                          ? 'TOP #${widget.topsisRecommendation!.rank}'
                                           : 'Rekomendasi DSS',
                                       style: TextStyle(
                                         color: Colors.white,
@@ -278,7 +278,8 @@ class _HomelistItemWidgetState extends State<HomelistItemWidget> {
                                   vertical: 6.h,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: _riskColor(widget.topsisRecommendation!.risk)
+                                  color: _riskColor(
+                                          widget.topsisRecommendation!.risk)
                                       .withOpacity(0.12),
                                   borderRadius: BorderRadius.circular(8.h),
                                 ),
@@ -287,14 +288,16 @@ class _HomelistItemWidgetState extends State<HomelistItemWidget> {
                                   style: TextStyle(
                                     fontSize: 12.fSize,
                                     fontWeight: FontWeight.w700,
-                                    color: _riskColor(widget.topsisRecommendation!.risk),
+                                    color: _riskColor(
+                                        widget.topsisRecommendation!.risk),
                                   ),
                                 ),
                               ),
                             ],
                           ),
                         ],
-                        if (widget.isRecommended && recommendation != null) ...[
+                        if (!widget.isRecommended &&
+                            recommendation != null) ...[
                           SizedBox(height: 12.h),
                           Row(
                             children: [

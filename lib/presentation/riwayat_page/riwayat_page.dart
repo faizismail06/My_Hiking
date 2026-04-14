@@ -182,6 +182,7 @@ class _RiwayatPageState extends State<RiwayatPage> {
   /// Navigate to ticket action screen
   void _navigateToTicketAction(BuildContext context, RecentclimbinglistItemModel model) {
     int parsedPesananId = int.tryParse(model.id.toString()) ?? 0;
+    final status = (model.status ?? '').trim().toLowerCase();
     
     // Format the hiking date for display
     String formattedDate = '';
@@ -190,6 +191,19 @@ class _RiwayatPageState extends State<RiwayatPage> {
       formattedDate = DateFormat('EEEE, dd MMMM yyyy', 'id_ID').format(tanggal);
     } catch (e) {
       formattedDate = model.tanggalNaik ?? '';
+    }
+
+    if (status == 'cancel requested' || status == 'cancelled') {
+      Navigator.of(context, rootNavigator: true).pushNamed(
+        AppRoutes.refundRequestResultPage,
+        arguments: {
+          'orderId': parsedPesananId,
+          'status': model.status ?? 'Cancel Requested',
+          'mountainName': model.gunung ?? 'Gunung',
+          'hikingDate': formattedDate,
+        },
+      );
+      return;
     }
     
     // Use root navigator to navigate outside the nested navigator

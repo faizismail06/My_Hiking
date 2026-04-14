@@ -22,6 +22,7 @@ class PaymentMethodScreen extends StatefulWidget {
 class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
   bool _isLoading = true;
   bool _isProcessing = false;
+  bool _isCancelling = false;
   Map<String, dynamic>? _orderData;
   List<dynamic> _paymentMethods = [];
   String? _selectedPaymentMethod;
@@ -455,8 +456,10 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
   }
 
   Widget _buildPaymentButton(BuildContext context) {
-    bool canPay =
-        _selectedPaymentMethod != null && !_isProcessing && _orderData != null;
+    bool canPay = _selectedPaymentMethod != null &&
+        !_isProcessing &&
+        !_isCancelling &&
+        _orderData != null;
 
     return Container(
       padding: EdgeInsets.all(16.h),
@@ -515,6 +518,42 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                   fontFamily: 'Manrope',
+                ),
+              ),
+            ),
+          ),
+          SizedBox(height: 10.h),
+          SizedBox(
+            width: double.infinity,
+            height: 48.h,
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: Colors.red.shade300),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                foregroundColor: Colors.red.shade600,
+              ),
+              onPressed: (_isProcessing || _isCancelling)
+                  ? null
+                  : () => _showCancelOrderConfirmation(context),
+              icon: _isCancelling
+                  ? SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Colors.red.shade400,
+                        ),
+                      ),
+                    )
+                  : Icon(Icons.delete_outline),
+              label: Text(
+                _isCancelling ? 'MEMBATALKAN...' : 'BATALKAN PESANAN',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
@@ -584,6 +623,86 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
       if (mounted) {
         setState(() {
           _isProcessing = false;
+        });
+      }
+    }
+  }
+
+  void _showCancelOrderConfirmation(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text('Batalkan Pesanan?'),
+          content: Text(
+            'Pesanan ini akan dihapus dari database. Tindakan ini tidak dapat dibatalkan.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text('Kembali'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                _cancelOrder(context);
+              },
+              child: Text('Ya, Batalkan'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _cancelOrder(BuildContext context) async {
+    setState(() {
+      _isCancelling = true;
+    });
+
+    try {
+      final result = await ApiService().cancelOrder(widget.orderId);
+      if (!mounted) return;
+
+      if (result['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content:
+                Text(result['message']?.toString() ?? 'Pesanan dibatalkan.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil(
+          AppRoutes.homeScreen,
+          (route) => false,
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              result['message']?.toString() ?? 'Gagal membatalkan pesanan.',
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Terjadi kesalahan saat membatalkan pesanan.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCancelling = false;
         });
       }
     }

@@ -33,12 +33,14 @@ class TiketSayaBloc extends Bloc<TiketSayaEvent, TiketSayaState> {
 
       // Split orders into active and completed
       final activeTickets = allOrders
-          .where(
-            (o) =>
-                o.status != 'Selesai' &&
-                o.status != 'Dibatalkan' &&
-                o.status != 'Expired',
-          )
+          .where((o) {
+            final status = (o.status ?? '').trim().toLowerCase();
+            return status != 'selesai' &&
+                status != 'dibatalkan' &&
+                status != 'cancel requested' &&
+                status != 'cancelled' &&
+                status != 'expired';
+          })
           .toList();
 
       final completedHikes =

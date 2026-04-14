@@ -27,6 +27,8 @@ import '../presentation/ticket_screen/ticket_screen.dart';
 import '../presentation/ticket_action_screen/ticket_action_screen.dart';
 import '../presentation/friend_screen/friend_screen.dart';
 import '../presentation/chatbot_screen/chatbot_screen.dart';
+import '../presentation/refund_request_page/refund_request_page.dart';
+import '../presentation/refund_request_result_page/refund_request_result_page.dart';
 
 class AppRoutes {
   static const String landingScreen = '/landing_screen';
@@ -56,6 +58,8 @@ class AppRoutes {
   static const String riwayatTransaksiPage = '/riwayat_transaksi_page';
   static const String friendScreen = '/friend_screen';
   static const String chatbotScreen = '/chatbot_screen';
+  static const String refundRequestPage = '/refund_request_page';
+  static const String refundRequestResultPage = '/refund_request_result_page';
   static const String experienceOnboardingScreen = '/experience_onboarding_screen';
   static const String appNavigationScreen = '/app_navigation_screen';
   static const String initialRoute = '/initialRoute';
@@ -156,6 +160,36 @@ class AppRoutes {
           return FriendScreen.builder(context, userId);
         },
         chatbotScreen: ChatbotScreen.builder,
+        refundRequestPage: (context) {
+          final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+
+          if (args == null) {
+            return Scaffold(
+              body: Center(child: Text("Arguments are required")),
+            );
+          }
+
+          return RefundRequestPage(
+            orderId: args['orderId'] as int,
+            mountainName: args['mountainName'] as String? ?? 'Gunung',
+            hikingDate: args['hikingDate'] as String? ?? '-',
+          );
+        },
+        refundRequestResultPage: (context) {
+          final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+
+          if (args == null) {
+            return Scaffold(
+              body: Center(child: Text("Arguments are required")),
+            );
+          }
+
+          return RefundRequestResultPage(
+            orderId: args['orderId'] as int,
+            mountainName: args['mountainName'] as String? ?? 'Gunung',
+            hikingDate: args['hikingDate'] as String? ?? '-',
+          );
+        },
         experienceOnboardingScreen: (context) => const ExperienceOnboardingScreen(),
       };
 }

@@ -48,9 +48,17 @@ class RiwayatTransaksiBloc
       final data = json.decode(response.body)['data'] as List;
 
       final filteredData = data
-          .where((item) =>
-              item['id_user'].toString() == userId &&
-              (item['status'] == 'Selesai' || item['status'] == 'Expired'))
+          .where((item) {
+            if (item['id_user'].toString() != userId) {
+              return false;
+            }
+
+            final status = (item['status'] ?? '').toString().trim().toLowerCase();
+            return status == 'selesai' ||
+                status == 'expired' ||
+                status == 'cancel requested' ||
+                status == 'cancelled';
+          })
           .toList()
         ..sort((a, b) {
           final aId = int.tryParse(a['id'].toString()) ?? 0;

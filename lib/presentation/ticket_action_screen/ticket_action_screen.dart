@@ -281,7 +281,7 @@ class _TicketActionScreenState extends State<TicketActionScreen> {
         ),
         title: const Text('Batalkan Pesanan?'),
         content: const Text(
-          'Pesanan yang dibatalkan tidak dapat dikembalikan. Lanjutkan pembatalan?',
+          'Lanjutkan ke formulir pembatalan dan refund?',
         ),
         actions: [
           TextButton(
@@ -291,11 +291,11 @@ class _TicketActionScreenState extends State<TicketActionScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              _cancelOrder();
+              _openRefundRequestPage();
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: const Text(
-              'Ya, Batalkan',
+              'Ya, Lanjutkan',
               style: TextStyle(color: Colors.white),
             ),
           ),
@@ -304,7 +304,7 @@ class _TicketActionScreenState extends State<TicketActionScreen> {
     );
   }
 
-  Future<void> _cancelOrder() async {
+  Future<void> _openRefundRequestPage() async {
     if (_state.isCancelOrderLoading) {
       return;
     }
@@ -312,30 +312,30 @@ class _TicketActionScreenState extends State<TicketActionScreen> {
     _cubit.setCancelOrderLoading(true);
 
     try {
-      final result = await ApiService().cancelOrder(widget.orderId);
+      final result = await Navigator.of(context, rootNavigator: true).pushNamed(
+        AppRoutes.refundRequestPage,
+        arguments: {
+          'orderId': widget.orderId,
+          'mountainName': widget.mountainName,
+          'hikingDate': widget.hikingDate,
+        },
+      );
+
       if (!mounted) {
         return;
       }
 
-      if (result['success'] == true) {
+      if (result is Map && result['submitted'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              result['message']?.toString() ?? 'Pesanan berhasil dibatalkan.',
+              result['message']?.toString() ??
+                  'Permintaan pembatalan berhasil diajukan.',
             ),
             backgroundColor: Colors.green,
           ),
         );
         Navigator.of(context).pop(true);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              result['message']?.toString() ?? 'Gagal membatalkan pesanan.',
-            ),
-            backgroundColor: Colors.red,
-          ),
-        );
       }
     } catch (e) {
       if (!mounted) {
@@ -344,7 +344,7 @@ class _TicketActionScreenState extends State<TicketActionScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Terjadi kesalahan saat membatalkan pesanan: $e'),
+          content: Text('Terjadi kesalahan saat membuka form refund: $e'),
           backgroundColor: Colors.red,
         ),
       );

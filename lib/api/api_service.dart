@@ -586,6 +586,170 @@ class ApiService {
     }
   }
 
+  Future<Map<String, dynamic>> getRefundPreview(int orderId) async {
+    try {
+      final token = await getToken();
+
+      if (token == null || token.isEmpty) {
+        return {
+          'success': false,
+          'message': 'Token tidak ditemukan. Silakan login ulang.',
+        };
+      }
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/refund-preview/$orderId'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      final Map<String, dynamic> responseData =
+          jsonDecode(response.body) is Map<String, dynamic>
+              ? jsonDecode(response.body) as Map<String, dynamic>
+              : <String, dynamic>{};
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'message': responseData['message']?.toString() ??
+              'Preview refund berhasil diambil.',
+          'data': responseData['data'] ?? <String, dynamic>{},
+        };
+      }
+
+      return {
+        'success': false,
+        'message': responseData['message']?.toString() ??
+            'Gagal mengambil preview refund.',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Terjadi kesalahan: $e',
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> submitRefundRequest({
+    required int orderId,
+    required String cancelReason,
+    required String refundMethod,
+    String? bankName,
+    String? accountNumber,
+    String? accountHolder,
+    String? phoneNumber,
+  }) async {
+    try {
+      final token = await getToken();
+
+      if (token == null || token.isEmpty) {
+        return {
+          'success': false,
+          'message': 'Token tidak ditemukan. Silakan login ulang.',
+        };
+      }
+
+      final payload = <String, dynamic>{
+        'order_id': orderId,
+        'cancel_reason': cancelReason,
+        'refund_method': refundMethod,
+      };
+
+      if (refundMethod == 'Bank Transfer') {
+        payload['bank_name'] = bankName;
+        payload['account_number'] = accountNumber;
+        payload['account_holder'] = accountHolder;
+      } else {
+        payload['phone_number'] = phoneNumber;
+        if (accountHolder != null && accountHolder.trim().isNotEmpty) {
+          payload['account_holder'] = accountHolder;
+        }
+      }
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/refund-requests'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(payload),
+      );
+
+      final Map<String, dynamic> responseData =
+          jsonDecode(response.body) is Map<String, dynamic>
+              ? jsonDecode(response.body) as Map<String, dynamic>
+              : <String, dynamic>{};
+
+      if (response.statusCode == 201) {
+        return {
+          'success': true,
+          'message': responseData['message']?.toString() ??
+              'Permintaan refund berhasil diajukan.',
+          'data': responseData['data'] ?? <String, dynamic>{},
+        };
+      }
+
+      return {
+        'success': false,
+        'message': responseData['message']?.toString() ??
+            'Gagal mengajukan refund request.',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Terjadi kesalahan: $e',
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> getRefundRequestResultByOrder(int orderId) async {
+    try {
+      final token = await getToken();
+
+      if (token == null || token.isEmpty) {
+        return {
+          'success': false,
+          'message': 'Token tidak ditemukan. Silakan login ulang.',
+        };
+      }
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/refund-requests/order/$orderId'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      final decoded = jsonDecode(response.body);
+      final Map<String, dynamic> responseData = decoded is Map<String, dynamic>
+          ? decoded
+          : decoded is Map
+              ? Map<String, dynamic>.from(decoded)
+              : <String, dynamic>{};
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'data': responseData['data'] ?? <String, dynamic>{},
+        };
+      }
+
+      return {
+        'success': false,
+        'message': responseData['message']?.toString() ??
+            'Gagal mengambil hasil refund request.',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Terjadi kesalahan: $e',
+      };
+    }
+  }
+
   Future<Map<String, dynamic>> fetchTrailPreview({
     required int mountainId,
     required int trailId,

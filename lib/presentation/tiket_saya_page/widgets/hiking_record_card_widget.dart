@@ -6,11 +6,13 @@ import '../models/tiket_saya_model.dart';
 class HikingRecordCardWidget extends StatelessWidget {
   final TiketItemModel model;
   final int index;
+  final VoidCallback? onTap;
 
   const HikingRecordCardWidget({
     super.key,
     required this.model,
     required this.index,
+    this.onTap,
   });
 
   @override
@@ -35,7 +37,12 @@ class HikingRecordCardWidget extends StatelessWidget {
       }
     }
 
-    return Container(
+    final status = (model.status ?? '').trim().toLowerCase();
+    final isRefundStatus = status == 'cancel requested' || status == 'cancelled';
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
       margin: EdgeInsets.only(bottom: 14.h),
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -190,13 +197,32 @@ class HikingRecordCardWidget extends StatelessWidget {
                       ],
                     ),
                   ),
+                  if (isRefundStatus) ...[
+                    SizedBox(height: 10.h),
+                    Row(
+                      children: [
+                        Icon(Icons.info_outline, size: 14.h, color: const Color(0xFF1D4ED8)),
+                        SizedBox(width: 6.h),
+                        Expanded(
+                          child: Text(
+                            'Tap kartu untuk melihat status proses refund',
+                            style: TextStyle(
+                              fontSize: 11.fSize,
+                              color: const Color(0xFF1E3A8A),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
           ],
         ),
       ),
-    );
+    ));
   }
 
   Widget _buildStatusBadge() {

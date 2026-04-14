@@ -11,6 +11,7 @@ class TiketItemModel extends Equatable {
   final String? jalur;
   final String? status;
   final int? totalHarga;
+  final String? updatedAt;
 
   const TiketItemModel({
     this.id,
@@ -20,6 +21,7 @@ class TiketItemModel extends Equatable {
     this.jalur,
     this.status,
     this.totalHarga,
+    this.updatedAt,
   });
 
   factory TiketItemModel.fromJson(Map<String, dynamic> json) {
@@ -33,12 +35,13 @@ class TiketItemModel extends Equatable {
       totalHarga: json['total_harga_tiket'] is int
           ? json['total_harga_tiket']
           : int.tryParse((json['total_harga_tiket'] ?? '').toString()),
+      updatedAt: json['updated_at'],
     );
   }
 
   @override
   List<Object?> get props =>
-      [id, tanggalNaik, tanggalTurun, gunung, jalur, status, totalHarga];
+      [id, tanggalNaik, tanggalTurun, gunung, jalur, status, totalHarga, updatedAt];
 }
 
 /// Model for a transaction item

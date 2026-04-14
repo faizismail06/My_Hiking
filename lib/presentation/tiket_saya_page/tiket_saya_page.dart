@@ -82,6 +82,33 @@ class _TiketSayaPageState extends State<TiketSayaPage> {
                             "Tiket Saya",
                             style: CustomTextStyles.titleMediumBlack900,
                           ),
+                          SizedBox(height: 8.h),
+                          Container(
+                            width: double.infinity,
+                            padding: EdgeInsets.symmetric(horizontal: 12.h, vertical: 10.h),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEFF6FF),
+                              borderRadius: BorderRadius.circular(10.h),
+                              border: Border.all(color: const Color(0xFFBFDBFE)),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(Icons.info_outline, color: const Color(0xFF1D4ED8), size: 16.h),
+                                SizedBox(width: 8.h),
+                                Expanded(
+                                  child: Text(
+                                    'Tiket dengan status Cancel Requested/Cancelled dipindahkan ke Riwayat Transaksi. Lihat status refund di sana.',
+                                    style: TextStyle(
+                                      fontSize: 11.fSize,
+                                      color: const Color(0xFF1E3A8A),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                           SizedBox(height: 10.h),
                           _buildTicketList(context),
                         ],
@@ -212,6 +239,27 @@ class _TiketSayaPageState extends State<TiketSayaPage> {
     if (parsedId <= 0) return;
 
     final status = (model.status ?? '').trim();
+    final normalizedStatus = status.toLowerCase();
+
+    if (normalizedStatus == 'cancel requested' || normalizedStatus == 'cancelled') {
+      String formattedDate = '';
+      try {
+        DateTime tanggal = DateTime.parse(model.tanggalNaik.toString());
+        formattedDate = DateFormat('EEEE, dd MMMM yyyy', 'id_ID').format(tanggal);
+      } catch (e) {
+        formattedDate = model.tanggalNaik ?? '';
+      }
+
+      await Navigator.of(context, rootNavigator: true).pushNamed(
+        AppRoutes.refundRequestResultPage,
+        arguments: {
+          'orderId': parsedId,
+          'mountainName': model.gunung ?? 'Gunung',
+          'hikingDate': formattedDate,
+        },
+      );
+      return;
+    }
 
     // Check for unpaid
     final tx = state.transactionMap?[parsedId];
@@ -223,7 +271,7 @@ class _TiketSayaPageState extends State<TiketSayaPage> {
           tx != null && (tx.paymentType?.trim().isNotEmpty ?? false);
 
       if (hasSelectedPaymentMethod) {
-        final resumed = await _resumePendingPayment(parsedId, tx!);
+        final resumed = await _resumePendingPayment(parsedId, tx);
         if (resumed) {
           if (mounted && userId.isNotEmpty) {
             context.read<TiketSayaBloc>().add(TiketSayaUserIdEvent(userId));
