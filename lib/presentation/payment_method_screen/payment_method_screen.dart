@@ -536,6 +536,7 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
       final paymentResult = await ApiService().createMidtransPayment(
         widget.orderId,
         paymentMethod: _selectedPaymentMethod,
+        reuseIfPending: true,
       );
 
       if (!mounted) return;
@@ -619,7 +620,7 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Silakan cek status pembayaran di menu Transaksi'),
+            content: Text('Silakan cek status pembayaran di menu Tiket saya'),
             backgroundColor: Colors.orange,
             duration: Duration(seconds: 3),
           ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:myhiking/presentation/midtrans_payment_screen/midtrans_payment_screen.dart';
 import 'package:myhiking/presentation/payment_method_screen/payment_method_screen.dart';
 import '../../api/api_service.dart';
 import '../../core/app_export.dart';
@@ -154,8 +155,8 @@ class _TiketSayaPageState extends State<TiketSayaPage> {
           if (state.isLoading) {
             return Center(
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(
-                    Colors.green.shade900),
+                valueColor:
+                    AlwaysStoppedAnimation<Color>(Colors.green.shade900),
               ),
             );
           }
@@ -205,7 +206,8 @@ class _TiketSayaPageState extends State<TiketSayaPage> {
     );
   }
 
-  Future<void> _handleTicketTap(TiketItemModel model, TiketSayaState state) async {
+  Future<void> _handleTicketTap(
+      TiketItemModel model, TiketSayaState state) async {
     int parsedId = int.tryParse(model.id ?? '') ?? 0;
     if (parsedId <= 0) return;
 
@@ -213,14 +215,33 @@ class _TiketSayaPageState extends State<TiketSayaPage> {
 
     // Check for unpaid
     final tx = state.transactionMap?[parsedId];
-    if (status.toLowerCase() == 'bayar' ||
-        (tx != null && tx.status?.toLowerCase() == 'incomplete')) {
-      Navigator.push(
+    final isUnpaid = status.toLowerCase() == 'bayar' ||
+        (tx != null && tx.status?.toLowerCase() == 'incomplete');
+
+    if (isUnpaid) {
+      final hasSelectedPaymentMethod =
+          tx != null && (tx.paymentType?.trim().isNotEmpty ?? false);
+
+      if (hasSelectedPaymentMethod) {
+        final resumed = await _resumePendingPayment(parsedId, tx!);
+        if (resumed) {
+          if (mounted && userId.isNotEmpty) {
+            context.read<TiketSayaBloc>().add(TiketSayaUserIdEvent(userId));
+          }
+          return;
+        }
+      }
+
+      await Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => PaymentMethodScreen(orderId: parsedId),
         ),
       );
+
+      if (mounted && userId.isNotEmpty) {
+        context.read<TiketSayaBloc>().add(TiketSayaUserIdEvent(userId));
+      }
       return;
     }
 
@@ -228,8 +249,7 @@ class _TiketSayaPageState extends State<TiketSayaPage> {
     String formattedDate = '';
     try {
       DateTime tanggal = DateTime.parse(model.tanggalNaik.toString());
-      formattedDate =
-          DateFormat('EEEE, dd MMMM yyyy', 'id_ID').format(tanggal);
+      formattedDate = DateFormat('EEEE, dd MMMM yyyy', 'id_ID').format(tanggal);
     } catch (e) {
       formattedDate = model.tanggalNaik ?? '';
     }
@@ -246,6 +266,64 @@ class _TiketSayaPageState extends State<TiketSayaPage> {
 
     if (result == true && mounted && userId.isNotEmpty) {
       context.read<TiketSayaBloc>().add(TiketSayaUserIdEvent(userId));
+    }
+  }
+
+  Future<bool> _resumePendingPayment(int orderId, TransaksiItemModel tx) async {
+    try {
+      final paymentResult = await ApiService().createMidtransPayment(
+        orderId,
+        reuseIfPending: true,
+      );
+
+      if (!mounted) {
+        return false;
+      }
+
+      if (paymentResult['success'] == true &&
+          paymentResult['redirect_url'] != null) {
+        final result = await Navigator.push<Map<String, dynamic>>(
+          context,
+          MaterialPageRoute(
+            builder: (context) => MidtransPaymentScreen(
+              transactionId: paymentResult['transaction_id'] ?? tx.id ?? 0,
+              redirectUrl: paymentResult['redirect_url'],
+              snapToken: paymentResult['snap_token'],
+            ),
+          ),
+        );
+
+        if (result != null && mounted) {
+          final message = result['message']?.toString();
+          if (message != null && message.isNotEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(message),
+                backgroundColor: (result['status'] == 'success')
+                    ? Colors.green
+                    : Colors.orange,
+              ),
+            );
+          }
+        }
+
+        return true;
+      }
+
+      final message = paymentResult['message']?.toString() ?? '';
+      if (message.toLowerCase().contains('melewati batas waktu')) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return true;
+      }
+
+      return false;
+    } catch (_) {
+      return false;
     }
   }
 }

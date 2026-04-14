@@ -548,7 +548,8 @@ class ApiService {
         Uri.parse('$baseUrl/orders/$orderId'),
         headers: {
           'Content-Type': 'application/json',
-          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+          if (token != null && token.isNotEmpty)
+            'Authorization': 'Bearer $token',
         },
       );
 
@@ -567,8 +568,8 @@ class ApiService {
       if (response.statusCode == 200) {
         return {
           'success': true,
-          'message':
-              responseData['message']?.toString() ?? 'Pesanan berhasil dibatalkan.',
+          'message': responseData['message']?.toString() ??
+              'Pesanan berhasil dibatalkan.',
         };
       }
 
@@ -970,7 +971,8 @@ class ApiService {
   Future<Map<String, dynamic>> getCurrentWeather(
       double latitude, double longitude) async {
     try {
-      final url = Uri.parse('$baseUrl/weather/current?lat=$latitude&lng=$longitude');
+      final url =
+          Uri.parse('$baseUrl/weather/current?lat=$latitude&lng=$longitude');
 
       final response = await http.get(url, headers: {
         'Accept': 'application/json',
@@ -987,7 +989,8 @@ class ApiService {
         try {
           final payload = jsonDecode(response.body);
           if (payload is Map<String, dynamic>) {
-            message = (payload['message'] ?? payload['error'] ?? message).toString();
+            message =
+                (payload['message'] ?? payload['error'] ?? message).toString();
           }
         } catch (_) {}
 
@@ -1008,7 +1011,8 @@ class ApiService {
   Future<Map<String, dynamic>> getWeatherForecast(
       double latitude, double longitude) async {
     try {
-      final url = Uri.parse('$baseUrl/weather/forecast?lat=$latitude&lng=$longitude');
+      final url =
+          Uri.parse('$baseUrl/weather/forecast?lat=$latitude&lng=$longitude');
 
       final response = await http.get(url, headers: {
         'Accept': 'application/json',
@@ -1025,7 +1029,8 @@ class ApiService {
         try {
           final payload = jsonDecode(response.body);
           if (payload is Map<String, dynamic>) {
-            message = (payload['message'] ?? payload['error'] ?? message).toString();
+            message =
+                (payload['message'] ?? payload['error'] ?? message).toString();
           }
         } catch (_) {}
 
@@ -1417,6 +1422,7 @@ class ApiService {
   Future<Map<String, dynamic>> createMidtransPayment(
     int orderId, {
     String? paymentMethod,
+    bool reuseIfPending = false,
   }) async {
     try {
       String? token = await getToken();
@@ -1427,6 +1433,10 @@ class ApiService {
 
       if (paymentMethod != null) {
         requestBody['payment_method'] = paymentMethod;
+      }
+
+      if (reuseIfPending) {
+        requestBody['reuse_if_pending'] = true;
       }
 
       final response = await http.post(
@@ -1449,6 +1459,7 @@ class ApiService {
           'redirect_url': data['redirect_url'],
           'order_id': data['midtrans_order_id'],
           'transaction_id': data['transaction_id'],
+          'payment_expires_at': data['payment_expires_at'],
         };
       } else {
         return {

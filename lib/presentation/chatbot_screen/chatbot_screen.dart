@@ -649,19 +649,17 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       );
 
       if (result != null && mounted) {
-        String? backendStatus;
-        final checkRef = message.transactionId?.toString() ??
-            message.orderId?.toString() ??
-            result['transaction_id']?.toString();
-
-        if (checkRef != null && checkRef.isNotEmpty) {
-          backendStatus = await _pollLatestPaymentStatus(checkRef);
-        }
+        final backendSnapshot = await _fetchBackendPaymentSnapshot(
+          message: message,
+          paymentResult: result,
+        );
 
         final status = result['status']?.toString() ?? 'pending';
         final statusMsg = _buildPaymentStatusMessage(
           gatewayStatus: status,
-          backendStatus: backendStatus,
+          backendStatus: backendSnapshot['status']?.toString(),
+          orderStatus: backendSnapshot['order_status']?.toString(),
+          isPaymentExpired: backendSnapshot['is_payment_expired'] == true,
           gatewayMessage: result['message']?.toString(),
         );
 
@@ -677,25 +675,36 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   String _buildPaymentStatusMessage({
     required String gatewayStatus,
     String? backendStatus,
+    String? orderStatus,
+    bool isPaymentExpired = false,
     String? gatewayMessage,
   }) {
     final backend = (backendStatus ?? '').trim().toLowerCase();
     final gateway = gatewayStatus.trim().toLowerCase();
+    final order = (orderStatus ?? '').trim().toLowerCase();
 
-    if (backend == 'complete' || gateway == 'success') {
-      return 'Pembayaran berhasil dan sudah terverifikasi. Tiket Anda siap digunakan.';
+    if (backend == 'complete') {
+      return 'Pembayaran sudah selesai dan terverifikasi. Tiket Anda siap digunakan.';
     }
 
-    if (backend == 'incomplete' || gateway == 'pending') {
-      return 'Pembayaran masih menunggu konfirmasi dari gateway. Silakan cek lagi beberapa saat di menu Transaksi.';
+    if (isPaymentExpired || order == 'expired') {
+      return 'Pembayaran sudah kedaluwarsa. Silakan buat pesanan baru jika ingin melanjutkan pendakian.';
     }
 
-    if (backend == 'unverified') {
-      return 'Pembayaran sudah tercatat tetapi masih menunggu verifikasi. Silakan cek status di menu Transaksi.';
+    if (backend == 'incomplete' || backend == 'unverified') {
+      return 'Pembayaran belum lunas. Silakan lanjutkan pembayaran di menu Tiket saya atau tombol Bayar Sekarang.';
+    }
+
+    if (gateway == 'success') {
+      return 'Pembayaran berhasil diproses. Sistem sedang sinkronisasi, status akan segera diperbarui.';
+    }
+
+    if (gateway == 'pending') {
+      return 'Pembayaran belum lunas. Silakan cek kembali status di menu Tiket saya.';
     }
 
     if (gateway == 'failed' || backend == 'failed') {
-      return 'Pembayaran gagal. Anda bisa coba lagi melalui menu Transaksi.';
+      return 'Pembayaran gagal. Anda bisa coba lagi melalui menu Tiket saya.';
     }
 
     if (gatewayMessage != null && gatewayMessage.trim().isNotEmpty) {
@@ -705,22 +714,44 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     return 'Status pembayaran belum final. Silakan cek menu Transaksi untuk status terbaru.';
   }
 
-  Future<String?> _pollLatestPaymentStatus(String checkRef) async {
+  Future<Map<String, dynamic>?> _pollLatestPaymentStatus(
+      String checkRef) async {
+    final normalizedRef = checkRef.trim();
+    if (normalizedRef.isEmpty || normalizedRef == '0') {
+      return null;
+    }
+
     const maxAttempt = 4;
 
     for (var i = 0; i < maxAttempt; i++) {
-      final latest = await _apiService.checkMidtransStatus(checkRef);
+      final latest = await _apiService.checkMidtransStatus(normalizedRef);
       if (latest['success'] == true && latest['data'] != null) {
-        final data = latest['data']['data'] ?? latest['data'];
-        final status = data['status']?.toString();
+        final dynamic payload = latest['data'];
+        final dynamic data = payload is Map<String, dynamic>
+            ? (payload['data'] ?? payload)
+            : payload;
+
+        final status = (data is Map ? data['status'] : null)?.toString();
         final normalized = status?.trim().toLowerCase();
 
-        if (normalized == 'complete' || normalized == 'failed') {
-          return status;
+        if (normalized == 'complete' ||
+            normalized == 'incomplete' ||
+            normalized == 'failed') {
+          return {
+            'status': status,
+            'order_status': data is Map ? data['order_status'] : null,
+            'is_payment_expired':
+                data is Map && data['is_payment_expired'] == true,
+          };
         }
 
         if (i == maxAttempt - 1) {
-          return status;
+          return {
+            'status': status,
+            'order_status': data is Map ? data['order_status'] : null,
+            'is_payment_expired':
+                data is Map && data['is_payment_expired'] == true,
+          };
         }
       }
 
@@ -728,6 +759,52 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     }
 
     return null;
+  }
+
+  Future<Map<String, dynamic>> _fetchBackendPaymentSnapshot({
+    required ChatMessage message,
+    required Map<String, dynamic> paymentResult,
+  }) async {
+    final refs = <String>{
+      if (message.transactionId != null && message.transactionId! > 0)
+        message.transactionId!.toString(),
+      if (message.orderId != null && message.orderId! > 0)
+        message.orderId!.toString(),
+      if (paymentResult['transaction_id'] != null)
+        paymentResult['transaction_id'].toString(),
+      if (paymentResult['order_id'] != null)
+        paymentResult['order_id'].toString(),
+    };
+
+    for (final ref in refs) {
+      final snapshot = await _pollLatestPaymentStatus(ref);
+      if (snapshot != null &&
+          (snapshot['status']?.toString().isNotEmpty ?? false)) {
+        return snapshot;
+      }
+    }
+
+    final fallbackOrderId = message.orderId ??
+        int.tryParse(paymentResult['order_id']?.toString() ?? '');
+    if (fallbackOrderId != null && fallbackOrderId > 0) {
+      try {
+        final orderRes = await _apiService.fetchPesanan(fallbackOrderId);
+        final order = orderRes['order'];
+        final tx = order is Map<String, dynamic> ? order['transaction'] : null;
+        return {
+          'status': tx is Map ? tx['status_pesanan'] : null,
+          'order_status':
+              order is Map<String, dynamic> ? order['status'] : null,
+          'is_payment_expired':
+              (order is Map<String, dynamic> ? order['status'] : null) ==
+                  'Expired',
+        };
+      } catch (_) {
+        // Ignore fallback errors, will return empty snapshot.
+      }
+    }
+
+    return const {};
   }
 
   /// Scroll ke bawah
@@ -1114,289 +1191,291 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
             backgroundColor: theme.colorScheme.onPrimary,
             drawer: _buildHistoryDrawer(),
             appBar: AppBar(
-        backgroundColor: _rolePrimaryColor,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          tooltip: 'Kembali ke Home',
-          onPressed: () async {
-            await _autoSaveHistory();
-            if (!mounted) return;
+              backgroundColor: _rolePrimaryColor,
+              elevation: 0,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                tooltip: 'Kembali ke Home',
+                onPressed: () async {
+                  await _autoSaveHistory();
+                  if (!mounted) return;
 
-            if (Navigator.canPop(context)) {
-              Navigator.pop(context);
-              return;
-            }
+                  if (Navigator.canPop(context)) {
+                    Navigator.pop(context);
+                    return;
+                  }
 
-            Navigator.pushNamedAndRemoveUntil(
-              context,
-              AppRoutes.homeScreen,
-              (route) => false,
-            );
-          },
-        ),
-        title: Row(
-          children: [
-            Container(
-              padding: EdgeInsets.all(8.h),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(12.h),
+                  Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    AppRoutes.homeScreen,
+                    (route) => false,
+                  );
+                },
               ),
-              child: Icon(
-                _roleIcon,
-                color: Colors.white,
-                size: 24.h,
-              ),
-            ),
-            SizedBox(width: 12.h),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _roleTitle,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16.fSize,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Row(
-                  children: [
-                    Container(
-                      height: 8.h,
-                      width: 8.h,
-                      decoration: BoxDecoration(
-                        color: _isServerConnected
-                            ? Colors.greenAccent
-                            : Colors.red,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    SizedBox(width: 4.h),
-                    Text(
-                      _isServerConnected ? 'Online' : 'Offline',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12.fSize,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ],
-        ),
-        actions: [
-          Builder(
-            builder: (context) => IconButton(
-              icon: const Icon(Icons.menu, color: Colors.white),
-              tooltip: 'Riwayat Chat',
-              onPressed: () {
-                _loadChatHistories();
-                Scaffold.of(context).openDrawer();
-              },
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
-            onPressed: () {
-              _checkServerConnection();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(_isServerConnected
-                      ? 'Server terhubung'
-                      : 'Server tidak terhubung'),
-                  backgroundColor:
-                      _isServerConnected ? Colors.green : Colors.red,
-                  duration: const Duration(seconds: 2),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-            body: Column(
-        children: [
-          // Header gradient
-          Container(
-            height: 20.h,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  _rolePrimaryColor,
-                  _rolePrimaryColor.withOpacity(0),
-                ],
-              ),
-            ),
-          ),
-
-          // Suggestion chips
-          if (_messages.length <= 1)
-            Container(
-              padding: EdgeInsets.only(bottom: 16.h),
-              child: _buildSuggestionChips(),
-            ),
-
-          // Chat messages
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: EdgeInsets.only(bottom: 16.h),
-              itemCount: _messages.length + (_isLoading ? 1 : 0),
-              itemBuilder: (context, index) {
-                if (index == _messages.length && _isLoading) {
-                  return _buildTypingIndicator();
-                }
-                return _buildMessageBubble(_messages[index]);
-              },
-            ),
-          ),
-
-          // Server offline warning
-          if (!_isServerConnected)
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.symmetric(horizontal: 16.h, vertical: 8.h),
-              color: Colors.orange.withOpacity(0.1),
-              child: Row(
+              title: Row(
                 children: [
-                  Icon(Icons.warning_amber_rounded,
-                      color: Colors.orange, size: 20.h),
-                  SizedBox(width: 8.h),
-                  Expanded(
-                    child: Text(
-                      'Server chatbot sedang offline. Pastikan server Python berjalan.',
-                      style: TextStyle(
-                        color: Colors.orange[800],
-                        fontSize: 12.fSize,
-                      ),
+                  Container(
+                    padding: EdgeInsets.all(8.h),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12.h),
                     ),
-                  ),
-                ],
-              ),
-            ),
-
-          // Input field
-          Container(
-            padding: EdgeInsets.all(16.h),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.onPrimary,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, -5),
-                ),
-              ],
-            ),
-            child: SafeArea(
-              child: Row(
-                children: [
-                  IconButton(
-                    tooltip: 'Pilih anggota pendaki',
-                    onPressed:
-                        _isServerConnected ? _openMemberPickerModal : null,
-                    icon: Icon(
-                      Icons.group_add,
-                      color: _isServerConnected
-                          ? _rolePrimaryColor
-                          : appTheme.gray400,
-                    ),
-                  ),
-                  Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: appTheme.gray200,
-                        borderRadius: BorderRadius.circular(24.h),
-                      ),
-                      child: TextField(
-                        controller: _messageController,
-                        enabled: _isServerConnected,
-                        textCapitalization: TextCapitalization.sentences,
-                        maxLines: 4,
-                        minLines: 1,
-                        decoration: InputDecoration(
-                          hintText: _isServerConnected
-                              ? 'Ketik pertanyaan Anda...'
-                              : 'Server tidak terhubung',
-                          hintStyle: TextStyle(
-                            color: appTheme.gray500,
-                            fontSize: 14.fSize,
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 20.h,
-                            vertical: 12.h,
-                          ),
-                        ),
-                        onSubmitted: (_) => _sendMessage(),
-                      ),
+                    child: Icon(
+                      _roleIcon,
+                      color: Colors.white,
+                      size: 24.h,
                     ),
                   ),
                   SizedBox(width: 12.h),
-                  Container(
-                    height: 48.h,
-                    width: 48.h,
-                    decoration: BoxDecoration(
-                      color: _isServerConnected
-                          ? _rolePrimaryColor
-                          : appTheme.gray400,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: _rolePrimaryColor.withOpacity(0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _roleTitle,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16.fSize,
+                          fontWeight: FontWeight.w600,
                         ),
-                      ],
-                    ),
-                    child: IconButton(
-                      icon: _isLoading
-                          ? SizedBox(
-                              height: 20.h,
-                              width: 20.h,
-                              child: const CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : Icon(
-                              Icons.send_rounded,
-                              color: Colors.white,
-                              size: 22.h,
+                      ),
+                      Row(
+                        children: [
+                          Container(
+                            height: 8.h,
+                            width: 8.h,
+                            decoration: BoxDecoration(
+                              color: _isServerConnected
+                                  ? Colors.greenAccent
+                                  : Colors.red,
+                              shape: BoxShape.circle,
                             ),
-                      onPressed: _isServerConnected && !_isLoading
-                          ? _sendMessage
-                          : null,
-                    ),
+                          ),
+                          SizedBox(width: 4.h),
+                          Text(
+                            _isServerConnected ? 'Online' : 'Offline',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12.fSize,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ),
-          ),
-          if (_selectedMemberIds.isNotEmpty)
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.fromLTRB(16, 8, 16, 12),
-              color: Colors.white,
-              child: Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: _selectedMemberIds.map((id) {
-                  final name = _selectedMemberNames[id] ?? 'ID $id';
-                  return Chip(
-                    label: Text('$name (#$id)'),
-                    onDeleted: () {
-                      _cubit.removeSelectedMember(id);
+              actions: [
+                Builder(
+                  builder: (context) => IconButton(
+                    icon: const Icon(Icons.menu, color: Colors.white),
+                    tooltip: 'Riwayat Chat',
+                    onPressed: () {
+                      _loadChatHistories();
+                      Scaffold.of(context).openDrawer();
                     },
-                  );
-                }).toList(),
-              ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.refresh, color: Colors.white),
+                  onPressed: () {
+                    _checkServerConnection();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(_isServerConnected
+                            ? 'Server terhubung'
+                            : 'Server tidak terhubung'),
+                        backgroundColor:
+                            _isServerConnected ? Colors.green : Colors.red,
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                ),
+              ],
             ),
-        ],
+            body: Column(
+              children: [
+                // Header gradient
+                Container(
+                  height: 20.h,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        _rolePrimaryColor,
+                        _rolePrimaryColor.withOpacity(0),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Suggestion chips
+                if (_messages.length <= 1)
+                  Container(
+                    padding: EdgeInsets.only(bottom: 16.h),
+                    child: _buildSuggestionChips(),
+                  ),
+
+                // Chat messages
+                Expanded(
+                  child: ListView.builder(
+                    controller: _scrollController,
+                    padding: EdgeInsets.only(bottom: 16.h),
+                    itemCount: _messages.length + (_isLoading ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (index == _messages.length && _isLoading) {
+                        return _buildTypingIndicator();
+                      }
+                      return _buildMessageBubble(_messages[index]);
+                    },
+                  ),
+                ),
+
+                // Server offline warning
+                if (!_isServerConnected)
+                  Container(
+                    width: double.infinity,
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 16.h, vertical: 8.h),
+                    color: Colors.orange.withOpacity(0.1),
+                    child: Row(
+                      children: [
+                        Icon(Icons.warning_amber_rounded,
+                            color: Colors.orange, size: 20.h),
+                        SizedBox(width: 8.h),
+                        Expanded(
+                          child: Text(
+                            'Server chatbot sedang offline. Pastikan server Python berjalan.',
+                            style: TextStyle(
+                              color: Colors.orange[800],
+                              fontSize: 12.fSize,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                // Input field
+                Container(
+                  padding: EdgeInsets.all(16.h),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.onPrimary,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, -5),
+                      ),
+                    ],
+                  ),
+                  child: SafeArea(
+                    child: Row(
+                      children: [
+                        IconButton(
+                          tooltip: 'Pilih anggota pendaki',
+                          onPressed: _isServerConnected
+                              ? _openMemberPickerModal
+                              : null,
+                          icon: Icon(
+                            Icons.group_add,
+                            color: _isServerConnected
+                                ? _rolePrimaryColor
+                                : appTheme.gray400,
+                          ),
+                        ),
+                        Expanded(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: appTheme.gray200,
+                              borderRadius: BorderRadius.circular(24.h),
+                            ),
+                            child: TextField(
+                              controller: _messageController,
+                              enabled: _isServerConnected,
+                              textCapitalization: TextCapitalization.sentences,
+                              maxLines: 4,
+                              minLines: 1,
+                              decoration: InputDecoration(
+                                hintText: _isServerConnected
+                                    ? 'Ketik pertanyaan Anda...'
+                                    : 'Server tidak terhubung',
+                                hintStyle: TextStyle(
+                                  color: appTheme.gray500,
+                                  fontSize: 14.fSize,
+                                ),
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 20.h,
+                                  vertical: 12.h,
+                                ),
+                              ),
+                              onSubmitted: (_) => _sendMessage(),
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 12.h),
+                        Container(
+                          height: 48.h,
+                          width: 48.h,
+                          decoration: BoxDecoration(
+                            color: _isServerConnected
+                                ? _rolePrimaryColor
+                                : appTheme.gray400,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: _rolePrimaryColor.withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: IconButton(
+                            icon: _isLoading
+                                ? SizedBox(
+                                    height: 20.h,
+                                    width: 20.h,
+                                    child: const CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : Icon(
+                                    Icons.send_rounded,
+                                    color: Colors.white,
+                                    size: 22.h,
+                                  ),
+                            onPressed: _isServerConnected && !_isLoading
+                                ? _sendMessage
+                                : null,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (_selectedMemberIds.isNotEmpty)
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.fromLTRB(16, 8, 16, 12),
+                    color: Colors.white,
+                    child: Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: _selectedMemberIds.map((id) {
+                        final name = _selectedMemberNames[id] ?? 'ID $id';
+                        return Chip(
+                          label: Text('$name (#$id)'),
+                          onDeleted: () {
+                            _cubit.removeSelectedMember(id);
+                          },
+                        );
+                      }).toList(),
+                    ),
+                  ),
+              ],
             ),
           );
         },
