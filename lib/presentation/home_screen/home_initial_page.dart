@@ -38,6 +38,8 @@ class HomeInitialPageState extends State<HomeInitialPage> {
   String userName = '';
   int userId = 0;
   bool isLoading = true;
+  bool _isFriendHovered = false;
+  bool _isFriendPressed = false;
   String? selectedProvince;
   final ScrollController _scrollController = ScrollController();
   static const String _siluetPath = 'assets/images/siluetgunung.jpeg';
@@ -289,26 +291,85 @@ class HomeInitialPageState extends State<HomeInitialPage> {
                         ],
                       ),
                     ),
-// Friend Button
-                    GestureDetector(
-                      onTap: () {
-                        if (userId != 0) {
-                          Navigator.of(context, rootNavigator: true).pushNamed(
-                            AppRoutes.friendScreen,
-                            arguments: userId,
-                          );
-                        }
+                    // Friend Button with hover and press effects
+                    MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      onEnter: (_) {
+                        if (!mounted) return;
+                        setState(() => _isFriendHovered = true);
                       },
-                      child: Container(
-                        padding: EdgeInsets.all(12.h),
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.people_outline_rounded,
-                          color: const Color(0xFF1B8A5A),
-                          size: 26.h,
+                      onExit: (_) {
+                        if (!mounted) return;
+                        setState(() {
+                          _isFriendHovered = false;
+                          _isFriendPressed = false;
+                        });
+                      },
+                      child: AnimatedScale(
+                        duration: const Duration(milliseconds: 160),
+                        curve: Curves.easeOutCubic,
+                        scale: _isFriendPressed
+                            ? 0.94
+                            : _isFriendHovered
+                                ? 1.08
+                                : 1.0,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          curve: Curves.easeOutCubic,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(
+                                    _isFriendHovered ? 0.22 : 0.14),
+                                blurRadius: _isFriendHovered ? 18.h : 10.h,
+                                offset: Offset(0, _isFriendHovered ? 7.h : 4.h),
+                              ),
+                              BoxShadow(
+                                color: const Color(0xFF1B8A5A).withOpacity(
+                                    _isFriendHovered ? 0.26 : 0.12),
+                                blurRadius: _isFriendHovered ? 16.h : 8.h,
+                                offset: Offset(0, _isFriendHovered ? 5.h : 2.h),
+                              ),
+                            ],
+                          ),
+                          child: Material(
+                            color: Colors.white,
+                            shape: const CircleBorder(),
+                            clipBehavior: Clip.antiAlias,
+                            child: InkWell(
+                              customBorder: const CircleBorder(),
+                              onTap: () {
+                                if (userId != 0) {
+                                  Navigator.of(context, rootNavigator: true)
+                                      .pushNamed(
+                                    AppRoutes.friendScreen,
+                                    arguments: userId,
+                                  );
+                                }
+                              },
+                              onHover: (value) {
+                                if (!mounted) return;
+                                setState(() => _isFriendHovered = value);
+                              },
+                              onHighlightChanged: (value) {
+                                if (!mounted) return;
+                                setState(() => _isFriendPressed = value);
+                              },
+                              splashColor:
+                                  const Color(0xFF1B8A5A).withOpacity(0.16),
+                              highlightColor:
+                                  const Color(0xFF1B8A5A).withOpacity(0.08),
+                              child: Padding(
+                                padding: EdgeInsets.all(12.h),
+                                child: Icon(
+                                  Icons.people_outline_rounded,
+                                  color: const Color(0xFF1B8A5A),
+                                  size: 26.h,
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),

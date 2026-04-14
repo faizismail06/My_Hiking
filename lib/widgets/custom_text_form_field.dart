@@ -5,7 +5,7 @@ extension TextFormFieldStyleHelper on CustomTextFormField {
   static OutlineInputBorder get outlineBlueGray => OutlineInputBorder(
         borderRadius: BorderRadius.circular(14.h),
         borderSide: BorderSide(
-          color: appTheme.green100.withOpacity(0.5),
+          color: appTheme.blueGray5001,
           width: 1,
         ),
       );
@@ -13,7 +13,7 @@ extension TextFormFieldStyleHelper on CustomTextFormField {
   static OutlineInputBorder get outlineBlueGrayTL14 => OutlineInputBorder(
         borderRadius: BorderRadius.circular(14.h),
         borderSide: BorderSide(
-          color: appTheme.green100.withOpacity(0.5),
+          color: appTheme.blueGray5001,
           width: 1,
         ),
       );
@@ -21,16 +21,8 @@ extension TextFormFieldStyleHelper on CustomTextFormField {
   static OutlineInputBorder get outlineGrayTL5 => OutlineInputBorder(
         borderRadius: BorderRadius.circular(5.h),
         borderSide: BorderSide(
-          color: appTheme.green100,
+          color: appTheme.gray400,
           width: 1,
-        ),
-      );
-
-  static OutlineInputBorder get outlineGreen => OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14.h),
-        borderSide: BorderSide(
-          color: appTheme.green600.withOpacity(0.6),
-          width: 1.5,
         ),
       );
 }
@@ -130,7 +122,7 @@ class CustomTextFormField extends StatelessWidget {
           maxLines: maxLines ?? 1,
           decoration: decoration,
           validator: validator,
-          onChanged: onChanged, // Use the onChanged callback here
+           onChanged: onChanged, // Use the onChanged callback here
         ),
       );
 
@@ -142,33 +134,34 @@ class CustomTextFormField extends StatelessWidget {
         suffixIcon: suffix,
         suffixIconConstraints: suffixConstraints,
         isDense: true,
-        contentPadding: contentPadding ??
-            EdgeInsets.symmetric(horizontal: 16.h, vertical: 14.h),
-        fillColor: fillColor ?? Color(0XFFF8FFFE),
+        contentPadding: contentPadding ?? EdgeInsets.all(12.h),
+        fillColor: fillColor ?? theme.colorScheme.onPrimary,
         filled: filled,
         border: borderDecoration ??
             OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14.h),
+              borderRadius: BorderRadius.circular(16.h),
               borderSide: BorderSide(
-                color: appTheme.green100.withOpacity(0.3),
+                color: appTheme.gray40001,
                 width: 1,
               ),
             ),
         enabledBorder: borderDecoration ??
             OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14.h),
+              borderRadius: BorderRadius.circular(16.h),
               borderSide: BorderSide(
-                color: appTheme.green100.withOpacity(0.3),
+                color: appTheme.gray40001,
                 width: 1,
               ),
             ),
         focusedBorder: (borderDecoration ??
-            OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14.h),
-              borderSide: BorderSide(
-                color: appTheme.green600,
-                width: 1.5,
-              ),
-            )),
+                OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16.h),
+                ))
+            .copyWith(
+          borderSide: BorderSide(
+            color: theme.colorScheme.primary,
+            width: 1,
+          ),
+        ),
       );
 }

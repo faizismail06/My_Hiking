@@ -68,7 +68,7 @@ class BookingDecisionResult {
 }
 
 class ApiService {
-  static const String _homeFeedCachePrefix = 'home_feed_cache_v1_';
+  static const String _homeFeedCachePrefix = 'home_feed_cache_v2_';
 
   Future<String?> getToken() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();

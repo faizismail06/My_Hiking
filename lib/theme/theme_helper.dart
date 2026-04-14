@@ -160,21 +160,10 @@ class TextThemes {
 /// Class containing the supported color schemes.
 class ColorSchemes {
   static const lightCodeColorScheme = ColorScheme.light(
-    primary: Color(0XFF1DB854),
-    secondary: Color(0XFF0D7E4A),
-    tertiary: Color(0XFF2ECC71),
+    primary: Color(0XFF127857),
     secondaryContainer: Color(0X14314F7C),
     onPrimary: Color(0XFFFFFFFF),
     onPrimaryContainer: Color(0XFF292B3A),
-  );
-
-  static const darkCodeColorScheme = ColorScheme.dark(
-    primary: Color(0XFF4ECB71),
-    secondary: Color(0XFF2ECC71),
-    tertiary: Color(0XFF1DB854),
-    secondaryContainer: Color(0X14314F7C),
-    onPrimary: Color(0XFF0D1F16),
-    onPrimaryContainer: Color(0XFFECF5f0),
   );
 }
 
@@ -227,15 +216,6 @@ class LightCodeColors {
 
   // Green
   Color get greenA700 => const Color(0XFF0FA958);
-  Color get green50 => const Color(0XFFF0F9F5);
-  Color get green100 => const Color(0XFFD4EFE1);
-  Color get green600 => const Color(0XFF1DB854);
-  Color get green700 => const Color(0XFF16A34A);
-  Color get green800 => const Color(0XFF0D7E4A);
-  Color get greenGradientLight => const Color(0XFF4ECB71);
-  Color get greenGradientDark => const Color(0XFF0D7E4A);
-  Color get emerald400 => const Color(0XFF2ECC71);
-  Color get emerald600 => const Color(0XFF059669);
 
   // LightBlue
   Color get lightBlue200 => const Color(0XFF85D3FF);
@@ -253,61 +233,6 @@ class LightCodeColors {
   Color get teal40051 => const Color(0X5128A176);
   Color get teal800 => const Color(0XFF127958);
   Color get teal900 => const Color(0XFF064E3A);
-
-  // Orange
-  Color get orange => const Color(0xffffa8949);
-}
-
-/// Class containing custom colors for a dark theme.
-class DarkCodeColors {
-  // Black
-  Color get black900 => const Color(0XFF000000);
-  Color get blackBackground => const Color(0XFF0D1F16);
-  Color get blackSurface => const Color(0XFF1A2D24);
-
-  // Green (Bright for dark theme)
-  Color get greenA700 => const Color(0XFF4ECB71);
-  Color get green50 => const Color(0XFF0D3D2E);
-  Color get green100 => const Color(0XFF1A5A48);
-  Color get green600 => const Color(0XFF4ECB71);
-  Color get green700 => const Color(0XFF2ECC71);
-  Color get green800 => const Color(0XFF1DB854);
-  Color get greenGradientLight => const Color(0XFF6FD993);
-  Color get greenGradientDark => const Color(0XFF1DB854);
-  Color get emerald400 => const Color(0XFF52D896);
-  Color get emerald600 => const Color(0XFF2ECC71);
-
-  // Gray (Light grays for dark theme)
-  Color get gray200 => const Color(0XFF2A2A2A);
-  Color get gray300 => const Color(0XFF3A3A3A);
-  Color get gray400 => const Color(0XFF4A4A4A);
-  Color get gray500 => const Color(0XFF5A5A5A);
-  Color get gray50001 => const Color(0XFF6A6A6A);
-  Color get gray50002 => const Color(0XFF7A7A7A);
-  Color get gray50003 => const Color(0XFF8A8A8A);
-  Color get gray50004 => const Color(0XFF9A9A9A);
-  Color get gray5001 => const Color(0XFFAAAAAA);
-  Color get gray600 => const Color(0XFFB0B0B0);
-  Color get gray800 => const Color(0XFFC0C0C0);
-  Color get gray900 => const Color(0XFFD0D0D0);
-
-  // Blue Gray (Adjusted for dark)
-  Color get blueGray50 => const Color(0XFF1A2D24);
-  Color get blueGray100 => const Color(0XFF2A3D34);
-  Color get blueGray5001 => const Color(0XFF2A2A3A);
-  Color get blueGray5002 => const Color(0XFF3A3A4A);
-  Color get blueGray700 => const Color(0XFFA0A0B0);
-  Color get blueGray800 => const Color(0XFFB0B0C0);
-  Color get blueGray900 => const Color(0XFFC0C0D0);
-
-  // White/Light text
-  Color get white => const Color(0XFFFFFFFF);
-  Color get offWhite => const Color(0XFFECF5F0);
-
-  // Red
-  Color get red600 => const Color(0XFFEF5350);
-  Color get red700 => const Color(0XFFE53935);
-  Color get redA700 => const Color(0XFFFF5252);
 
   // Orange
   Color get orange => const Color(0xffffa8949);
