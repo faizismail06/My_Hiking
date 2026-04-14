@@ -29,18 +29,33 @@ class DetailMountainBloc
       );
 
       if (response.statusCode == 200) {
-        final jsonData = jsonDecode(response.body);
-        final resRouteCentres = ResRouteCentres.fromJson(jsonData);
+        try {
+          final jsonData = jsonDecode(response.body);
+          final resRouteCentres = ResRouteCentres.fromJson(jsonData);
 
-        emit(state.copyWith(
-          isLoading: false,
-          gunung: resRouteCentres.gunung,
-          jalurList: resRouteCentres
-              .data, // Pastikan jalur berasal dari ResRouteCentres
-        ));
+          // Validate that we have at least a valid mountain
+          if (resRouteCentres.gunung.nama.isEmpty) {
+            emit(state.copyWith(
+                isLoading: false,
+                error: 'Mountain data is incomplete or invalid'));
+            return;
+          }
+
+          emit(state.copyWith(
+            isLoading: false,
+            gunung: resRouteCentres.gunung,
+            jalurList: resRouteCentres
+                .data, // Pastikan jalur berasal dari ResRouteCentres
+          ));
+        } catch (parseError) {
+          emit(state.copyWith(
+              isLoading: false,
+              error: 'Failed to parse mountain data: $parseError'));
+        }
       } else {
-        emit(
-            state.copyWith(isLoading: false, error: 'Failed to fetch routes.'));
+        emit(state.copyWith(
+            isLoading: false,
+            error: 'Failed to fetch routes. Status: ${response.statusCode}'));
       }
     } catch (e) {
       emit(state.copyWith(isLoading: false, error: 'Failed to fetch data: $e'));

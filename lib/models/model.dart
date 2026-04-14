@@ -11,15 +11,7 @@ class ResRouteCentres {
     required this.data,
   });
 
-  factory ResRouteCentres.fromJson(Map<String, dynamic> json) {
-    return ResRouteCentres(
-      status: json['status'] ?? false,
-      message: json['message'] ?? '',
-      gunung: Gunung.fromJson(json['mountain']),
-      data: List<Jalur>.from(
-          json['mountain']['data'].map((x) => Jalur.fromJson(x))),
-    );
-  }
+  factory ResRouteCentres.fromJson(Map<String, dynamic> json) {\n    // Handle null mountain data safely\n    final mountainData = json['mountain'] as Map<String, dynamic>? ?? {};\n    final jalurList = mountainData['data'] as List? ?? [];\n    \n    return ResRouteCentres(\n      status: (json['status'] as bool?) ?? false,\n      message: (json['message'] as String?) ?? '',\n      gunung: Gunung.fromJson(mountainData),\n      data: jalurList.isNotEmpty\n          ? List<Jalur>.from(jalurList.map((x) => Jalur.fromJson(x as Map<String, dynamic>)))\n          : [],\n    );\n  }
 
   Map<String, dynamic> toJson() {
     return {
@@ -53,20 +45,38 @@ class Gunung {
   });
 
   factory Gunung.fromJson(Map<String, dynamic> json) {
+    // Safely parse latitude and longitude with null checks
+    double? parsedLat;
+    if (json['latitude'] != null) {
+      try {
+        parsedLat = double.parse(json['latitude'].toString());
+      } catch (e) {
+        parsedLat = null;
+      }
+    }
+
+    double? parsedLng;
+    if (json['longitude'] != null) {
+      try {
+        parsedLng = double.parse(json['longitude'].toString());
+      } catch (e) {
+        parsedLng = null;
+      }
+    }
+
     return Gunung(
-      id: json['id'] ?? 0,
-      nama: json['nama'] ?? '',
-      ketinggian: json['ketinggian'] ?? 0,
-      province: json['province'] ?? '',
-      gambar: json['gambar'] ?? 'URL Gambar Tidak Tersedia',
-      latitude: json['latitude'] != null
-          ? double.tryParse(json['latitude'].toString())
-          : null,
-      longitude: json['longitude'] != null
-          ? double.tryParse(json['longitude'].toString())
-          : null,
+      id: json['id'] as int? ?? 0,
+      nama: (json['nama'] as String?) ?? '',
+      ketinggian: json['ketinggian'] as int? ?? 0,
+      province: (json['province'] as String?) ?? 'Unknown',
+      gambar: (json['gambar'] as String?) ??
+          (json['gambar_gunung'] as String?) ??
+          'assets/images/img_error.png',
+      latitude: parsedLat,
+      longitude: parsedLng,
       data: json['data'] != null
-          ? List<Jalur>.from(json['data'].map((x) => Jalur.fromJson(x)))
+          ? List<Jalur>.from((json['data'] as List)
+              .map((x) => Jalur.fromJson(x as Map<String, dynamic>)))
           : [],
     );
   }
@@ -331,7 +341,8 @@ class TrailPost {
       lat: double.tryParse((json['lat'] ?? json['latitude'] ?? 0).toString()) ??
           0,
       lng: double.tryParse(
-              (json['lng'] ?? json['lon'] ?? json['longitude'] ?? 0).toString()) ??
+              (json['lng'] ?? json['lon'] ?? json['longitude'] ?? 0)
+                  .toString()) ??
           0,
       elevation: json['elevation'] != null
           ? double.tryParse(json['elevation'].toString())
@@ -425,11 +436,11 @@ class Jalur {
       routePreview: json['route_preview'] is Map<String, dynamic>
           ? RoutePreview.fromJson(json['route_preview'])
           : null,
-        posts: (json['posts'] as List?)
-            ?.whereType<Map>()
-            .map((item) =>
-              TrailPost.fromJson(Map<String, dynamic>.from(item)))
-            .toList() ??
+      posts: (json['posts'] as List?)
+              ?.whereType<Map>()
+              .map(
+                  (item) => TrailPost.fromJson(Map<String, dynamic>.from(item)))
+              .toList() ??
           const [],
     );
   }

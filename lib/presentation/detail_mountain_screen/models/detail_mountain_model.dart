@@ -22,12 +22,13 @@ class DetailMountainModel {
   // Konstruktor untuk membuat DetailMountainModel dari Gunung
   factory DetailMountainModel.fromGunung(Gunung gunung) {
     return DetailMountainModel(
-      name: gunung.nama,
-      elevation: gunung.ketinggian,
-      province: gunung.province,
-      height: gunung.ketinggian
-          .toDouble(), // Misalnya ketinggian digunakan untuk height
-      gambar: gunung.gambar,
+      name: gunung.nama.isNotEmpty ? gunung.nama : 'Unknown Mountain',
+      elevation: gunung.ketinggian > 0 ? gunung.ketinggian : 0,
+      province: gunung.province.isNotEmpty ? gunung.province : 'Unknown Region',
+      height: (gunung.ketinggian > 0 ? gunung.ketinggian : 0).toDouble(),
+      gambar: (gunung.gambar?.isNotEmpty ?? false)
+          ? gunung.gambar
+          : 'assets/images/img_error.png',
       latitude: gunung.latitude,
       longitude: gunung.longitude,
     );

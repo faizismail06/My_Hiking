@@ -23,7 +23,7 @@ android {
         // Pastikan applicationId ini unik untuk aplikasi Anda.
         applicationId = "com.example.myhiking"
         // Versi minimum dan target SDK aplikasi Anda.
-        minSdkVersion 21
+        minSdkVersion flutter.minSdkVersion
         targetSdkVersion 33
         versionCode 1
         versionName "1.0"
