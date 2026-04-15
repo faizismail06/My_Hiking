@@ -12,6 +12,7 @@ class SelectedMember {
 class BookingState extends Equatable {
   // Field controllers
   final TextEditingController? bookingDateFieldController;
+  final TextEditingController? returnDateFieldController;
   final TextEditingController? memberIdFieldController;
   final TextEditingController? memberNameFieldController;
 
@@ -32,6 +33,7 @@ class BookingState extends Equatable {
 
   BookingState({
     this.bookingDateFieldController,
+    this.returnDateFieldController,
     this.memberIdFieldController,
     this.memberNameFieldController,
     this.trail,
@@ -46,6 +48,7 @@ class BookingState extends Equatable {
   @override
   List<Object?> get props => [
         bookingDateFieldController,
+        returnDateFieldController,
         memberIdFieldController,
         memberNameFieldController,
         trail,
@@ -59,6 +62,7 @@ class BookingState extends Equatable {
 
   BookingState copyWith({
     TextEditingController? bookingDateFieldController,
+    TextEditingController? returnDateFieldController,
     TextEditingController? memberIdFieldController,
     TrailModel? trail,
     Mountain? mountain,
@@ -71,6 +75,8 @@ class BookingState extends Equatable {
     return BookingState(
       bookingDateFieldController:
           bookingDateFieldController ?? this.bookingDateFieldController,
+      returnDateFieldController:
+          returnDateFieldController ?? this.returnDateFieldController,
       memberIdFieldController:
           memberIdFieldController ?? this.memberIdFieldController,
       memberNameFieldController:

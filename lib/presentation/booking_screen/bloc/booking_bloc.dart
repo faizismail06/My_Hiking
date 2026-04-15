@@ -18,6 +18,7 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
   BookingBloc({required this.apiService}) : super(BookingState()) {
     on<BookingInitialEvent>(_onInitialize);
     on<UpdateBookingDateEvent>(_onUpdateBookingDate);
+    on<UpdateReturnDateEvent>(_onUpdateReturnDate);
     on<CreateBookingEvent>(_onCreateBooking); // Add the handler here
     on<UpdateMemberIdField>(_onUpdateAnggotaID);
     on<UpdateSelectedMembers>(_onUpdateSelectedMembers);
@@ -108,6 +109,14 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
     // Update the state with the new date in the controller
     emit(state.copyWith(
       bookingDateFieldController:
+          TextEditingController(text: event.formattedDate),
+    ));
+  }
+
+  Future<void> _onUpdateReturnDate(
+      UpdateReturnDateEvent event, Emitter<BookingState> emit) async {
+    emit(state.copyWith(
+      returnDateFieldController:
           TextEditingController(text: event.formattedDate),
     ));
   }

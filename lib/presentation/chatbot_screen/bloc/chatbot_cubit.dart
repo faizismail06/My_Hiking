@@ -64,6 +64,12 @@ class ChatbotCubit extends Cubit<ChatbotState> {
     ));
   }
 
+  void markMessagePaid(ChatMessage message) {
+    message.isPaid = true;
+    // Emit a new state to trigger a rebuild
+    emit(state.copyWith(messages: List<ChatMessage>.from(state.messages)));
+  }
+
   void removeSelectedMember(int id) {
     final nextIds = Set<int>.from(state.selectedMemberIds)..remove(id);
     final nextNames = Map<int, String>.from(state.selectedMemberNames)

@@ -6,6 +6,7 @@ class ChatMessage {
   final String? paymentUrl;
   final int? orderId;
   final int? transactionId;
+  bool isPaid;
 
   ChatMessage({
     required this.message,
@@ -15,6 +16,7 @@ class ChatMessage {
     this.paymentUrl,
     this.orderId,
     this.transactionId,
+    this.isPaid = false,
   }) : timestamp = timestamp ?? DateTime.now();
 
   Map<String, dynamic> toJson() => {

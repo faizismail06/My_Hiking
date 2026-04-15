@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:myhiking/presentation/midtrans_payment_screen/midtrans_payment_screen.dart';
 import 'package:myhiking/presentation/payment_method_screen/payment_method_screen.dart';
+import 'package:myhiking/presentation/waiting_payment_page/waiting_payment_page.dart';
 import '../../api/api_service.dart';
 import '../../core/app_export.dart';
 import 'bloc/tiket_saya_bloc.dart';
@@ -85,16 +85,19 @@ class _TiketSayaPageState extends State<TiketSayaPage> {
                           SizedBox(height: 8.h),
                           Container(
                             width: double.infinity,
-                            padding: EdgeInsets.symmetric(horizontal: 12.h, vertical: 10.h),
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 12.h, vertical: 10.h),
                             decoration: BoxDecoration(
                               color: const Color(0xFFEFF6FF),
                               borderRadius: BorderRadius.circular(10.h),
-                              border: Border.all(color: const Color(0xFFBFDBFE)),
+                              border:
+                                  Border.all(color: const Color(0xFFBFDBFE)),
                             ),
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Icon(Icons.info_outline, color: const Color(0xFF1D4ED8), size: 16.h),
+                                Icon(Icons.info_outline,
+                                    color: const Color(0xFF1D4ED8), size: 16.h),
                                 SizedBox(width: 8.h),
                                 Expanded(
                                   child: Text(
@@ -241,11 +244,13 @@ class _TiketSayaPageState extends State<TiketSayaPage> {
     final status = (model.status ?? '').trim();
     final normalizedStatus = status.toLowerCase();
 
-    if (normalizedStatus == 'cancel requested' || normalizedStatus == 'cancelled') {
+    if (normalizedStatus == 'cancel requested' ||
+        normalizedStatus == 'cancelled') {
       String formattedDate = '';
       try {
         DateTime tanggal = DateTime.parse(model.tanggalNaik.toString());
-        formattedDate = DateFormat('EEEE, dd MMMM yyyy', 'id_ID').format(tanggal);
+        formattedDate =
+            DateFormat('EEEE, dd MMMM yyyy', 'id_ID').format(tanggal);
       } catch (e) {
         formattedDate = model.tanggalNaik ?? '';
       }
@@ -329,32 +334,33 @@ class _TiketSayaPageState extends State<TiketSayaPage> {
       }
 
       if (paymentResult['success'] == true &&
-          paymentResult['redirect_url'] != null) {
-        final result = await Navigator.push<Map<String, dynamic>>(
+          (paymentResult['redirect_url'] != null ||
+              paymentResult['payment_code'] != null ||
+              paymentResult['deeplink_url'] != null ||
+              paymentResult['qr_code_url'] != null ||
+              paymentResult['qr_string'] != null)) {
+        await Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => MidtransPaymentScreen(
+            builder: (context) => WaitingPaymentPage(
+              orderId:
+                  (_parseInt(paymentResult['order_id']) ?? orderId).toString(),
               transactionId: paymentResult['transaction_id'] ?? tx.id ?? 0,
-              redirectUrl: paymentResult['redirect_url'],
-              snapToken: paymentResult['snap_token'],
+              totalPayment: _parseInt(paymentResult['total_payment']),
+              paymentMethod: paymentResult['payment_method'] ?? tx.paymentType,
+              transactionCreatedAt: paymentResult['transaction_created_at'] ??
+                  tx.waktuPembayaran ??
+                  DateTime.now().toIso8601String(),
+              paymentCode: paymentResult['payment_code']?.toString(),
+              paymentCodeLabel: paymentResult['payment_code_label']?.toString(),
+              paymentInstruction:
+                  paymentResult['payment_instruction']?.toString(),
+              deeplinkUrl: paymentResult['deeplink_url']?.toString(),
+              qrCodeUrl: paymentResult['qr_code_url']?.toString(),
+              qrString: paymentResult['qr_string']?.toString(),
             ),
           ),
         );
-
-        if (result != null && mounted) {
-          final message = result['message']?.toString();
-          if (message != null && message.isNotEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(message),
-                backgroundColor: (result['status'] == 'success')
-                    ? Colors.green
-                    : Colors.orange,
-              ),
-            );
-          }
-        }
-
         return true;
       }
 
@@ -373,5 +379,17 @@ class _TiketSayaPageState extends State<TiketSayaPage> {
     } catch (_) {
       return false;
     }
+  }
+
+  int? _parseInt(dynamic value) {
+    if (value is int) {
+      return value;
+    }
+
+    if (value is double) {
+      return value.toInt();
+    }
+
+    return int.tryParse((value ?? '').toString());
   }
 }

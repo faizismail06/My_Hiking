@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:another_stepper/dto/stepper_data.dart';
 import 'package:another_stepper/widgets/another_stepper.dart';
 import 'package:intl/intl.dart';
-import 'package:myhiking/presentation/midtrans_payment_screen/midtrans_payment_screen.dart';
 import 'package:myhiking/presentation/home_screen/home_screen.dart';
+import 'package:myhiking/presentation/waiting_payment_page/waiting_payment_page.dart';
 import '../../api/api_service.dart';
 import '../../core/app_export.dart';
 import '../../theme/custom_button_style.dart';
@@ -581,23 +581,34 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
       if (!mounted) return;
 
       if (paymentResult['success'] == true &&
-          paymentResult['redirect_url'] != null) {
-        // Navigate to Midtrans payment screen
-        final result = await Navigator.push<Map<String, dynamic>>(
+          (paymentResult['redirect_url'] != null ||
+              paymentResult['payment_code'] != null ||
+              paymentResult['deeplink_url'] != null ||
+              paymentResult['qr_code_url'] != null ||
+              paymentResult['qr_string'] != null)) {
+        await Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => MidtransPaymentScreen(
+            builder: (context) => WaitingPaymentPage(
+              orderId: (_parseInt(paymentResult['order_id']) ?? widget.orderId)
+                  .toString(),
               transactionId: paymentResult['transaction_id'] ?? 0,
-              redirectUrl: paymentResult['redirect_url'],
-              snapToken: paymentResult['snap_token'],
+              totalPayment: _parseInt(paymentResult['total_payment']),
+              paymentMethod:
+                  paymentResult['payment_method'] ?? _selectedPaymentMethod,
+              transactionCreatedAt: paymentResult['transaction_created_at'] ??
+                  DateTime.now().toIso8601String(),
+              paymentCode: paymentResult['payment_code']?.toString(),
+              paymentCodeLabel: paymentResult['payment_code_label']?.toString(),
+              paymentInstruction:
+                  paymentResult['payment_instruction']?.toString(),
+              deeplinkUrl: paymentResult['deeplink_url']?.toString(),
+              qrCodeUrl: paymentResult['qr_code_url']?.toString(),
+              qrString: paymentResult['qr_string']?.toString(),
             ),
           ),
         );
-
-        // Handle payment result
-        if (result != null && mounted) {
-          _handlePaymentResult(context, result, widget.orderId);
-        }
+        return;
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -669,16 +680,8 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
       if (!mounted) return;
 
       if (result['success'] == true) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content:
-                Text(result['message']?.toString() ?? 'Pesanan dibatalkan.'),
-            backgroundColor: Colors.green,
-          ),
-        );
-
         Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil(
-          AppRoutes.homeScreen,
+          AppRoutes.orderCancelledScreen,
           (route) => false,
         );
       } else {
@@ -708,57 +711,15 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
     }
   }
 
-  void _handlePaymentResult(
-      BuildContext context, Map<String, dynamic> result, int orderId) {
-    final status = result['status'] ?? 'pending';
-
-    if (status == 'success') {
-      // Payment success - navigate to home screen and show success message
-      Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil(
-        AppRoutes.homeScreen,
-        (route) => false,
-      );
-
-      // Show success snackbar after navigation
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Pembayaran berhasil! Transaksi Anda sudah lunas.'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 3),
-          ),
-        );
-      });
-    } else if (status == 'pending') {
-      // Payment pending - navigate to home screen
-      Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil(
-        AppRoutes.homeScreen,
-        (route) => false,
-      );
-
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Silakan cek status pembayaran di menu Tiket saya'),
-            backgroundColor: Colors.orange,
-            duration: Duration(seconds: 3),
-          ),
-        );
-      });
-    } else if (status == 'cancelled') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Pembayaran dibatalkan'),
-          backgroundColor: Colors.grey,
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result['message'] ?? 'Pembayaran gagal'),
-          backgroundColor: Colors.red,
-        ),
-      );
+  int? _parseInt(dynamic value) {
+    if (value is int) {
+      return value;
     }
+
+    if (value is double) {
+      return value.toInt();
+    }
+
+    return int.tryParse((value ?? '').toString());
   }
 }

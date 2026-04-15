@@ -27,7 +27,8 @@ class HomeScreen extends StatelessWidget {
     return SafeArea(
       child: Scaffold(
         resizeToAvoidBottomInset: false,
-        backgroundColor: theme.colorScheme.onPrimary, // Pastikan background bersih
+        backgroundColor:
+            theme.colorScheme.onPrimary, // Pastikan background bersih
         body: Container(
           width: double.maxFinite,
           decoration: BoxDecoration(
@@ -42,8 +43,11 @@ class HomeScreen extends StatelessWidget {
                   onGenerateRoute: (routeSetting) => PageRouteBuilder(
                     pageBuilder: (ctx, ani, ani1) =>
                         getCurrentPage(context, routeSetting.name!),
-                    transitionDuration: const Duration(milliseconds: 200), // Sedikit transisi agar lebih smooth
-                    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                    transitionDuration: const Duration(
+                        milliseconds:
+                            200), // Sedikit transisi agar lebih smooth
+                    transitionsBuilder:
+                        (context, animation, secondaryAnimation, child) {
                       return FadeTransition(opacity: animation, child: child);
                     },
                   ),
@@ -72,7 +76,7 @@ class HomeScreen extends StatelessWidget {
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: theme.colorScheme.primary.withOpacity(0.4),
+              color: theme.colorScheme.primary.withValues(alpha: 0.4),
               blurRadius: 16.h,
               spreadRadius: 2.h,
               offset: Offset(0, 6.h),
@@ -85,7 +89,8 @@ class HomeScreen extends StatelessWidget {
               AppRoutes.chatbotScreen,
             );
           },
-          backgroundColor: Colors.transparent, // Transparan agar gradient box terlihat
+          backgroundColor:
+              Colors.transparent, // Transparan agar gradient box terlihat
           elevation: 0, // Matikan default elevation untuk custom shadow
           child: Container(
             width: double.maxFinite,
@@ -96,13 +101,13 @@ class HomeScreen extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  theme.colorScheme.primary.withOpacity(0.9),
+                  theme.colorScheme.primary.withValues(alpha: 0.9),
                   const Color(0xFF1B8A5A),
                 ],
               ),
               shape: BoxShape.circle,
               border: Border.all(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 width: 1.5,
               ),
             ),
@@ -124,7 +129,9 @@ class HomeScreen extends StatelessWidget {
       child: CustomBottomBar(
         onChanged: (BottomBarEnum type) {
           Navigator.pushNamed(
-              navigatorKey.currentContext!, getCurrentRoute(type));
+            navigatorKey.currentContext!,
+            getCurrentRoute(type),
+          );
         },
       ),
     );
@@ -138,13 +145,13 @@ class HomeScreen extends StatelessWidget {
         return AppRoutes.tiketSayaPage;
       case BottomBarEnum.Iconprofile:
         return AppRoutes.profileScreen;
-      default:
-        return "/";
     }
   }
 
   Widget getCurrentPage(BuildContext context, String currentRoute) {
     switch (currentRoute) {
+      case '/':
+        return HomeInitialPage.builder(context);
       case AppRoutes.homeInitialPage:
         return HomeInitialPage.builder(context);
       case AppRoutes.tiketSayaPage:
@@ -152,7 +159,7 @@ class HomeScreen extends StatelessWidget {
       case AppRoutes.profileScreen:
         return ProfileScreen.builder(context);
       default:
-        return const DefaultWidget();
+        return HomeInitialPage.builder(context);
     }
   }
 }

@@ -189,11 +189,23 @@ class _BookingScreenState extends State<BookingScreen> {
           ),
           SizedBox(height: 16.h),
           Text(
-            "Tanggal Pendakian",
+            "Tanggal Naik",
             style: TextStyle(fontSize: 13, color: Colors.black87),
           ),
           SizedBox(height: 8.h),
           _buildBookingDateField(context),
+          SizedBox(height: 16.h),
+          Text(
+            "Tanggal Turun",
+            style: TextStyle(fontSize: 13, color: Colors.black87),
+          ),
+          SizedBox(height: 8.h),
+          _buildReturnDateField(context),
+          SizedBox(height: 4.h),
+          Text(
+            "Tektok: tanggal naik = tanggal turun. Camping: tanggal turun setelah tanggal naik.",
+            style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+          ),
           SizedBox(height: 16.h),
           Text(
             "Tambah Anggota",
@@ -484,10 +496,52 @@ class _BookingScreenState extends State<BookingScreen> {
                 Expanded(
                   child: Text(
                     (bookingDateFieldController?.text.isEmpty ?? true)
-                        ? "Pilih Tanggal".tr
+                        ? "Pilih Tanggal Naik"
                         : bookingDateFieldController!.text,
                     style: TextStyle(
                       color: (bookingDateFieldController?.text.isEmpty ?? true)
+                          ? Colors.grey.shade700
+                          : Colors.black87,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Section Widget - Tanggal Turun
+  Widget _buildReturnDateField(BuildContext context) {
+    return BlocSelector<BookingBloc, BookingState, TextEditingController?>(
+      selector: (state) => state.returnDateFieldController,
+      builder: (context, returnDateFieldController) {
+        return GestureDetector(
+          onTap: () => onTapReturnDateInput(context),
+          child: Container(
+            width: double.maxFinite,
+            padding: EdgeInsets.symmetric(horizontal: 16.h, vertical: 12.h),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF4F5F4),
+              borderRadius: BorderRadius.circular(10.h),
+              border: Border.all(color: Colors.grey.shade300, width: 1),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.calendar_today_outlined,
+                    size: 20.h, color: Colors.grey.shade700),
+                SizedBox(width: 12.h),
+                Expanded(
+                  child: Text(
+                    (returnDateFieldController?.text.isEmpty ?? true)
+                        ? "Pilih Tanggal Turun"
+                        : returnDateFieldController!.text,
+                    style: TextStyle(
+                      color: (returnDateFieldController?.text.isEmpty ?? true)
                           ? Colors.grey.shade700
                           : Colors.black87,
                       fontSize: 14,
@@ -873,6 +927,7 @@ class _BookingScreenState extends State<BookingScreen> {
 
       final selectedMembers = state.selectedMembers ?? [];
       final bookingDate = state.bookingDateFieldController?.text;
+      final returnDate = state.returnDateFieldController?.text;
       final idGunung = state.mountain?.id;
       final jalurId = state.trail?.id;
       final biaya = state.trail?.biaya;
@@ -885,25 +940,32 @@ class _BookingScreenState extends State<BookingScreen> {
       }
 
       final formattedDate =
-          bookingDate != null ? formatTanggal(bookingDate) : null;
-      final tanggalTurun = formattedDate != null
-          ? DateTime.parse(formattedDate)
-              .add(const Duration(days: 1))
-              .toString()
-          : null;
+          bookingDate != null && bookingDate.isNotEmpty ? formatTanggal(bookingDate) : null;
+      final formattedReturnDate =
+          returnDate != null && returnDate.isNotEmpty ? formatTanggal(returnDate) : null;
 
       List<int>? anggotaIds = selectedMembers.isNotEmpty
           ? selectedMembers.map((m) => m.id).toList()
           : null;
 
       if (formattedDate == null ||
+          formattedReturnDate == null ||
           idGunung == null ||
           jalurId == null ||
           userIdInt == null ||
-          tanggalTurun == null ||
           biaya == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Harap lengkapi data pemesanan.')),
+          const SnackBar(content: Text('Harap lengkapi data pemesanan, termasuk tanggal naik dan tanggal turun.')),
+        );
+        return;
+      }
+
+      // Validasi: tanggal turun tidak boleh sebelum tanggal naik
+      final dtNaik = DateTime.parse(formattedDate);
+      final dtTurun = DateTime.parse(formattedReturnDate);
+      if (dtTurun.isBefore(dtNaik)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Tanggal turun tidak boleh sebelum tanggal naik.')),
         );
         return;
       }
@@ -913,7 +975,7 @@ class _BookingScreenState extends State<BookingScreen> {
         jalurId,
         userIdInt,
         formattedDate,
-        tanggalTurun,
+        formattedReturnDate,
         biaya.toInt(),
         anggotaIds: anggotaIds?.isNotEmpty == true ? anggotaIds : null,
         forceContinue: forceContinue,
@@ -1004,15 +1066,12 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   void onTapBookingDateInput(BuildContext context) async {
-    // Get current date
     DateTime currentDate = DateTime.now();
 
-    // Show date picker
     DateTime? pickedDate = await showDatePicker(
       context: context,
       initialDate: currentDate,
       firstDate: currentDate,
-      // Changed to allow selection up to 2 years ahead
       lastDate: DateTime(
         currentDate.year + 2,
         currentDate.month,
@@ -1020,13 +1079,43 @@ class _BookingScreenState extends State<BookingScreen> {
       ),
     );
 
-    if (pickedDate != null && pickedDate != currentDate) {
-      // Format the selected date to yyyy-MM-dd
+    if (pickedDate != null) {
       String formattedDate = DateFormat('yyyy-MM-dd').format(pickedDate);
-
-      // Dispatch UpdateBookingDateEvent with the new date format
       BlocProvider.of<BookingBloc>(context)
           .add(UpdateBookingDateEvent(formattedDate));
+    }
+  }
+
+  void onTapReturnDateInput(BuildContext context) async {
+    final state = BlocProvider.of<BookingBloc>(context).state;
+    final bookingDateText = state.bookingDateFieldController?.text;
+
+    // Tanggal naik harus dipilih dahulu
+    DateTime firstDate;
+    DateTime initialDate;
+    if (bookingDateText != null && bookingDateText.isNotEmpty) {
+      firstDate = DateTime.parse(bookingDateText);
+      initialDate = firstDate;
+    } else {
+      firstDate = DateTime.now();
+      initialDate = firstDate;
+    }
+
+    DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: firstDate,
+      lastDate: DateTime(
+        firstDate.year + 2,
+        firstDate.month,
+        firstDate.day,
+      ),
+    );
+
+    if (pickedDate != null) {
+      String formattedDate = DateFormat('yyyy-MM-dd').format(pickedDate);
+      BlocProvider.of<BookingBloc>(context)
+          .add(UpdateReturnDateEvent(formattedDate));
     }
   }
 }

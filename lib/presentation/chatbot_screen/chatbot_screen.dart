@@ -644,6 +644,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           builder: (context) => MidtransPaymentScreen(
             transactionId: message.transactionId ?? 0,
             redirectUrl: message.paymentUrl,
+            orderId: message.orderId,
           ),
         ),
       );
@@ -655,13 +656,21 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         );
 
         final status = result['status']?.toString() ?? 'pending';
+        final backendStatus = backendSnapshot['status']?.toString();
         final statusMsg = _buildPaymentStatusMessage(
           gatewayStatus: status,
-          backendStatus: backendSnapshot['status']?.toString(),
+          backendStatus: backendStatus,
           orderStatus: backendSnapshot['order_status']?.toString(),
           isPaymentExpired: backendSnapshot['is_payment_expired'] == true,
           gatewayMessage: result['message']?.toString(),
         );
+
+        // Mark as paid if backend confirms Complete or gateway says success
+        final normalizedBackend = (backendStatus ?? '').trim().toLowerCase();
+        final normalizedGateway = status.trim().toLowerCase();
+        if (normalizedBackend == 'complete' || normalizedGateway == 'success') {
+          _cubit.markMessagePaid(message);
+        }
 
         _cubit.addMessage(ChatMessage(
           message: statusMsg,
@@ -877,14 +886,20 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
               Padding(
                 padding: EdgeInsets.only(top: 8.h),
                 child: ElevatedButton.icon(
-                  onPressed: () => _openPayment(message),
-                  icon: Icon(Icons.payment, size: 18.h, color: Colors.white),
+                  onPressed: message.isPaid ? null : () => _openPayment(message),
+                  icon: Icon(
+                    message.isPaid ? Icons.check_circle : Icons.payment,
+                    size: 18.h,
+                    color: Colors.white,
+                  ),
                   label: Text(
-                    'Bayar Sekarang',
+                    message.isPaid ? 'Sudah Dibayar' : 'Bayar Sekarang',
                     style: TextStyle(fontSize: 13.fSize, color: Colors.white),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF00C853),
+                    backgroundColor: message.isPaid
+                        ? Colors.grey.shade400
+                        : const Color(0xFF00C853),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20.h),
                     ),

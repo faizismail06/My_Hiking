@@ -45,11 +45,21 @@ class ChangeDateEvent extends BookingEvent {
   List<Object?> get props => [date];
 }
 
-// Event untuk mengupdate tanggal
+// Event untuk mengupdate tanggal naik
 class UpdateBookingDateEvent extends BookingEvent {
   final String formattedDate;
 
   UpdateBookingDateEvent(this.formattedDate);
+
+  @override
+  List<Object?> get props => [formattedDate];
+}
+
+// Event untuk mengupdate tanggal turun
+class UpdateReturnDateEvent extends BookingEvent {
+  final String formattedDate;
+
+  UpdateReturnDateEvent(this.formattedDate);
 
   @override
   List<Object?> get props => [formattedDate];

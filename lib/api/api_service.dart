@@ -704,7 +704,8 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>> getRefundRequestResultByOrder(int orderId) async {
+  Future<Map<String, dynamic>> getRefundRequestResultByOrder(
+      int orderId) async {
     try {
       final token = await getToken();
 
@@ -1621,9 +1622,21 @@ class ApiService {
           'success': true,
           'snap_token': data['snap_token'],
           'redirect_url': data['redirect_url'],
-          'order_id': data['midtrans_order_id'],
+          'order_id': data['order_id'] ?? orderId,
+          'midtrans_order_id': data['midtrans_order_id'],
           'transaction_id': data['transaction_id'],
+          'total_payment': data['total_payment'] ?? data['total_amount'],
+          'payment_method': data['payment_method'],
+          'payment_type': data['payment_type'],
+          'transaction_created_at':
+              data['transaction_created_at'] ?? data['transaction_time'],
           'payment_expires_at': data['payment_expires_at'],
+          'payment_code': data['payment_code'],
+          'payment_code_label': data['payment_code_label'],
+          'payment_instruction': data['payment_instruction'],
+          'deeplink_url': data['deeplink_url'],
+          'qr_code_url': data['qr_code_url'],
+          'qr_string': data['qr_string'],
         };
       } else {
         return {
@@ -1703,6 +1716,42 @@ class ApiService {
       }
     } catch (e) {
       print('Midtrans Status Error: $e');
+      return {
+        'success': false,
+        'message': 'Tidak dapat terhubung ke server',
+      };
+    }
+  }
+
+  /// Poll payment status using order ID (or Midtrans order reference).
+  Future<Map<String, dynamic>> getPaymentStatus(String orderId) async {
+    try {
+      String? token = await getToken();
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/payment/status/$orderId'),
+        headers: {
+          'Accept': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 15));
+
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'data': responseData,
+        };
+      }
+
+      return {
+        'success': false,
+        'message':
+            responseData['message'] ?? 'Gagal mengambil status pembayaran',
+      };
+    } catch (e) {
+      print('Payment Status Error: $e');
       return {
         'success': false,
         'message': 'Tidak dapat terhubung ke server',

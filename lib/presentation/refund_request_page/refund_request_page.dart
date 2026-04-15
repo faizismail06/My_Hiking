@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../api/api_service.dart';
+import '../../core/app_export.dart';
 
 class RefundRequestPage extends StatefulWidget {
   final int orderId;
@@ -140,10 +141,10 @@ class _RefundRequestPageState extends State<RefundRequestPage> {
         ),
       );
 
-      Navigator.pop(context, {
-        'submitted': true,
-        'message': message,
-      });
+      Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil(
+        AppRoutes.orderCancelledScreen,
+        (route) => false,
+      );
       return;
     }
 
