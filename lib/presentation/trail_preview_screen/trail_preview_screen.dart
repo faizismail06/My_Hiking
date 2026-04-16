@@ -31,7 +31,7 @@ class TrailPreviewScreen extends StatelessWidget {
           child: Padding(
             padding: EdgeInsets.all(24),
             child: Text(
-              'Data preview jalur belum tersedia. Silakan upload GPX terlebih dahulu dari panel admin atau penjaga jalur.',
+              'Data preview jalur belum tersedia.',
               textAlign: TextAlign.center,
             ),
           ),

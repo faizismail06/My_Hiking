@@ -302,7 +302,7 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
     String _getTypeTitle(String type) {
       switch (type) {
         case 'e_wallet':
-          return 'E-Wallet';
+          return 'QRIS';
         case 'bank_transfer':
           return 'Virtual Account';
         case 'cstore':
