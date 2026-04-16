@@ -330,6 +330,8 @@ class ApiService {
   Future<Map<String, dynamic>> submitOnboardingExperience({
     required int jumlahPendakian,
     required int jumlahSummit,
+    List<Map<String, dynamic>>? questionnaireAnswers,
+    int? totalWeightedScore,
   }) async {
     final token = await getToken();
     if (token == null || token.isEmpty) {
@@ -341,16 +343,20 @@ class ApiService {
     }
 
     final url = Uri.parse('$baseUrl/onboarding/experience');
+    final payload = {
+      'jumlah_pendakian': jumlahPendakian,
+      'jumlah_summit': jumlahSummit,
+      if (questionnaireAnswers != null) 'questionnaire_answers': questionnaireAnswers,
+      if (totalWeightedScore != null) 'weighted_score': totalWeightedScore,
+    };
+
     final response = await http.post(
       url,
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       },
-      body: jsonEncode({
-        'jumlah_pendakian': jumlahPendakian,
-        'jumlah_summit': jumlahSummit,
-      }),
+      body: jsonEncode(payload),
     );
 
     if (response.statusCode == 201) {
