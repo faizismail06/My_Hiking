@@ -1,10 +1,18 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../api/api_service.dart';
 import '../models/chat_message.dart';
 import 'chatbot_state.dart';
 
 class ChatbotCubit extends Cubit<ChatbotState> {
+  final ApiService _apiService = ApiService();
+  String _role = 'pendaki';
+
   ChatbotCubit() : super(const ChatbotState());
+
+  void setRole(String role) {
+    _role = role;
+  }
 
   void setUserId(int? value) {
     emit(state.copyWith(userId: value));
@@ -66,7 +74,6 @@ class ChatbotCubit extends Cubit<ChatbotState> {
 
   void markMessagePaid(ChatMessage message) {
     message.isPaid = true;
-    // Emit a new state to trigger a rebuild
     emit(state.copyWith(messages: List<ChatMessage>.from(state.messages)));
   }
 
@@ -78,5 +85,115 @@ class ChatbotCubit extends Cubit<ChatbotState> {
       selectedMemberIds: nextIds,
       selectedMemberNames: nextNames,
     ));
+  }
+
+  // --- BUSINESS LOGIC MOVED FROM UI ---
+
+  Future<void> checkServerConnection() async {
+    final isHealthy = await _apiService.isChatbotServerHealthy();
+    setServerConnected(isHealthy);
+  }
+
+  Future<void> loadUserIdIfNeeded() async {
+    if (state.userId != null) {
+      loadFriends();
+      loadChatHistories();
+      return;
+    }
+    try {
+      final token = await _apiService.getToken();
+      if (token != null) {
+        final response = await _apiService.getUserProfile(token);
+        if (response['success']) {
+          setUserId(response['data']['id']);
+          await loadFriends();
+          loadChatHistories();
+        }
+      }
+    } catch (e) {
+      print('Error loading user ID: $e');
+    }
+  }
+
+  Future<void> loadFriends() async {
+    if (state.userId == null) return;
+    try {
+      final result = await _apiService.getFriends(state.userId!);
+      if (result['success'] == true && result['data'] is List) {
+        setFriends(List<Map<String, dynamic>>.from(result['data']));
+      }
+    } catch (e) {
+      print('Error loading friends: $e');
+    }
+  }
+
+  Future<void> loadChatHistories() async {
+    if (state.userId == null) return;
+    try {
+      final result = await _apiService.getChatHistories(
+        userId: state.userId!,
+        role: _role,
+      );
+      if (result['success'] == true && result['data'] != null) {
+        setChatHistories(List<Map<String, dynamic>>.from(result['data']));
+      }
+    } catch (e) {
+      print('Error loading chat histories: $e');
+    }
+  }
+
+  Future<void> loadChatHistory(int historyId) async {
+    try {
+      final result = await _apiService.getChatHistory(historyId);
+      if (result['success'] == true && result['data'] != null) {
+        final messages = result['data']['messages'] as List;
+        final rebuiltMessages = <ChatMessage>[];
+        for (var msg in messages) {
+          rebuiltMessages.add(ChatMessage(
+            message: msg['message'] ?? '',
+            isUser: msg['isUser'] ?? false,
+          ));
+        }
+        setCurrentHistoryId(historyId);
+        replaceMessages(rebuiltMessages);
+      }
+    } catch (e) {
+      print('Error loading chat history: $e');
+    }
+  }
+
+  Future<void> autoSaveHistory() async {
+    if (state.userId == null || state.messages.length <= 1) return;
+
+    final userMessages = state.messages.where((m) => m.isUser).toList();
+    if (userMessages.isEmpty) return;
+
+    try {
+      final messagesJson = state.messages.map((m) => m.toJson()).toList();
+      final result = await _apiService.saveChatHistory(
+        userId: state.userId!,
+        role: _role,
+        messages: messagesJson,
+        historyId: state.currentHistoryId,
+      );
+
+      if (result['success'] == true && result['history_id'] != null) {
+        final historyId = result['history_id'];
+        if (historyId is int && state.currentHistoryId != historyId) {
+          setCurrentHistoryId(historyId);
+        }
+      }
+    } catch (e) {
+      print('Error auto-saving history: $e');
+    }
+  }
+
+  Future<void> deleteHistory(int historyId) async {
+    try {
+      await _apiService.deleteChatHistory(historyId, userId: state.userId);
+      loadChatHistories();
+    } catch (e) {
+      print('Error deleting history: $e');
+    }
   }
 }

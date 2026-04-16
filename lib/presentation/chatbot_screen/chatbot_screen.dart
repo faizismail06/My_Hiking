@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../api/api_service.dart';
 import '../../core/app_export.dart';
@@ -560,7 +561,14 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                       const SizedBox(width: 8),
                       ElevatedButton(
                         onPressed: addManualId,
-                        child: const Text('Tambah ID'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _rolePrimaryColor,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: const Text(
+                          'Tambah ID',
+                          style: TextStyle(color: Colors.white),
+                        ),
                       ),
                     ],
                   ),
@@ -831,112 +839,119 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
   /// Widget untuk bubble chat
   Widget _buildMessageBubble(ChatMessage message) {
+    if (_messages.length == 1 &&
+        message == _messages.first &&
+        !message.isUser) {
+      return const SizedBox.shrink();
+    }
     return Align(
       alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
+          maxWidth: MediaQuery.of(context).size.width * 0.9,
         ),
-        margin: EdgeInsets.only(
-          top: 8.h,
-          bottom: 8.h,
-          left: message.isUser ? 50.h : 16.h,
-          right: message.isUser ? 16.h : 50.h,
-        ),
-        child: Column(
-          crossAxisAlignment: message.isUser
-              ? CrossAxisAlignment.end
-              : CrossAxisAlignment.start,
+        margin: EdgeInsets.only(top: 8.h, bottom: 8.h, left: 16.h, right: 16.h),
+        child: Row(
+          mainAxisAlignment:
+              message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 16.h, vertical: 12.h),
-              decoration: BoxDecoration(
-                color: message.isUser ? _rolePrimaryColor : appTheme.gray200,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(20.h),
-                  topRight: Radius.circular(20.h),
-                  bottomLeft: message.isUser
-                      ? Radius.circular(20.h)
-                      : Radius.circular(4.h),
-                  bottomRight: message.isUser
-                      ? Radius.circular(4.h)
-                      : Radius.circular(20.h),
+            if (!message.isUser)
+              Container(
+                width: 32.h,
+                height: 32.h,
+                margin: EdgeInsets.only(right: 8.h),
+                child: RepaintBoundary(
+                  child: Lottie.asset(
+                    'assets/lottie/Siri.json',
+                    fit: BoxFit.contain,
+                    repeat: true,
+                    animate: _messages.last == message,
+                  ),
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 5,
-                    offset: const Offset(0, 2),
+              ),
+            Flexible(
+              child: Column(
+                crossAxisAlignment: message.isUser
+                    ? CrossAxisAlignment.end
+                    : CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 16.h, vertical: 12.h),
+                    decoration: BoxDecoration(
+                      color: message.isUser ? appTheme.gray200 : Colors.white,
+                      borderRadius: BorderRadius.circular(20.h),
+                      boxShadow: message.isUser
+                          ? []
+                          : [
+                              BoxShadow(
+                                  color: Colors.black.withOpacity(0.04),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4)),
+                            ],
+                    ),
+                    child: Text(
+                      message.message,
+                      style: TextStyle(
+                          color: appTheme.blueGray900,
+                          fontSize: 14.fSize,
+                          height: 1.5),
+                    ),
+                  ),
+                  if (message.paymentUrl != null &&
+                      message.paymentUrl!.isNotEmpty &&
+                      !message.isUser)
+                    Padding(
+                      padding: EdgeInsets.only(top: 8.h),
+                      child: ElevatedButton.icon(
+                        onPressed:
+                            message.isPaid ? null : () => _openPayment(message),
+                        icon: Icon(
+                            message.isPaid ? Icons.check_circle : Icons.payment,
+                            size: 18.h,
+                            color: Colors.white),
+                        label: Text(
+                            message.isPaid ? 'Sudah Dibayar' : 'Bayar Sekarang',
+                            style: TextStyle(
+                                fontSize: 13.fSize, color: Colors.white)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: message.isPaid
+                              ? Colors.grey.shade400
+                              : const Color(0xFF00C853),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20.h)),
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 20.h, vertical: 10.h),
+                        ),
+                      ),
+                    ),
+                  if (message.downloadUrl != null && !message.isUser)
+                    Padding(
+                      padding: EdgeInsets.only(top: 8.h),
+                      child: ElevatedButton.icon(
+                        onPressed: () => _downloadFile(message.downloadUrl!),
+                        icon: Icon(Icons.download,
+                            size: 18.h, color: Colors.white),
+                        label: Text('Download Excel',
+                            style: TextStyle(
+                                fontSize: 12.fSize, color: Colors.white)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _rolePrimaryColor,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20.h)),
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 16.h, vertical: 8.h),
+                        ),
+                      ),
+                    ),
+                  Padding(
+                    padding: EdgeInsets.only(top: 4.h, left: 4.h, right: 4.h),
+                    child: Text(_formatTime(message.timestamp),
+                        style: TextStyle(
+                            color: appTheme.gray500, fontSize: 10.fSize)),
                   ),
                 ],
-              ),
-              child: Text(
-                message.message,
-                style: TextStyle(
-                  color: message.isUser ? Colors.white : appTheme.blueGray900,
-                  fontSize: 14.fSize,
-                  height: 1.5,
-                ),
-              ),
-            ),
-            // Payment button jika ada
-            if (message.paymentUrl != null &&
-                message.paymentUrl!.isNotEmpty &&
-                !message.isUser)
-              Padding(
-                padding: EdgeInsets.only(top: 8.h),
-                child: ElevatedButton.icon(
-                  onPressed: message.isPaid ? null : () => _openPayment(message),
-                  icon: Icon(
-                    message.isPaid ? Icons.check_circle : Icons.payment,
-                    size: 18.h,
-                    color: Colors.white,
-                  ),
-                  label: Text(
-                    message.isPaid ? 'Sudah Dibayar' : 'Bayar Sekarang',
-                    style: TextStyle(fontSize: 13.fSize, color: Colors.white),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: message.isPaid
-                        ? Colors.grey.shade400
-                        : const Color(0xFF00C853),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20.h),
-                    ),
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 20.h, vertical: 10.h),
-                  ),
-                ),
-              ),
-            // Download button jika ada
-            if (message.downloadUrl != null && !message.isUser)
-              Padding(
-                padding: EdgeInsets.only(top: 8.h),
-                child: ElevatedButton.icon(
-                  onPressed: () => _downloadFile(message.downloadUrl!),
-                  icon: Icon(Icons.download, size: 18.h, color: Colors.white),
-                  label: Text(
-                    'Download Excel',
-                    style: TextStyle(fontSize: 12.fSize, color: Colors.white),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _rolePrimaryColor,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20.h),
-                    ),
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 16.h, vertical: 8.h),
-                  ),
-                ),
-              ),
-            Padding(
-              padding: EdgeInsets.only(top: 4.h, left: 4.h, right: 4.h),
-              child: Text(
-                _formatTime(message.timestamp),
-                style: TextStyle(
-                  color: appTheme.gray500,
-                  fontSize: 10.fSize,
-                ),
               ),
             ),
           ],
@@ -994,7 +1009,8 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   }
 
   /// Widget untuk saran pertanyaan berdasarkan role
-  Widget _buildSuggestionChips() {
+
+  Widget _buildSuggestionGrid() {
     List<String> suggestions;
 
     switch (widget.role) {
@@ -1017,38 +1033,64 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       default:
         suggestions = [
           'Gunung apa saja yang tersedia?',
-          'Saya ingin memesan tiket pendakian',
+          'Saya ingin memesan tiket',
           'Berapa biaya pendakian?',
           'Tips pendakian pemula',
         ];
     }
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: EdgeInsets.symmetric(horizontal: 16.h),
-      child: Row(
-        children: suggestions.map((suggestion) {
-          return Padding(
-            padding: EdgeInsets.only(right: 8.h),
-            child: ActionChip(
-              label: Text(
-                suggestion,
-                style: TextStyle(
-                  fontSize: 12.fSize,
-                  color: _rolePrimaryColor,
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 24.h),
+      child: Column(
+        children: [
+          Wrap(
+            spacing: 12.h,
+            runSpacing: 12.h,
+            alignment: WrapAlignment.center,
+            children: suggestions.take(2).map((suggestion) {
+              return InkWell(
+                onTap: () {
+                  _messageController.text = suggestion;
+                  _sendMessage();
+                },
+                borderRadius: BorderRadius.circular(16.h),
+                child: Container(
+                  width: MediaQuery.of(context).size.width * 0.4,
+                  padding: EdgeInsets.all(16.h),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16.h),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.03),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    suggestion,
+                    style: TextStyle(
+                      fontSize: 13.fSize,
+                      color: appTheme.black900,
+                      height: 1.4,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
-              ),
-              backgroundColor: _rolePrimaryColor.withOpacity(0.1),
-              side: BorderSide(
-                color: _rolePrimaryColor.withOpacity(0.3),
-              ),
-              onPressed: () {
-                _messageController.text = suggestion;
-                _sendMessage();
-              },
+              );
+            }).toList(),
+          ),
+          SizedBox(height: 16.h),
+          TextButton.icon(
+            onPressed: () {},
+            icon: Icon(Icons.refresh, size: 18.h, color: appTheme.gray500),
+            label: Text(
+              'Refresh saran otomatis',
+              style: TextStyle(color: appTheme.gray500, fontSize: 13.fSize),
             ),
-          );
-        }).toList(),
+          ),
+        ],
       ),
     );
   }
@@ -1196,6 +1238,52 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     );
   }
 
+  Widget _buildEmptyState() {
+    return SingleChildScrollView(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(height: 40.h),
+          SizedBox(
+            width: 150.h,
+            height: 150.h,
+            child: Lottie.asset(
+              'assets/lottie/Siri.json',
+              fit: BoxFit.contain,
+              repeat: true,
+              animate: true,
+            ),
+          ),
+          SizedBox(height: 16.h),
+          Text(
+            'Halo, Ada yang bisa dibantu?',
+            style: TextStyle(
+              fontSize: 22.fSize,
+              fontWeight: FontWeight.w700,
+              color: Colors.black87,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 12.h),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 40.h),
+            child: Text(
+              'Pilih prompt di bawah ini atau ketik sendiri pertanyaan Anda.',
+              style: TextStyle(
+                fontSize: 14.fSize,
+                color: Colors.black54,
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          SizedBox(height: 32.h),
+          _buildSuggestionGrid(),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocProvider.value(
@@ -1203,86 +1291,45 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       child: BlocBuilder<ChatbotCubit, ChatbotState>(
         builder: (context, state) {
           return Scaffold(
-            backgroundColor: theme.colorScheme.onPrimary,
+            backgroundColor: const Color(0xFFF1F8F1),
             drawer: _buildHistoryDrawer(),
             appBar: AppBar(
-              backgroundColor: _rolePrimaryColor,
+              backgroundColor: Colors.transparent,
               elevation: 0,
+              centerTitle: true,
+              iconTheme: const IconThemeData(color: Colors.black87),
               leading: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                tooltip: 'Kembali ke Home',
+                icon: const Icon(Icons.arrow_back_ios_new),
                 onPressed: () async {
                   await _autoSaveHistory();
                   if (!mounted) return;
-
                   if (Navigator.canPop(context)) {
                     Navigator.pop(context);
-                    return;
+                  } else {
+                    Navigator.pushNamedAndRemoveUntil(
+                        context, AppRoutes.homeScreen, (route) => false);
                   }
-
-                  Navigator.pushNamedAndRemoveUntil(
-                    context,
-                    AppRoutes.homeScreen,
-                    (route) => false,
-                  );
                 },
               ),
               title: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(
-                    padding: EdgeInsets.all(8.h),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12.h),
+                  Icon(_roleIcon, color: _rolePrimaryColor, size: 24.h),
+                  SizedBox(width: 8.h),
+                  Text(
+                    _roleTitle,
+                    style: TextStyle(
+                      color: Colors.black87,
+                      fontSize: 18.fSize,
+                      fontWeight: FontWeight.w600,
                     ),
-                    child: Icon(
-                      _roleIcon,
-                      color: Colors.white,
-                      size: 24.h,
-                    ),
-                  ),
-                  SizedBox(width: 12.h),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _roleTitle,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16.fSize,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Row(
-                        children: [
-                          Container(
-                            height: 8.h,
-                            width: 8.h,
-                            decoration: BoxDecoration(
-                              color: _isServerConnected
-                                  ? Colors.greenAccent
-                                  : Colors.red,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          SizedBox(width: 4.h),
-                          Text(
-                            _isServerConnected ? 'Online' : 'Offline',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 12.fSize,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
                   ),
                 ],
               ),
               actions: [
                 Builder(
                   builder: (context) => IconButton(
-                    icon: const Icon(Icons.menu, color: Colors.white),
+                    icon: const Icon(Icons.menu, color: Colors.black87),
                     tooltip: 'Riwayat Chat',
                     onPressed: () {
                       _loadChatHistories();
@@ -1291,7 +1338,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.refresh, color: Colors.white),
+                  icon: const Icon(Icons.refresh, color: Colors.black87),
                   onPressed: () {
                     _checkServerConnection();
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -1310,166 +1357,136 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
             ),
             body: Column(
               children: [
-                // Header gradient
-                Container(
-                  height: 20.h,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        _rolePrimaryColor,
-                        _rolePrimaryColor.withOpacity(0),
-                      ],
+                if (_messages.length > 1)
+                  Expanded(
+                    child: ListView.builder(
+                      controller: _scrollController,
+                      padding: EdgeInsets.only(bottom: 16.h),
+                      itemCount: _messages.length + (_isLoading ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index == _messages.length && _isLoading) {
+                          return _buildTypingIndicator();
+                        }
+                        return _buildMessageBubble(_messages[index]);
+                      },
                     ),
-                  ),
-                ),
-
-                // Suggestion chips
-                if (_messages.length <= 1)
-                  Container(
-                    padding: EdgeInsets.only(bottom: 16.h),
-                    child: _buildSuggestionChips(),
-                  ),
-
-                // Chat messages
-                Expanded(
-                  child: ListView.builder(
-                    controller: _scrollController,
-                    padding: EdgeInsets.only(bottom: 16.h),
-                    itemCount: _messages.length + (_isLoading ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (index == _messages.length && _isLoading) {
-                        return _buildTypingIndicator();
-                      }
-                      return _buildMessageBubble(_messages[index]);
-                    },
-                  ),
-                ),
-
-                // Server offline warning
-                if (!_isServerConnected)
-                  Container(
-                    width: double.infinity,
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 16.h, vertical: 8.h),
-                    color: Colors.orange.withOpacity(0.1),
-                    child: Row(
-                      children: [
-                        Icon(Icons.warning_amber_rounded,
-                            color: Colors.orange, size: 20.h),
-                        SizedBox(width: 8.h),
-                        Expanded(
-                          child: Text(
-                            'Server chatbot sedang offline. Pastikan server Python berjalan.',
-                            style: TextStyle(
-                              color: Colors.orange[800],
-                              fontSize: 12.fSize,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                  )
+                else
+                  Expanded(
+                    child: _buildEmptyState(),
                   ),
 
                 // Input field
                 Container(
-                  padding: EdgeInsets.all(16.h),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.onPrimary,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, -5),
-                      ),
-                    ],
-                  ),
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 16.h, vertical: 12.h),
+                  color: Colors.transparent,
                   child: SafeArea(
-                    child: Row(
-                      children: [
-                        IconButton(
-                          tooltip: 'Pilih anggota pendaki',
-                          onPressed: _isServerConnected
-                              ? _openMemberPickerModal
-                              : null,
-                          icon: Icon(
-                            Icons.group_add,
-                            color: _isServerConnected
-                                ? _rolePrimaryColor
-                                : appTheme.gray400,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24.h),
+                        border: Border.all(color: appTheme.gray200, width: 1.5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.04),
+                            blurRadius: 15,
+                            offset: const Offset(0, 5),
                           ),
-                        ),
-                        Expanded(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: appTheme.gray200,
-                              borderRadius: BorderRadius.circular(24.h),
-                            ),
-                            child: TextField(
-                              controller: _messageController,
-                              enabled: _isServerConnected,
-                              textCapitalization: TextCapitalization.sentences,
-                              maxLines: 4,
-                              minLines: 1,
-                              decoration: InputDecoration(
-                                hintText: _isServerConnected
-                                    ? 'Ketik pertanyaan Anda...'
-                                    : 'Server tidak terhubung',
-                                hintStyle: TextStyle(
-                                  color: appTheme.gray500,
-                                  fontSize: 14.fSize,
-                                ),
-                                border: InputBorder.none,
-                                contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 20.h,
-                                  vertical: 12.h,
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              SizedBox(width: 16.h),
+                              Expanded(
+                                child: TextField(
+                                  controller: _messageController,
+                                  enabled: _isServerConnected,
+                                  textCapitalization:
+                                      TextCapitalization.sentences,
+                                  maxLines: 4,
+                                  minLines: 1,
+                                  style: TextStyle(fontSize: 14.fSize),
+                                  decoration: InputDecoration(
+                                    hintText: _isServerConnected
+                                        ? 'Ketik pertanyaan Anda...'
+                                        : 'Server offline',
+                                    hintStyle: TextStyle(
+                                        color: appTheme.gray500,
+                                        fontSize: 14.fSize),
+                                    border: InputBorder.none,
+                                    isDense: true,
+                                    contentPadding:
+                                        EdgeInsets.symmetric(vertical: 16.h),
+                                  ),
+                                  onSubmitted: (_) => _sendMessage(),
                                 ),
                               ),
-                              onSubmitted: (_) => _sendMessage(),
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 12.h),
-                        Container(
-                          height: 48.h,
-                          width: 48.h,
-                          decoration: BoxDecoration(
-                            color: _isServerConnected
-                                ? _rolePrimaryColor
-                                : appTheme.gray400,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: _rolePrimaryColor.withOpacity(0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: IconButton(
-                            icon: _isLoading
-                                ? SizedBox(
+                              if (_isLoading)
+                                Padding(
+                                  padding:
+                                      EdgeInsets.symmetric(horizontal: 16.h),
+                                  child: SizedBox(
                                     height: 20.h,
                                     width: 20.h,
-                                    child: const CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : Icon(
-                                    Icons.send_rounded,
-                                    color: Colors.white,
-                                    size: 22.h,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: _rolePrimaryColor),
                                   ),
-                            onPressed: _isServerConnected && !_isLoading
-                                ? _sendMessage
-                                : null,
+                                ),
+                              if (!_isLoading)
+                                IconButton(
+                                  icon: Icon(Icons.send_rounded,
+                                      color: _rolePrimaryColor),
+                                  onPressed:
+                                      _isServerConnected ? _sendMessage : null,
+                                ),
+                            ],
                           ),
-                        ),
-                      ],
+                          Container(height: 1, color: appTheme.gray200),
+                          Padding(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 8.h, vertical: 4.h),
+                            child: Row(
+                              children: [
+                                ActionChip(
+                                  label: Text('Member',
+                                      style: TextStyle(
+                                          color: _rolePrimaryColor,
+                                          fontSize: 12.fSize)),
+                                  avatar: Icon(Icons.group_add,
+                                      color: _rolePrimaryColor, size: 16.h),
+                                  backgroundColor:
+                                      _rolePrimaryColor.withOpacity(0.1),
+                                  side: BorderSide.none,
+                                  onPressed: _isServerConnected
+                                      ? _openMemberPickerModal
+                                      : null,
+                                ),
+                                const Spacer(),
+                                IconButton(
+                                    icon: Icon(Icons.camera_alt_outlined,
+                                        color: appTheme.gray500, size: 20.h),
+                                    onPressed: () {}),
+                                IconButton(
+                                    icon: Icon(Icons.attach_file,
+                                        color: appTheme.gray500, size: 20.h),
+                                    onPressed: () {}),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
+                ),
+                Padding(
+                  padding: EdgeInsets.only(bottom: 8.h),
+                  child: Text('Harap periksa kembali respons dari AI.',
+                      style: TextStyle(
+                          fontSize: 11.fSize, color: appTheme.gray500)),
                 ),
                 if (_selectedMemberIds.isNotEmpty)
                   Container(

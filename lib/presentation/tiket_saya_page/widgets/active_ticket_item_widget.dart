@@ -1,18 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../core/app_export.dart';
-import '../../../theme/custom_button_style.dart';
-import '../../../widgets/custom_elevated_button.dart';
 import '../models/tiket_saya_model.dart';
 
 class ActiveTicketItemWidget extends StatelessWidget {
   final TiketItemModel model;
   final VoidCallback? onTap;
+  final bool isPendingPaymentCard;
+  final Duration? pendingRemainingTime;
+  final bool isCountdownSyncing;
+  final VoidCallback? onPayNowTap;
 
   const ActiveTicketItemWidget({
     super.key,
     required this.model,
     this.onTap,
+    this.isPendingPaymentCard = false,
+    this.pendingRemainingTime,
+    this.isCountdownSyncing = false,
+    this.onPayNowTap,
   });
 
   @override
@@ -22,98 +28,251 @@ class ActiveTicketItemWidget extends StatelessWidget {
       tanggal = DateTime.parse(model.tanggalNaik ?? '');
     } catch (_) {}
 
+    if (isPendingPaymentCard) {
+      return GestureDetector(
+        onTap: onTap,
+        child: _buildPendingPaymentCard(tanggal),
+      );
+    }
+
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.all(16.h),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16.h),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 12.h,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            // Mountain icon container
-            Container(
-              width: 48.h,
-              height: 48.h,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    _statusGradientStart(model.status),
-                    _statusGradientEnd(model.status),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(12.h),
-              ),
-              child: Icon(
-                _statusIcon(model.status),
-                color: Colors.white,
-                size: 24.h,
-              ),
-            ),
-            SizedBox(width: 14.h),
-            // Content
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    model.gunung ?? 'Gunung',
-                    style: TextStyle(
-                      fontSize: 15.fSize,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF1A1A2E),
-                      letterSpacing: 0.1,
-                    ),
-                  ),
-                  SizedBox(height: 3.h),
-                  if (model.jalur != null && model.jalur!.isNotEmpty)
-                    Text(
-                      model.jalur!,
-                      style: TextStyle(
-                        fontSize: 12.fSize,
-                        color: const Color(0xFF6B7280),
-                      ),
-                    ),
-                  SizedBox(height: 3.h),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.calendar_today_rounded,
-                        size: 12.h,
-                        color: const Color(0xFF9CA3AF),
-                      ),
-                      SizedBox(width: 4.h),
-                      Text(
-                        tanggal != null
-                            ? DateFormat('dd MMM yyyy', 'id_ID')
-                                .format(tanggal)
-                            : '-',
-                        style: TextStyle(
-                          fontSize: 12.fSize,
-                          color: const Color(0xFF9CA3AF),
-                        ),
-                      ),
-                    ],
-                  ),
+      child: _buildRegularTicketCard(tanggal),
+    );
+  }
+
+  Widget _buildRegularTicketCard(DateTime? tanggal) {
+    return Container(
+      padding: EdgeInsets.all(16.h),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16.h),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 12.h,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48.h,
+            height: 48.h,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  _statusGradientStart(model.status),
+                  _statusGradientEnd(model.status),
                 ],
               ),
+              borderRadius: BorderRadius.circular(12.h),
             ),
-            // Status badge
-            _buildStatusBadge(),
-          ],
-        ),
+            child: Icon(
+              _statusIcon(model.status),
+              color: Colors.white,
+              size: 24.h,
+            ),
+          ),
+          SizedBox(width: 14.h),
+          Expanded(
+            child: _buildTicketInfo(tanggal),
+          ),
+          _buildStatusBadge(),
+        ],
       ),
     );
+  }
+
+  Widget _buildPendingPaymentCard(DateTime? tanggal) {
+    final isSyncing = isCountdownSyncing || pendingRemainingTime == null;
+    final remaining = pendingRemainingTime ?? Duration.zero;
+    final isExpired = !isSyncing && remaining <= Duration.zero;
+
+    return Container(
+      padding: EdgeInsets.all(14.h),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16.h),
+        border: Border.all(color: const Color(0xFFF59E72), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10.h,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 54.h,
+                height: 54.h,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14.h),
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFFEF4444), Color(0xFFF87171)],
+                  ),
+                ),
+                child: Icon(
+                  Icons.confirmation_number_rounded,
+                  color: Colors.white,
+                  size: 30.h,
+                ),
+              ),
+              SizedBox(width: 12.h),
+              Expanded(
+                child: _buildTicketInfo(tanggal),
+              ),
+            ],
+          ),
+          SizedBox(height: 10.h),
+          if (isSyncing)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: 14.h,
+                  height: 14.h,
+                  child: const CircularProgressIndicator(strokeWidth: 2),
+                ),
+                SizedBox(width: 8.h),
+                Text(
+                  'Sinkronisasi waktu...',
+                  style: TextStyle(
+                    fontSize: 13.fSize,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF6B7280),
+                  ),
+                ),
+              ],
+            )
+          else
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'Sisa Waktu: ',
+                  style: TextStyle(
+                    fontSize: 14.fSize,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF111827),
+                  ),
+                ),
+                Text(
+                  _formatDuration(remaining),
+                  style: TextStyle(
+                    fontSize: 16.fSize,
+                    fontWeight: FontWeight.w800,
+                    color: isExpired
+                        ? const Color(0xFF9CA3AF)
+                        : const Color(0xFFF97316),
+                  ),
+                ),
+                SizedBox(width: 6.h),
+                Icon(
+                  isExpired ? Icons.timer_off_rounded : Icons.lock_rounded,
+                  color: isExpired
+                      ? const Color(0xFF9CA3AF)
+                      : const Color(0xFFF97316),
+                  size: 16.h,
+                ),
+              ],
+            ),
+          SizedBox(height: 12.h),
+          SizedBox(
+            width: double.infinity,
+            height: 44.h,
+            child: ElevatedButton(
+              onPressed: isExpired ? null : onPayNowTap,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isExpired
+                    ? const Color(0xFFE5E7EB)
+                    : const Color(0xFFF97316),
+                foregroundColor:
+                    isExpired ? const Color(0xFF9CA3AF) : Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(22.h),
+                ),
+              ),
+              child: Text(
+                isExpired ? 'Waktu Habis' : 'Bayar Sekarang',
+                style: TextStyle(
+                  fontSize: 15.fSize,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTicketInfo(DateTime? tanggal) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          model.gunung ?? 'Gunung',
+          style: TextStyle(
+            fontSize: 15.fSize,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF1A1A2E),
+            letterSpacing: 0.1,
+          ),
+        ),
+        SizedBox(height: 3.h),
+        if (model.jalur != null && model.jalur!.isNotEmpty)
+          Text(
+            model.jalur!,
+            style: TextStyle(
+              fontSize: 12.fSize,
+              color: const Color(0xFF6B7280),
+            ),
+          ),
+        SizedBox(height: 3.h),
+        Row(
+          children: [
+            Icon(
+              Icons.calendar_today_rounded,
+              size: 12.h,
+              color: const Color(0xFF9CA3AF),
+            ),
+            SizedBox(width: 4.h),
+            Text(
+              tanggal != null
+                  ? DateFormat('dd MMM yyyy', 'id_ID').format(tanggal)
+                  : '-',
+              style: TextStyle(
+                fontSize: 12.fSize,
+                color: const Color(0xFF9CA3AF),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  String _formatDuration(Duration duration) {
+    final safeDuration = duration.isNegative ? Duration.zero : duration;
+    final hours = safeDuration.inHours.toString().padLeft(2, '0');
+    final minutes =
+        safeDuration.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds =
+        safeDuration.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$hours:$minutes:$seconds';
   }
 
   Widget _buildStatusBadge() {

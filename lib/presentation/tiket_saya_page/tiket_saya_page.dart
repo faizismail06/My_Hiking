@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:myhiking/presentation/payment_method_screen/payment_method_screen.dart';
@@ -26,13 +28,46 @@ class TiketSayaPage extends StatefulWidget {
 }
 
 class _TiketSayaPageState extends State<TiketSayaPage> {
+  static const Duration _paymentWindow = Duration(minutes: 15);
+  static const Duration _pendingStatusPollingInterval = Duration(seconds: 12);
+
   String userId = '';
   String userName = '';
+  final Set<int> _trackedPendingOrderIds = <int>{};
+  final Map<int, _PendingPaymentMeta> _pendingPaymentMetaMap =
+      <int, _PendingPaymentMeta>{};
+
+  Timer? _countdownTicker;
+  Timer? _pendingStatusPollingTimer;
 
   @override
   void initState() {
     super.initState();
     _getUserProfile();
+  }
+
+  @override
+  void dispose() {
+    _countdownTicker?.cancel();
+    _pendingStatusPollingTimer?.cancel();
+    super.dispose();
+  }
+
+  void _ensureCountdownTicker() {
+    if (_countdownTicker?.isActive ?? false) {
+      return;
+    }
+
+    _countdownTicker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+  }
+
+  void _stopCountdownTicker() {
+    _countdownTicker?.cancel();
+    _countdownTicker = null;
   }
 
   Future<void> _getUserProfile() async {
@@ -195,6 +230,7 @@ class _TiketSayaPageState extends State<TiketSayaPage> {
               state.tiketSayaModelObj?.activeTicketsList ?? [];
 
           if (activeTickets.isEmpty) {
+            _syncPendingTracking(const <int>{});
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -217,23 +253,365 @@ class _TiketSayaPageState extends State<TiketSayaPage> {
             );
           }
 
-          return ListView.separated(
+          final pendingTickets = <_PendingTicketViewData>[];
+          final paidTickets = <TiketItemModel>[];
+
+          for (final ticket in activeTickets) {
+            final orderId = int.tryParse(ticket.id ?? '');
+            final tx = _findTransactionForOrder(state, orderId);
+            if (_isPendingPaymentTicket(ticket, tx, orderId: orderId)) {
+              pendingTickets.add(
+                _PendingTicketViewData(
+                  model: ticket,
+                  orderId: orderId,
+                  transaction: tx,
+                  remainingTime: _resolveRemainingTime(
+                    ticket,
+                    tx,
+                    orderId: orderId,
+                  ),
+                ),
+              );
+            } else {
+              paidTickets.add(ticket);
+            }
+          }
+
+          _syncPendingTracking(
+            pendingTickets.map((item) => item.orderId).whereType<int>().toSet(),
+          );
+
+          return ListView(
             padding: EdgeInsets.zero,
             physics: const BouncingScrollPhysics(),
             shrinkWrap: true,
-            separatorBuilder: (context, index) => SizedBox(height: 14.h),
-            itemCount: activeTickets.length,
-            itemBuilder: (context, index) {
-              final model = activeTickets[index];
-              return ActiveTicketItemWidget(
-                model: model,
-                onTap: () => _handleTicketTap(model, state),
-              );
-            },
+            children: [
+              _buildSectionTitle(
+                icon: Icons.access_time_filled,
+                iconColor: const Color(0xFFF97316),
+                title: 'Selesaikan Pembayaran',
+              ),
+              SizedBox(height: 12.h),
+              if (pendingTickets.isEmpty)
+                _buildEmptySection(
+                  icon: Icons.payment_rounded,
+                  message: 'Tidak ada pembayaran yang menunggu',
+                )
+              else
+                ...pendingTickets.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final data = entry.value;
+                  return Padding(
+                    padding: EdgeInsets.only(
+                      bottom: index == pendingTickets.length - 1 ? 0 : 12.h,
+                    ),
+                    child: ActiveTicketItemWidget(
+                      model: data.model,
+                      isPendingPaymentCard: true,
+                      pendingRemainingTime: data.remainingTime,
+                      isCountdownSyncing: data.remainingTime == null,
+                      onTap: () => _handlePayNow(data),
+                      onPayNowTap: () => _handlePayNow(data),
+                    ),
+                  );
+                }),
+              SizedBox(height: 24.h),
+              _buildSectionTitle(
+                icon: Icons.check_circle,
+                iconColor: const Color(0xFF16A34A),
+                title: 'Tiket Terpesan',
+              ),
+              SizedBox(height: 12.h),
+              if (paidTickets.isEmpty)
+                _buildEmptySection(
+                  icon: Icons.confirmation_number_outlined,
+                  message: 'Belum ada tiket yang sudah lunas',
+                )
+              else
+                ...paidTickets.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final model = entry.value;
+                  return Padding(
+                    padding: EdgeInsets.only(
+                      bottom: index == paidTickets.length - 1 ? 0 : 12.h,
+                    ),
+                    child: ActiveTicketItemWidget(
+                      model: model,
+                      onTap: () => _handleTicketTap(model, state),
+                    ),
+                  );
+                }),
+              SizedBox(height: 8.h),
+            ],
           );
         },
       ),
     );
+  }
+
+  Widget _buildSectionTitle({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, color: iconColor, size: 22.h),
+        SizedBox(width: 8.h),
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 18.fSize,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF111827),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptySection({
+    required IconData icon,
+    required String message,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(horizontal: 14.h, vertical: 14.h),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14.h),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: const Color(0xFF9CA3AF), size: 18.h),
+          SizedBox(width: 8.h),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                fontSize: 12.fSize,
+                color: const Color(0xFF6B7280),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  TransaksiItemModel? _findTransactionForOrder(
+    TiketSayaState state,
+    int? orderId,
+  ) {
+    if (orderId == null) {
+      return null;
+    }
+
+    final txMap = state.transactionMap;
+    if (txMap == null) {
+      return null;
+    }
+
+    return txMap[orderId];
+  }
+
+  bool _isPendingPaymentTicket(
+    TiketItemModel model,
+    TransaksiItemModel? tx, {
+    int? orderId,
+  }) {
+    final status = (model.status ?? '').trim().toLowerCase();
+    final txStatus = (tx?.status ?? '').trim().toLowerCase();
+    final basePending = status == 'bayar' || txStatus == 'incomplete';
+
+    if (!basePending) {
+      return false;
+    }
+
+    if (orderId == null) {
+      return true;
+    }
+
+    final meta = _pendingPaymentMetaMap[orderId];
+    if (meta == null) {
+      return true;
+    }
+
+    return meta.status == 'pending';
+  }
+
+  Duration? _resolveRemainingTime(
+    TiketItemModel model,
+    TransaksiItemModel? tx, {
+    int? orderId,
+  }) {
+    if (orderId != null) {
+      final meta = _pendingPaymentMetaMap[orderId];
+      if (meta != null) {
+        final remaining = meta.expiresAt.difference(DateTime.now());
+        return remaining.isNegative ? Duration.zero : remaining;
+      }
+    }
+
+    final createdAt = _resolveFallbackCreatedAt(model, tx);
+    if (createdAt == null) {
+      return null;
+    }
+
+    final expiresAt = createdAt.add(_paymentWindow);
+    final remaining = expiresAt.difference(DateTime.now());
+    return remaining.isNegative ? Duration.zero : remaining;
+  }
+
+  DateTime? _resolveFallbackCreatedAt(
+    TiketItemModel model,
+    TransaksiItemModel? tx,
+  ) {
+    final candidates = [
+      tx?.waktuPembayaran,
+      model.updatedAt,
+    ];
+
+    for (final raw in candidates) {
+      final value = (raw ?? '').trim();
+      if (value.isEmpty) {
+        continue;
+      }
+
+      final parsed = DateTime.tryParse(value);
+      if (parsed != null) {
+        return parsed.isUtc ? parsed.toLocal() : parsed;
+      }
+    }
+
+    return null;
+  }
+
+  void _syncPendingTracking(Set<int> orderIds) {
+    final isSameSet = _trackedPendingOrderIds.length == orderIds.length &&
+        _trackedPendingOrderIds.containsAll(orderIds);
+
+    if (isSameSet) {
+      return;
+    }
+
+    _trackedPendingOrderIds
+      ..clear()
+      ..addAll(orderIds);
+
+    _pendingPaymentMetaMap.removeWhere((key, _) => !orderIds.contains(key));
+
+    _pendingStatusPollingTimer?.cancel();
+    if (orderIds.isEmpty) {
+      _stopCountdownTicker();
+      return;
+    }
+
+    _ensureCountdownTicker();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _refreshPendingPaymentStatuses(orderIds.toList());
+    });
+
+    _pendingStatusPollingTimer =
+        Timer.periodic(_pendingStatusPollingInterval, (_) {
+      _refreshPendingPaymentStatuses(_trackedPendingOrderIds.toList());
+    });
+  }
+
+  Future<void> _refreshPendingPaymentStatuses(List<int> orderIds) async {
+    if (!mounted || orderIds.isEmpty) {
+      return;
+    }
+
+    bool hasChanges = false;
+    bool shouldReloadTicketData = false;
+
+    final results = await Future.wait(
+      orderIds.map((orderId) async {
+        try {
+          final response =
+              await ApiService().getPaymentStatus(orderId.toString());
+          if (response['success'] != true) {
+            return _PendingStatusFetchResult(orderId: orderId);
+          }
+
+          final payload = response['data'];
+          if (payload is! Map<String, dynamic>) {
+            return _PendingStatusFetchResult(orderId: orderId);
+          }
+
+          return _PendingStatusFetchResult(
+            orderId: orderId,
+            payload: payload,
+          );
+        } catch (_) {
+          return _PendingStatusFetchResult(orderId: orderId);
+        }
+      }),
+    );
+
+    for (final result in results) {
+      final payload = result.payload;
+      if (payload == null) {
+        continue;
+      }
+
+      final orderId = result.orderId;
+      try {
+        final status =
+            (payload['status'] ?? 'pending').toString().trim().toLowerCase();
+        final createdAt = _parseDateTime(payload['transaction_created_at']);
+        if (createdAt == null) {
+          continue;
+        }
+
+        final expiresAt = _parseDateTime(payload['payment_expires_at']) ??
+            createdAt.add(_paymentWindow);
+
+        final previous = _pendingPaymentMetaMap[orderId];
+        final next = _PendingPaymentMeta(
+          status: status,
+          createdAt: createdAt,
+          expiresAt: expiresAt,
+        );
+
+        if (previous != next) {
+          _pendingPaymentMetaMap[orderId] = next;
+          hasChanges = true;
+        }
+
+        if (status != 'pending') {
+          shouldReloadTicketData = true;
+        }
+      } catch (_) {
+        // Ignore malformed payload for this ticket and continue others.
+      }
+    }
+
+    if (hasChanges && mounted) {
+      setState(() {});
+    }
+
+    if (shouldReloadTicketData && mounted && userId.isNotEmpty) {
+      context.read<TiketSayaBloc>().add(TiketSayaUserIdEvent(userId));
+    }
+  }
+
+  DateTime? _parseDateTime(dynamic value) {
+    final raw = (value ?? '').toString().trim();
+    if (raw.isEmpty) {
+      return null;
+    }
+
+    final parsed = DateTime.tryParse(raw);
+    if (parsed == null) {
+      return null;
+    }
+
+    return parsed.isUtc ? parsed.toLocal() : parsed;
   }
 
   Future<void> _handleTicketTap(
@@ -272,29 +650,14 @@ class _TiketSayaPageState extends State<TiketSayaPage> {
         (tx != null && tx.status?.toLowerCase() == 'incomplete');
 
     if (isUnpaid) {
-      final hasSelectedPaymentMethod =
-          tx != null && (tx.paymentType?.trim().isNotEmpty ?? false);
-
-      if (hasSelectedPaymentMethod) {
-        final resumed = await _resumePendingPayment(parsedId, tx);
-        if (resumed) {
-          if (mounted && userId.isNotEmpty) {
-            context.read<TiketSayaBloc>().add(TiketSayaUserIdEvent(userId));
-          }
-          return;
-        }
-      }
-
-      await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => PaymentMethodScreen(orderId: parsedId),
+      await _handlePayNow(
+        _PendingTicketViewData(
+          model: model,
+          orderId: parsedId,
+          transaction: tx,
+          remainingTime: _resolveRemainingTime(model, tx, orderId: parsedId),
         ),
       );
-
-      if (mounted && userId.isNotEmpty) {
-        context.read<TiketSayaBloc>().add(TiketSayaUserIdEvent(userId));
-      }
       return;
     }
 
@@ -322,7 +685,49 @@ class _TiketSayaPageState extends State<TiketSayaPage> {
     }
   }
 
-  Future<bool> _resumePendingPayment(int orderId, TransaksiItemModel tx) async {
+  Future<void> _handlePayNow(_PendingTicketViewData pendingTicket) async {
+    final parsedId = pendingTicket.orderId;
+    if (parsedId == null || parsedId <= 0) {
+      return;
+    }
+
+    final remaining = pendingTicket.remainingTime;
+    if (remaining != null && remaining <= Duration.zero) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pembayaran sudah melewati batas waktu.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+
+      if (mounted && userId.isNotEmpty) {
+        context.read<TiketSayaBloc>().add(TiketSayaUserIdEvent(userId));
+      }
+      return;
+    }
+
+    final resumed =
+        await _openWaitingPayment(parsedId, pendingTicket.transaction);
+    if (resumed) {
+      if (mounted && userId.isNotEmpty) {
+        context.read<TiketSayaBloc>().add(TiketSayaUserIdEvent(userId));
+      }
+      return;
+    }
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PaymentMethodScreen(orderId: parsedId),
+      ),
+    );
+
+    if (mounted && userId.isNotEmpty) {
+      context.read<TiketSayaBloc>().add(TiketSayaUserIdEvent(userId));
+    }
+  }
+
+  Future<bool> _openWaitingPayment(int orderId, TransaksiItemModel? tx) async {
     try {
       final paymentResult = await ApiService().createMidtransPayment(
         orderId,
@@ -339,17 +744,17 @@ class _TiketSayaPageState extends State<TiketSayaPage> {
               paymentResult['deeplink_url'] != null ||
               paymentResult['qr_code_url'] != null ||
               paymentResult['qr_string'] != null)) {
-        await Navigator.pushReplacement(
+        await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => WaitingPaymentPage(
               orderId:
                   (_parseInt(paymentResult['order_id']) ?? orderId).toString(),
-              transactionId: paymentResult['transaction_id'] ?? tx.id ?? 0,
+              transactionId: paymentResult['transaction_id'] ?? tx?.id ?? 0,
               totalPayment: _parseInt(paymentResult['total_payment']),
-              paymentMethod: paymentResult['payment_method'] ?? tx.paymentType,
+              paymentMethod: paymentResult['payment_method'] ?? tx?.paymentType,
               transactionCreatedAt: paymentResult['transaction_created_at'] ??
-                  tx.waktuPembayaran ??
+                  tx?.waktuPembayaran ??
                   DateTime.now().toIso8601String(),
               paymentCode: paymentResult['payment_code']?.toString(),
               paymentCodeLabel: paymentResult['payment_code_label']?.toString(),
@@ -392,4 +797,55 @@ class _TiketSayaPageState extends State<TiketSayaPage> {
 
     return int.tryParse((value ?? '').toString());
   }
+}
+
+class _PendingPaymentMeta {
+  final String status;
+  final DateTime createdAt;
+  final DateTime expiresAt;
+
+  const _PendingPaymentMeta({
+    required this.status,
+    required this.createdAt,
+    required this.expiresAt,
+  });
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) {
+      return true;
+    }
+
+    return other is _PendingPaymentMeta &&
+        other.status == status &&
+        other.createdAt == createdAt &&
+        other.expiresAt == expiresAt;
+  }
+
+  @override
+  int get hashCode => Object.hash(status, createdAt, expiresAt);
+}
+
+class _PendingTicketViewData {
+  final TiketItemModel model;
+  final int? orderId;
+  final TransaksiItemModel? transaction;
+  final Duration? remainingTime;
+
+  const _PendingTicketViewData({
+    required this.model,
+    required this.orderId,
+    required this.transaction,
+    required this.remainingTime,
+  });
+}
+
+class _PendingStatusFetchResult {
+  final int orderId;
+  final Map<String, dynamic>? payload;
+
+  const _PendingStatusFetchResult({
+    required this.orderId,
+    this.payload,
+  });
 }
