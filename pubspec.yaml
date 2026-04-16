@@ -65,6 +65,7 @@ dependencies:
   dotted_line: ^3.2.3
   flutter_map: ^6.2.1
   latlong2: ^0.9.1
+  lottie: ^3.1.2
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -89,6 +90,9 @@ flutter:
   uses-material-design: true
   assets:
     - assets/
+    - assets/lottie/
+    - assets/lottie/sandy_loading.json
+    - assets/lottie/trail_loading.json
     - assets/images/
     - assets/images/siluetgunung.jpeg
     - assets/images/img_home.png

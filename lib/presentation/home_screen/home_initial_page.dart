@@ -449,7 +449,9 @@ class HomeInitialPageState extends State<HomeInitialPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                padding: EdgeInsets.all(isAlert ? 10.h : 8.h),
+                width: 48.h,
+                height: 48.h,
+                alignment: Alignment.center,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: isAlert ? Colors.redAccent : Colors.transparent,
@@ -478,7 +480,7 @@ class HomeInitialPageState extends State<HomeInitialPage> {
                         color: Colors.white,
                       ),
               ),
-              SizedBox(height: 8.h),
+              SizedBox(height: 12.h),
               Text(
                 label,
                 textAlign: TextAlign.center,

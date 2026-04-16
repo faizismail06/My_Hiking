@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:lottie/lottie.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:myhiking/api/api_service.dart';
 import '../../core/app_export.dart';
@@ -111,7 +112,7 @@ class LoginScreen extends StatelessWidget {
                       ),
                       Expanded(child: Divider()),
                     ],
-                  ),       
+                  ),
                   _buildEmailInputSection(context),
                   SizedBox(height: 10.h),
                   Align(
@@ -485,30 +486,66 @@ class LoginScreen extends StatelessWidget {
   }
 
   void _showDssWarmupDialog(BuildContext context) {
-    showDialog<void>(
+    showGeneralDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (BuildContext dialogContext) {
+      barrierLabel: 'DSS Warmup',
+      barrierColor: Colors.white,
+      transitionDuration: const Duration(milliseconds: 220),
+      pageBuilder: (BuildContext dialogContext, Animation<double> animation,
+          Animation<double> secondaryAnimation) {
         return PopScope(
           canPop: false,
-          child: AlertDialog(
-            content: Row(
-              children: [
-                const SizedBox(
-                  height: 24,
-                  width: 24,
-                  child: CircularProgressIndicator(strokeWidth: 2.5),
+          child: Material(
+            color: Colors.white,
+            child: SafeArea(
+              child: SizedBox.expand(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CustomImageView(
+                      imagePath: ImageConstant.imgNn,
+                      height: 56.h,
+                      width: 70.h,
+                    ),
+                    SizedBox(height: 14.h),
+                    Text(
+                      'MyHiking',
+                      style: theme.textTheme.headlineLarge,
+                    ),
+                    SizedBox(height: 26.h),
+                    SizedBox(
+                      height: 180.h,
+                      width: 180.h,
+                      child: Lottie.asset(
+                        'assets/lottie/sandy_loading.json',
+                        repeat: true,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                    SizedBox(height: 20.h),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 34.h),
+                      child: Text(
+                        'Menyiapkan rekomendasi jalur DSS, mohon tunggu...',
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                    ),
+                  ],
                 ),
-                SizedBox(width: 14.h),
-                Expanded(
-                  child: Text(
-                    'Menyiapkan rekomendasi jalur DSS, mohon tunggu...',
-                    style: theme.textTheme.bodyMedium,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
+        );
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        return FadeTransition(
+          opacity: CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOut,
+          ),
+          child: child,
         );
       },
     );
