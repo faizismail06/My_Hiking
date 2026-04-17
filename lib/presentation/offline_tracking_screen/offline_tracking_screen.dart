@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -281,6 +280,7 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
       throw Exception('Token login tidak tersedia.');
     }
 
+    final clientCacheId = _resolveClientCacheId(item);
     final orderId = item['order_id'];
     final url = Uri.parse('$baseUrl/orders/$orderId/offline-track-sync');
 
@@ -292,6 +292,7 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
             'Authorization': 'Bearer $token',
           },
           body: jsonEncode({
+            'client_cache_id': clientCacheId,
             'source': 'mobile_offline_tracking',
             'cached_at': item['cached_at'],
             'point_count': item['point_count'],
@@ -305,6 +306,61 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception('HTTP ${response.statusCode}: ${response.body}');
     }
+
+    final trimmedBody = response.body.trim();
+    if (trimmedBody.isEmpty) {
+      throw Exception('Sync response kosong. Item cache disimpan untuk retry.');
+    }
+
+    dynamic decoded;
+    try {
+      decoded = jsonDecode(trimmedBody);
+    } catch (_) {
+      throw Exception(
+        'Sync response bukan JSON valid. Item cache disimpan untuk retry.',
+      );
+    }
+
+    if (decoded is! Map) {
+      throw Exception(
+        'Sync response tidak berbentuk object. Item cache disimpan untuk retry.',
+      );
+    }
+
+    final success = decoded['success'] == true;
+    final data = decoded['data'];
+    if (!success || data is! Map) {
+      throw Exception(
+        'Sync response tidak menandakan sukses eksplisit. Item cache disimpan untuk retry.',
+      );
+    }
+
+    final syncId = data['sync_id'];
+    final syncStatus = data['sync_status']?.toString().toLowerCase();
+    final acceptedStatus = syncStatus == 'synced' || syncStatus == 'duplicate';
+
+    if (syncId == null || !acceptedStatus) {
+      throw Exception(
+        'Sync response belum valid untuk dequeue. Item cache disimpan untuk retry.',
+      );
+    }
+  }
+
+  String _resolveClientCacheId(Map<String, dynamic> item) {
+    final existingId = item['cache_id']?.toString().trim();
+    if (existingId != null && existingId.isNotEmpty) {
+      return existingId;
+    }
+
+    final orderId = item['order_id']?.toString() ?? widget.orderId.toString();
+    final cachedAt = item['cached_at']?.toString() ?? '';
+    final gpx = item['gpx_content']?.toString() ?? '';
+    final checksum = gpx.codeUnits.fold<int>(
+      0,
+      (prev, unit) => ((prev * 31) + unit) & 0x7fffffff,
+    );
+
+    return '${orderId}_${cachedAt}_$checksum';
   }
 
   Future<void> _syncCachedTracksIfPossible({
@@ -360,6 +416,7 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
     final remaining = <Map<String, dynamic>>[];
     var syncedCount = 0;
     var endpointUnavailable = false;
+    var droppedInvalidCount = 0;
 
     for (var i = 0; i < queue.length; i++) {
       final item = queue[i];
@@ -373,6 +430,12 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
           remaining.addAll(queue.sublist(i));
           break;
         }
+
+        if (err.contains('gpx_too_large') || err.contains('http 413')) {
+          droppedInvalidCount++;
+          continue;
+        }
+
         remaining.add(item);
       }
     }
@@ -389,6 +452,12 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
       if (endpointUnavailable) {
         _syncInfo =
             'Endpoint sync backend belum tersedia. Cache tetap aman ($_pendingCacheCount antrean).';
+      } else if (droppedInvalidCount > 0 && _pendingCacheCount == 0) {
+        _syncInfo =
+            'Sinkron selesai. $droppedInvalidCount cache dilewati karena GPX terlalu besar.';
+      } else if (droppedInvalidCount > 0) {
+        _syncInfo =
+            'Sinkron selesai sebagian. $droppedInvalidCount cache terlalu besar, sisa $_pendingCacheCount antrean.';
       } else if (_pendingCacheCount == 0) {
         _syncInfo = 'Sinkronisasi selesai. Semua cache terkirim.';
       } else {
@@ -401,6 +470,16 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
       if (endpointUnavailable) {
         _showSnack(
           'Backend sync belum tersedia. Data tetap disimpan lokal.',
+          backgroundColor: Colors.orange,
+        );
+      } else if (droppedInvalidCount > 0 && syncedCount > 0) {
+        _showSnack(
+          'Sinkron berhasil sebagian. $syncedCount terkirim, $droppedInvalidCount dilewati karena GPX terlalu besar.',
+          backgroundColor: Colors.orange,
+        );
+      } else if (droppedInvalidCount > 0) {
+        _showSnack(
+          '$droppedInvalidCount cache dilewati karena GPX terlalu besar. Cek ukuran track.',
           backgroundColor: Colors.orange,
         );
       } else if (syncedCount > 0 && _pendingCacheCount == 0) {
@@ -1356,10 +1435,10 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
                       ),
                       width: 44,
                       height: 44,
-                      child: const Icon(
-                        Icons.my_location,
-                        color: Colors.red,
-                        size: 30,
+                      child: _buildMarkerAsset(
+                        assetPath: 'assets/images/pendaki.png',
+                        fallbackIcon: Icons.my_location,
+                        fallbackColor: Colors.red,
                       ),
                     ),
                   ...state.gpxWaypoints.map(
@@ -1372,10 +1451,10 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
                                 waypoint.description!.trim().isEmpty
                             ? waypoint.name
                             : '${waypoint.name}\n${waypoint.description}',
-                        child: const Icon(
-                          Icons.location_pin,
-                          color: Colors.deepOrange,
-                          size: 28,
+                        child: _buildMarkerAsset(
+                          assetPath: 'assets/images/camp.png',
+                          fallbackIcon: Icons.location_pin,
+                          fallbackColor: Colors.deepOrange,
                         ),
                       ),
                     ),
@@ -1388,7 +1467,7 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
                       child: const Icon(
                         Icons.play_circle_fill,
                         color: Colors.green,
-                        size: 28,
+                        size: 30,
                       ),
                     ),
                   if (state.gpxRoutePoints.length > 1)
@@ -1396,10 +1475,10 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
                       point: state.gpxRoutePoints.last,
                       width: 36,
                       height: 36,
-                      child: const Icon(
-                        Icons.flag_circle,
-                        color: Colors.orange,
-                        size: 28,
+                      child: _buildMarkerAsset(
+                        assetPath: 'assets/images/puncak.png',
+                        fallbackIcon: Icons.flag_circle,
+                        fallbackColor: Colors.orange,
                       ),
                     ),
                 ],
@@ -1421,6 +1500,22 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildMarkerAsset({
+    required String assetPath,
+    required IconData fallbackIcon,
+    required Color fallbackColor,
+  }) {
+    return Image.asset(
+      assetPath,
+      fit: BoxFit.contain,
+      errorBuilder: (_, __, ___) => Icon(
+        fallbackIcon,
+        color: fallbackColor,
+        size: 28,
+      ),
     );
   }
 

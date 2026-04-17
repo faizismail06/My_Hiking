@@ -94,6 +94,9 @@ flutter:
     - assets/lottie/sandy_loading.json
     - assets/lottie/trail_loading.json
     - assets/images/
+    - assets/images/pendaki.png
+    - assets/images/camp.png
+    - assets/images/puncak.png
     - assets/images/siluetgunung.jpeg
     - assets/images/img_home.png
     - assets/images/img_image_156x316.png
