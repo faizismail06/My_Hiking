@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:lottie/lottie.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import '../../api/api_service.dart';
 import '../../core/app_export.dart';
-import '../midtrans_payment_screen/midtrans_payment_screen.dart';
+import '../waiting_payment_page/waiting_payment_page.dart';
 import 'bloc/chatbot_cubit.dart';
 import 'bloc/chatbot_state.dart';
 import 'models/chat_message.dart';
@@ -31,11 +35,20 @@ class ChatbotScreen extends StatefulWidget {
   State<ChatbotScreen> createState() => _ChatbotScreenState();
 }
 
-class _ChatbotScreenState extends State<ChatbotScreen> {
+class _ChatbotScreenState extends State<ChatbotScreen>
+    with WidgetsBindingObserver {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final ChatbotCubit _cubit = ChatbotCubit();
   final ApiService _apiService = ApiService();
+  static const Duration _paymentStatusSyncInterval = Duration(seconds: 12);
+
+  Timer? _paymentStatusSyncTimer;
+  bool _isSyncingPaymentStatus = false;
+  final Set<int> _busyPaymentOrderIds = <int>{};
+  bool _hasAttemptedInitialHistoryLoad = false;
+
+  static final Map<String, bool> _freshChatOnNextOpen = <String, bool>{};
 
   ChatbotState get _state => _cubit.state;
   List<ChatMessage> get _messages => _state.messages;
@@ -51,14 +64,28 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _cubit.setRole(widget.role);
     _cubit.setUserId(widget.userId);
     _checkServerConnection();
     _loadUserIdIfNeeded();
     _addWelcomeMessage();
+    _startPaymentStatusSync();
+  }
+
+  String get _chatSessionKey => '${widget.role}:${widget.userId ?? 0}';
+
+  bool get _preferFreshChatOnNextOpen =>
+      _freshChatOnNextOpen[_chatSessionKey] == true;
+
+  void _setPreferFreshChatOnNextOpen(bool value) {
+    _freshChatOnNextOpen[_chatSessionKey] = value;
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _paymentStatusSyncTimer?.cancel();
     _autoSaveHistory();
     _messageController.dispose();
     _scrollController.dispose();
@@ -66,11 +93,18 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     super.dispose();
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _syncPendingPaymentStatuses();
+    }
+  }
+
   /// Load user ID jika belum ada
   Future<void> _loadUserIdIfNeeded() async {
     if (_userId != null) {
       _loadFriends();
-      _loadChatHistories();
+      _loadChatHistories(autoOpenLatestIfNeeded: true);
       return;
     }
     try {
@@ -80,7 +114,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         if (response['success']) {
           _cubit.setUserId(response['data']['id']);
           await _loadFriends();
-          _loadChatHistories();
+          _loadChatHistories(autoOpenLatestIfNeeded: true);
         }
       }
     } catch (e) {
@@ -101,7 +135,9 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   }
 
   /// Load daftar riwayat chat dari server
-  Future<void> _loadChatHistories() async {
+  Future<void> _loadChatHistories({
+    bool autoOpenLatestIfNeeded = false,
+  }) async {
     if (_userId == null) return;
     try {
       final result = await _apiService.getChatHistories(
@@ -109,8 +145,20 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         role: widget.role,
       );
       if (result['success'] == true && result['data'] != null) {
-        _cubit
-            .setChatHistories(List<Map<String, dynamic>>.from(result['data']));
+        final histories = List<Map<String, dynamic>>.from(result['data']);
+        _cubit.setChatHistories(histories);
+
+        if (autoOpenLatestIfNeeded && !_hasAttemptedInitialHistoryLoad) {
+          _hasAttemptedInitialHistoryLoad = true;
+
+          if (_preferFreshChatOnNextOpen) {
+            return;
+          }
+
+          if (histories.isNotEmpty) {
+            await _loadChatHistory(histories.first['id']);
+          }
+        }
       }
     } catch (e) {
       print('Error loading chat histories: $e');
@@ -128,10 +176,15 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           rebuiltMessages.add(ChatMessage(
             message: msg['message'] ?? '',
             isUser: msg['isUser'] ?? false,
+            orderId: _toInt(msg['order_id']),
+            transactionId: _toInt(msg['transaction_id']),
+            isPaid: msg['is_paid'] == true,
           ));
         }
         _cubit.setCurrentHistoryId(historyId);
         _cubit.replaceMessages(rebuiltMessages);
+        _setPreferFreshChatOnNextOpen(false);
+        _syncPendingPaymentStatuses();
         _scrollToBottom();
       }
     } catch (e) {
@@ -188,6 +241,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     _cubit.setCurrentHistoryId(null);
     _cubit.clearMessages();
     _addWelcomeMessage();
+    _setPreferFreshChatOnNextOpen(true);
     Navigator.pop(context); // Close drawer
   }
 
@@ -195,6 +249,165 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   Future<void> _checkServerConnection() async {
     final isHealthy = await _apiService.isChatbotServerHealthy();
     _cubit.setServerConnected(isHealthy);
+  }
+
+  void _startPaymentStatusSync() {
+    _paymentStatusSyncTimer?.cancel();
+    _paymentStatusSyncTimer = Timer.periodic(_paymentStatusSyncInterval, (_) {
+      _syncPendingPaymentStatuses();
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _syncPendingPaymentStatuses();
+    });
+  }
+
+  Future<void> _syncPendingPaymentStatuses() async {
+    if (!mounted || _isSyncingPaymentStatus) {
+      return;
+    }
+
+    final pendingOrderIds = _messages
+        .where((m) => !m.isUser && !m.isPaid && m.orderId != null)
+        .map((m) => m.orderId!)
+        .toSet()
+        .toList();
+
+    if (pendingOrderIds.isEmpty) {
+      return;
+    }
+
+    _isSyncingPaymentStatus = true;
+    try {
+      final statuses = await Future.wait(
+        pendingOrderIds.map(
+          (orderId) => _cubit.fetchPaymentStatus(orderId.toString()),
+        ),
+      );
+
+      for (var i = 0; i < pendingOrderIds.length; i++) {
+        final orderId = pendingOrderIds[i];
+        final response = statuses[i];
+        if (response['success'] != true ||
+            response['data'] is! Map<String, dynamic>) {
+          continue;
+        }
+
+        final payload = response['data'] as Map<String, dynamic>;
+        final status =
+            (payload['status'] ?? 'pending').toString().trim().toLowerCase();
+
+        _cubit.updatePaymentInfoForOrder(
+          orderId: orderId,
+          transactionId: _toInt(payload['transaction_id']),
+          paymentMethod: _sanitizePaymentMethod(
+            payload['payment_method']?.toString(),
+          ),
+          totalPayment: _toInt(payload['total_payment']),
+          transactionCreatedAt: payload['transaction_created_at']?.toString(),
+          paymentCode: payload['payment_code']?.toString(),
+          paymentCodeLabel: payload['payment_code_label']?.toString(),
+          paymentInstruction: payload['payment_instruction']?.toString(),
+          deeplinkUrl: payload['deeplink_url']?.toString(),
+          qrCodeUrl: payload['qr_code_url']?.toString(),
+          qrString: payload['qr_string']?.toString(),
+        );
+
+        if (status == 'paid' || status == 'complete' || status == 'success') {
+          final changed = _cubit.markOrderPaid(orderId: orderId);
+          if (changed) {
+            _appendPaymentVerifiedMessage(orderId: orderId);
+            await _autoSaveHistory();
+            await _loadChatHistories();
+          }
+        }
+      }
+    } catch (_) {
+      // Ignore polling failures and retry on next tick.
+    } finally {
+      _isSyncingPaymentStatus = false;
+    }
+  }
+
+  bool _hasPaymentVerifiedMessage(int orderId) {
+    final marker = 'order #$orderId sudah terverifikasi';
+    return _messages.any(
+      (m) => !m.isUser && m.message.toLowerCase().contains(marker),
+    );
+  }
+
+  void _appendPaymentVerifiedMessage({required int orderId}) {
+    if (_hasPaymentVerifiedMessage(orderId)) {
+      return;
+    }
+
+    _cubit.addMessage(
+      ChatMessage(
+        message:
+            'Pembayaran untuk order #$orderId sudah terverifikasi. Tiket Anda siap digunakan.',
+        isUser: false,
+      ),
+    );
+    _scrollToBottom();
+  }
+
+  String _normalizeChatbotPaymentText(String input) {
+    var text = input;
+    text = text.replaceAll(
+      RegExp(
+        r"Silakan klik tombol 'Bayar Sekarang' untuk melanjutkan pembayaran\\.",
+        caseSensitive: false,
+      ),
+      'Silakan pilih metode pembayaran, lalu lanjutkan melalui Waiting Payment.',
+    );
+    text = text.replaceAll(
+      RegExp(r'Bayar Sekarang', caseSensitive: false),
+      'Pilih Metode Pembayaran',
+    );
+    return text;
+  }
+
+  int? _toInt(dynamic value) {
+    if (value is int) {
+      return value;
+    }
+
+    if (value is double) {
+      return value.toInt();
+    }
+
+    return int.tryParse((value ?? '').toString());
+  }
+
+  String _formatCurrency(int? value) {
+    if (value == null) {
+      return '-';
+    }
+
+    final formatter = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    );
+    return formatter.format(value);
+  }
+
+  bool _isPaymentMethodSelected(String? value) {
+    final raw = (value ?? '').trim();
+    if (raw.isEmpty) {
+      return false;
+    }
+
+    final normalized = raw.toLowerCase();
+    return normalized != 'belum dipilih' &&
+        normalized != 'not selected' &&
+        normalized != '-' &&
+        normalized != 'null';
+  }
+
+  String? _sanitizePaymentMethod(String? value) {
+    final raw = (value ?? '').trim();
+    return _isPaymentMethodSelected(raw) ? raw : null;
   }
 
   /// Info role untuk judul
@@ -297,6 +510,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     }
 
     _cubit.addMessage(ChatMessage(message: message, isUser: true));
+    _setPreferFreshChatOnNextOpen(false);
     _messageController.clear();
     _cubit.setLoading(true);
 
@@ -323,8 +537,14 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
     _cubit.setLoading(false);
     if (response['success']) {
+      final rawMessage = response['message']?.toString() ?? '';
+      final hasPayment = _toInt(response['order_id']) != null ||
+          _toInt(response['transaction_id']) != null ||
+          response['payment_url'] != null;
+
       _cubit.addMessage(ChatMessage(
-        message: response['message'],
+        message:
+            hasPayment ? _normalizeChatbotPaymentText(rawMessage) : rawMessage,
         isUser: false,
         downloadUrl: response['download_url'],
         paymentUrl: response['payment_url'],
@@ -334,6 +554,16 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         transactionId: response['transaction_id'] is int
             ? response['transaction_id']
             : int.tryParse(response['transaction_id']?.toString() ?? ''),
+        paymentMethod:
+            _sanitizePaymentMethod(response['payment_method']?.toString()),
+        totalPayment: _toInt(response['total_payment']),
+        transactionCreatedAt: response['transaction_created_at']?.toString(),
+        paymentCode: response['payment_code']?.toString(),
+        paymentCodeLabel: response['payment_code_label']?.toString(),
+        paymentInstruction: response['payment_instruction']?.toString(),
+        deeplinkUrl: response['deeplink_url']?.toString(),
+        qrCodeUrl: response['qr_code_url']?.toString(),
+        qrString: response['qr_string']?.toString(),
       ));
     } else {
       _cubit.addMessage(ChatMessage(
@@ -352,7 +582,10 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     // Setelah booking jadi, reset pilihan anggota agar tidak kebawa ke booking berikutnya.
     if (response['order_id'] != null) {
       _cubit.clearSelectedMembers();
+      _setPreferFreshChatOnNextOpen(false);
     }
+
+    _syncPendingPaymentStatuses();
   }
 
   Future<void> _openMemberPickerModal() async {
@@ -401,11 +634,12 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
             }
 
             Future<void> addManualId() async {
+              final messenger = ScaffoldMessenger.of(this.context);
               final input = idController.text.trim();
               final id = int.tryParse(input);
 
               if (id == null || id <= 0) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                messenger.showSnackBar(
                   const SnackBar(
                     content: Text('ID harus berupa angka valid'),
                     backgroundColor: Colors.red,
@@ -415,7 +649,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
               }
 
               if (id == _userId) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                messenger.showSnackBar(
                   const SnackBar(
                     content: Text('ID diri sendiri tidak bisa ditambahkan'),
                     backgroundColor: Colors.orange,
@@ -425,7 +659,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
               }
 
               if (tempSelectedIds.contains(id)) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                messenger.showSnackBar(
                   const SnackBar(
                     content: Text('ID sudah ada di daftar anggota'),
                     backgroundColor: Colors.orange,
@@ -435,8 +669,12 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
               }
 
               final lookup = await _apiService.getUserById(id);
+              if (!mounted) {
+                return;
+              }
+
               if (lookup['success'] != true || lookup['data'] == null) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                messenger.showSnackBar(
                   const SnackBar(
                     content: Text('ID user tidak ditemukan'),
                     backgroundColor: Colors.red,
@@ -450,7 +688,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
               final isFriend = friendIds.contains(id);
 
               final confirmed = await showDialog<bool>(
-                context: context,
+                context: this.context,
                 builder: (ctx) => AlertDialog(
                   title: const Text('Konfirmasi Anggota'),
                   content: Text(
@@ -468,6 +706,10 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                   ],
                 ),
               );
+
+              if (!mounted) {
+                return;
+              }
 
               if (confirmed == true) {
                 setModalState(() {
@@ -642,186 +884,312 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     }
   }
 
-  /// Buka pembayaran Midtrans
-  Future<void> _openPayment(ChatMessage message) async {
-    if (message.paymentUrl != null && message.paymentUrl!.isNotEmpty) {
-      // Navigasi ke MidtransPaymentScreen dengan redirect URL
-      final result = await Navigator.push<Map<String, dynamic>>(
-        context,
-        MaterialPageRoute(
-          builder: (context) => MidtransPaymentScreen(
-            transactionId: message.transactionId ?? 0,
-            redirectUrl: message.paymentUrl,
-            orderId: message.orderId,
-          ),
+  Future<void> _handlePaymentAction(ChatMessage message) async {
+    final orderId = message.orderId;
+    if (orderId == null || orderId <= 0) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content:
+              Text('Order tidak ditemukan. Silakan lakukan pemesanan lagi.'),
+          backgroundColor: Colors.red,
         ),
       );
+      return;
+    }
 
-      if (result != null && mounted) {
-        final backendSnapshot = await _fetchBackendPaymentSnapshot(
-          message: message,
-          paymentResult: result,
+    if (_busyPaymentOrderIds.contains(orderId)) {
+      return;
+    }
+
+    if (!_isPaymentMethodSelected(message.paymentMethod) ||
+        message.transactionId == null ||
+        message.transactionCreatedAt == null) {
+      await _selectPaymentMethodAndPrepareWaiting(message);
+      return;
+    }
+
+    await _openWaitingPaymentPage(message);
+  }
+
+  Future<void> _selectPaymentMethodAndPrepareWaiting(
+      ChatMessage message) async {
+    final orderId = message.orderId;
+    if (orderId == null || orderId <= 0) {
+      return;
+    }
+
+    final methods = await _cubit.fetchPaymentMethods();
+    if (!mounted) {
+      return;
+    }
+
+    if (methods.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Metode pembayaran belum tersedia saat ini.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final pickedMethod = await _showPaymentMethodPicker(
+        methods: methods, initialOrderId: orderId);
+    if (pickedMethod == null) {
+      return;
+    }
+
+    setState(() {
+      _busyPaymentOrderIds.add(orderId);
+    });
+
+    try {
+      final paymentResult = await _cubit.createPaymentForOrder(
+        orderId: orderId,
+        paymentMethod: pickedMethod['id'].toString(),
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      if (paymentResult['success'] != true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              paymentResult['message']?.toString() ??
+                  'Gagal menyiapkan pembayaran.',
+            ),
+            backgroundColor: Colors.red,
+          ),
         );
+        return;
+      }
 
-        final status = result['status']?.toString() ?? 'pending';
-        final backendStatus = backendSnapshot['status']?.toString();
-        final statusMsg = _buildPaymentStatusMessage(
-          gatewayStatus: status,
-          backendStatus: backendStatus,
-          orderStatus: backendSnapshot['order_status']?.toString(),
-          isPaymentExpired: backendSnapshot['is_payment_expired'] == true,
-          gatewayMessage: result['message']?.toString(),
-        );
+      final resolvedOrderId = _toInt(paymentResult['order_id']) ?? orderId;
+      final resolvedMessage = message.copyWith(
+        orderId: resolvedOrderId,
+        transactionId:
+            _toInt(paymentResult['transaction_id']) ?? message.transactionId,
+        paymentMethod: _sanitizePaymentMethod(
+              paymentResult['payment_method']?.toString(),
+            ) ??
+            _sanitizePaymentMethod(pickedMethod['name']?.toString()),
+        totalPayment: _toInt(paymentResult['total_payment']),
+        transactionCreatedAt:
+            paymentResult['transaction_created_at']?.toString() ??
+                DateTime.now().toIso8601String(),
+        paymentCode: paymentResult['payment_code']?.toString(),
+        paymentCodeLabel: paymentResult['payment_code_label']?.toString(),
+        paymentInstruction: paymentResult['payment_instruction']?.toString(),
+        deeplinkUrl: paymentResult['deeplink_url']?.toString(),
+        qrCodeUrl: paymentResult['qr_code_url']?.toString(),
+        qrString: paymentResult['qr_string']?.toString(),
+      );
 
-        // Mark as paid if backend confirms Complete or gateway says success
-        final normalizedBackend = (backendStatus ?? '').trim().toLowerCase();
-        final normalizedGateway = status.trim().toLowerCase();
-        if (normalizedBackend == 'complete' || normalizedGateway == 'success') {
-          _cubit.markMessagePaid(message);
-        }
+      _cubit.replaceMessage(message, resolvedMessage);
 
-        _cubit.addMessage(ChatMessage(
-          message: statusMsg,
-          isUser: false,
-        ));
-        _scrollToBottom();
+      await _autoSaveHistory();
+      await _loadChatHistories();
+
+      _scrollToBottom();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _busyPaymentOrderIds.remove(orderId);
+        });
       }
     }
   }
 
-  String _buildPaymentStatusMessage({
-    required String gatewayStatus,
-    String? backendStatus,
-    String? orderStatus,
-    bool isPaymentExpired = false,
-    String? gatewayMessage,
-  }) {
-    final backend = (backendStatus ?? '').trim().toLowerCase();
-    final gateway = gatewayStatus.trim().toLowerCase();
-    final order = (orderStatus ?? '').trim().toLowerCase();
-
-    if (backend == 'complete') {
-      return 'Pembayaran sudah selesai dan terverifikasi. Tiket Anda siap digunakan.';
-    }
-
-    if (isPaymentExpired || order == 'expired') {
-      return 'Pembayaran sudah kedaluwarsa. Silakan buat pesanan baru jika ingin melanjutkan pendakian.';
-    }
-
-    if (backend == 'incomplete' || backend == 'unverified') {
-      return 'Pembayaran belum lunas. Silakan lanjutkan pembayaran di menu Tiket saya atau tombol Bayar Sekarang.';
-    }
-
-    if (gateway == 'success') {
-      return 'Pembayaran berhasil diproses. Sistem sedang sinkronisasi, status akan segera diperbarui.';
-    }
-
-    if (gateway == 'pending') {
-      return 'Pembayaran belum lunas. Silakan cek kembali status di menu Tiket saya.';
-    }
-
-    if (gateway == 'failed' || backend == 'failed') {
-      return 'Pembayaran gagal. Anda bisa coba lagi melalui menu Tiket saya.';
-    }
-
-    if (gatewayMessage != null && gatewayMessage.trim().isNotEmpty) {
-      return gatewayMessage.trim();
-    }
-
-    return 'Status pembayaran belum final. Silakan cek menu Transaksi untuk status terbaru.';
-  }
-
-  Future<Map<String, dynamic>?> _pollLatestPaymentStatus(
-      String checkRef) async {
-    final normalizedRef = checkRef.trim();
-    if (normalizedRef.isEmpty || normalizedRef == '0') {
-      return null;
-    }
-
-    const maxAttempt = 4;
-
-    for (var i = 0; i < maxAttempt; i++) {
-      final latest = await _apiService.checkMidtransStatus(normalizedRef);
-      if (latest['success'] == true && latest['data'] != null) {
-        final dynamic payload = latest['data'];
-        final dynamic data = payload is Map<String, dynamic>
-            ? (payload['data'] ?? payload)
-            : payload;
-
-        final status = (data is Map ? data['status'] : null)?.toString();
-        final normalized = status?.trim().toLowerCase();
-
-        if (normalized == 'complete' ||
-            normalized == 'incomplete' ||
-            normalized == 'failed') {
-          return {
-            'status': status,
-            'order_status': data is Map ? data['order_status'] : null,
-            'is_payment_expired':
-                data is Map && data['is_payment_expired'] == true,
-          };
-        }
-
-        if (i == maxAttempt - 1) {
-          return {
-            'status': status,
-            'order_status': data is Map ? data['order_status'] : null,
-            'is_payment_expired':
-                data is Map && data['is_payment_expired'] == true,
-          };
-        }
-      }
-
-      await Future.delayed(const Duration(seconds: 2));
-    }
-
-    return null;
-  }
-
-  Future<Map<String, dynamic>> _fetchBackendPaymentSnapshot({
-    required ChatMessage message,
-    required Map<String, dynamic> paymentResult,
+  Future<Map<String, dynamic>?> _showPaymentMethodPicker({
+    required List<Map<String, dynamic>> methods,
+    required int initialOrderId,
   }) async {
-    final refs = <String>{
-      if (message.transactionId != null && message.transactionId! > 0)
-        message.transactionId!.toString(),
-      if (message.orderId != null && message.orderId! > 0)
-        message.orderId!.toString(),
-      if (paymentResult['transaction_id'] != null)
-        paymentResult['transaction_id'].toString(),
-      if (paymentResult['order_id'] != null)
-        paymentResult['order_id'].toString(),
-    };
+    Map<String, dynamic>? selected;
 
-    for (final ref in refs) {
-      final snapshot = await _pollLatestPaymentStatus(ref);
-      if (snapshot != null &&
-          (snapshot['status']?.toString().isNotEmpty ?? false)) {
-        return snapshot;
-      }
+    return showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      backgroundColor: Colors.white,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (bottomSheetContext) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                16,
+                16,
+                16,
+                MediaQuery.of(bottomSheetContext).viewInsets.bottom + 16,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 50,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Pilih Metode Pembayaran',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Order #$initialOrderId',
+                    style: TextStyle(color: Colors.grey.shade600),
+                  ),
+                  const SizedBox(height: 12),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.of(context).size.height * 0.45,
+                    ),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: methods.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final method = methods[index];
+                        final id = method['id']?.toString() ?? '';
+                        final isSelected = selected?['id']?.toString() == id;
+
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(method['name']?.toString() ?? id),
+                          subtitle: method['description'] == null
+                              ? null
+                              : Text(method['description'].toString()),
+                          trailing: isSelected
+                              ? Icon(Icons.check_circle,
+                                  color: _rolePrimaryColor)
+                              : const Icon(Icons.circle_outlined),
+                          onTap: () {
+                            setModalState(() {
+                              selected = method;
+                            });
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: selected == null
+                          ? null
+                          : () => Navigator.pop(bottomSheetContext, selected),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _rolePrimaryColor,
+                        foregroundColor: Colors.white,
+                      ),
+                      icon: const Icon(Icons.payment),
+                      label: const Text('Gunakan Metode Ini'),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _openWaitingPaymentPage(ChatMessage message) async {
+    final orderId = message.orderId;
+    if (orderId == null || orderId <= 0) {
+      return;
     }
 
-    final fallbackOrderId = message.orderId ??
-        int.tryParse(paymentResult['order_id']?.toString() ?? '');
-    if (fallbackOrderId != null && fallbackOrderId > 0) {
-      try {
-        final orderRes = await _apiService.fetchPesanan(fallbackOrderId);
-        final order = orderRes['order'];
-        final tx = order is Map<String, dynamic> ? order['transaction'] : null;
-        return {
-          'status': tx is Map ? tx['status_pesanan'] : null,
-          'order_status':
-              order is Map<String, dynamic> ? order['status'] : null,
-          'is_payment_expired':
-              (order is Map<String, dynamic> ? order['status'] : null) ==
-                  'Expired',
-        };
-      } catch (_) {
-        // Ignore fallback errors, will return empty snapshot.
-      }
+    if (message.transactionId == null ||
+        message.transactionCreatedAt == null ||
+        message.transactionCreatedAt!.trim().isEmpty) {
+      await _selectPaymentMethodAndPrepareWaiting(message);
+      return;
     }
 
-    return const {};
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => WaitingPaymentPage(
+          orderId: orderId.toString(),
+          transactionId: message.transactionId!,
+          totalPayment: message.totalPayment,
+          paymentMethod: message.paymentMethod,
+          transactionCreatedAt: message.transactionCreatedAt!,
+          paymentCode: message.paymentCode,
+          paymentCodeLabel: message.paymentCodeLabel,
+          paymentInstruction: message.paymentInstruction,
+          deeplinkUrl: message.deeplinkUrl,
+          qrCodeUrl: message.qrCodeUrl,
+          qrString: message.qrString,
+        ),
+      ),
+    );
+
+    await _refreshPaymentStatusAfterWaiting(
+      orderId: orderId,
+      transactionId: message.transactionId,
+      showMessage: true,
+    );
+  }
+
+  Future<void> _refreshPaymentStatusAfterWaiting({
+    required int orderId,
+    int? transactionId,
+    bool showMessage = false,
+  }) async {
+    final response = await _cubit.fetchPaymentStatus(orderId.toString());
+    if (response['success'] != true ||
+        response['data'] is! Map<String, dynamic>) {
+      return;
+    }
+
+    final payload = response['data'] as Map<String, dynamic>;
+    final status =
+        (payload['status'] ?? 'pending').toString().trim().toLowerCase();
+
+    _cubit.updatePaymentInfoForOrder(
+      orderId: orderId,
+      transactionId: _toInt(payload['transaction_id']) ?? transactionId,
+      paymentMethod:
+          _sanitizePaymentMethod(payload['payment_method']?.toString()),
+      totalPayment: _toInt(payload['total_payment']),
+      transactionCreatedAt: payload['transaction_created_at']?.toString(),
+      paymentCode: payload['payment_code']?.toString(),
+      paymentCodeLabel: payload['payment_code_label']?.toString(),
+      paymentInstruction: payload['payment_instruction']?.toString(),
+      deeplinkUrl: payload['deeplink_url']?.toString(),
+      qrCodeUrl: payload['qr_code_url']?.toString(),
+      qrString: payload['qr_string']?.toString(),
+    );
+
+    final paid =
+        status == 'paid' || status == 'complete' || status == 'success';
+    if (paid) {
+      final changed =
+          _cubit.markOrderPaid(orderId: orderId, transactionId: transactionId);
+      if (showMessage && changed) {
+        _appendPaymentVerifiedMessage(orderId: orderId);
+      }
+
+      await _autoSaveHistory();
+      await _loadChatHistories();
+    }
   }
 
   /// Scroll ke bawah
@@ -844,6 +1212,21 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         !message.isUser) {
       return const SizedBox.shrink();
     }
+
+    final hasPaymentOrder =
+        !message.isUser && message.orderId != null && message.orderId! > 0;
+    final isLatestPaymentMessage = hasPaymentOrder
+        ? _messages.lastIndexWhere(
+              (m) => !m.isUser && m.orderId == message.orderId,
+            ) ==
+            _messages.indexOf(message)
+        : false;
+    final hasPreparedPayment =
+        _isPaymentMethodSelected(message.paymentMethod) &&
+            (message.transactionCreatedAt ?? '').trim().isNotEmpty;
+    final isBusy =
+        hasPaymentOrder && _busyPaymentOrderIds.contains(message.orderId);
+
     return Align(
       alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -899,20 +1282,67 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                           height: 1.5),
                     ),
                   ),
-                  if (message.paymentUrl != null &&
-                      message.paymentUrl!.isNotEmpty &&
-                      !message.isUser)
+                  if (hasPaymentOrder &&
+                      isLatestPaymentMessage &&
+                      hasPreparedPayment &&
+                      !message.isPaid)
+                    Container(
+                      width: double.infinity,
+                      margin: EdgeInsets.only(top: 8.h),
+                      padding: EdgeInsets.symmetric(
+                          horizontal: 12.h, vertical: 10.h),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12.h),
+                        border: Border.all(color: appTheme.gray200),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Detail Pembayaran',
+                            style: TextStyle(
+                              fontSize: 12.fSize,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          SizedBox(height: 4.h),
+                          if (_isPaymentMethodSelected(message.paymentMethod))
+                            Text('Metode: ${message.paymentMethod}'),
+                          if (message.totalPayment != null)
+                            Text(
+                                'Total: ${_formatCurrency(message.totalPayment)}'),
+                          if ((message.paymentCode ?? '').trim().isNotEmpty)
+                            Text(
+                              '${(message.paymentCodeLabel ?? 'Kode Bayar').trim()}: ${message.paymentCode}',
+                            ),
+                        ],
+                      ),
+                    ),
+                  if (hasPaymentOrder && isLatestPaymentMessage)
                     Padding(
                       padding: EdgeInsets.only(top: 8.h),
                       child: ElevatedButton.icon(
-                        onPressed:
-                            message.isPaid ? null : () => _openPayment(message),
+                        onPressed: (message.isPaid || isBusy)
+                            ? null
+                            : () => _handlePaymentAction(message),
                         icon: Icon(
-                            message.isPaid ? Icons.check_circle : Icons.payment,
+                            message.isPaid
+                                ? Icons.check_circle
+                                : hasPreparedPayment
+                                    ? Icons.hourglass_top
+                                    : Icons.payment,
                             size: 18.h,
                             color: Colors.white),
                         label: Text(
-                            message.isPaid ? 'Sudah Dibayar' : 'Bayar Sekarang',
+                            message.isPaid
+                                ? 'Sudah Dibayar'
+                                : isBusy
+                                    ? 'Menyiapkan Pembayaran...'
+                                    : hasPreparedPayment
+                                        ? 'Buka Waiting Payment'
+                                        : 'Pilih Metode Pembayaran',
                             style: TextStyle(
                                 fontSize: 13.fSize, color: Colors.white)),
                         style: ElevatedButton.styleFrom(
@@ -1303,11 +1733,12 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                 onPressed: () async {
                   await _autoSaveHistory();
                   if (!mounted) return;
-                  if (Navigator.canPop(context)) {
-                    Navigator.pop(context);
+                  final navigator = Navigator.of(this.context);
+                  if (navigator.canPop()) {
+                    navigator.pop();
                   } else {
                     Navigator.pushNamedAndRemoveUntil(
-                        context, AppRoutes.homeScreen, (route) => false);
+                        this.context, AppRoutes.homeScreen, (route) => false);
                   }
                 },
               ),

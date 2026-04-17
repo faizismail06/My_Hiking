@@ -346,7 +346,8 @@ class ApiService {
     final payload = {
       'jumlah_pendakian': jumlahPendakian,
       'jumlah_summit': jumlahSummit,
-      if (questionnaireAnswers != null) 'questionnaire_answers': questionnaireAnswers,
+      if (questionnaireAnswers != null)
+        'questionnaire_answers': questionnaireAnswers,
       if (totalWeightedScore != null) 'weighted_score': totalWeightedScore,
     };
 
@@ -1393,6 +1394,15 @@ class ApiService {
           'payment_url': responseData['payment_url'],
           'transaction_id': responseData['transaction_id'],
           'order_id': responseData['order_id'],
+          'payment_method': responseData['payment_method'],
+          'total_payment': responseData['total_payment'],
+          'transaction_created_at': responseData['transaction_created_at'],
+          'payment_code': responseData['payment_code'],
+          'payment_code_label': responseData['payment_code_label'],
+          'payment_instruction': responseData['payment_instruction'],
+          'deeplink_url': responseData['deeplink_url'],
+          'qr_code_url': responseData['qr_code_url'],
+          'qr_string': responseData['qr_string'],
         };
       } else {
         return {

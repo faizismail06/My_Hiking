@@ -77,6 +77,117 @@ class ChatbotCubit extends Cubit<ChatbotState> {
     emit(state.copyWith(messages: List<ChatMessage>.from(state.messages)));
   }
 
+  void replaceMessage(ChatMessage oldMessage, ChatMessage newMessage) {
+    final index = state.messages.indexWhere((m) => identical(m, oldMessage));
+    if (index < 0) {
+      return;
+    }
+
+    final next = List<ChatMessage>.from(state.messages);
+    next[index] = newMessage;
+    emit(state.copyWith(messages: next));
+  }
+
+  void updatePaymentInfoForOrder({
+    required int orderId,
+    int? transactionId,
+    String? paymentMethod,
+    int? totalPayment,
+    String? transactionCreatedAt,
+    String? paymentCode,
+    String? paymentCodeLabel,
+    String? paymentInstruction,
+    String? deeplinkUrl,
+    String? qrCodeUrl,
+    String? qrString,
+  }) {
+    final normalizedPaymentMethod = _normalizePaymentMethod(paymentMethod);
+
+    bool changed = false;
+    final next = state.messages.map((message) {
+      if (message.isUser) {
+        return message;
+      }
+
+      final matchesOrder =
+          message.orderId != null && message.orderId == orderId;
+      final matchesTx = transactionId != null &&
+          transactionId > 0 &&
+          message.transactionId != null &&
+          message.transactionId == transactionId;
+
+      if (!matchesOrder && !matchesTx) {
+        return message;
+      }
+
+      changed = true;
+      return message.copyWith(
+        orderId: orderId,
+        transactionId: transactionId ?? message.transactionId,
+        paymentMethod: normalizedPaymentMethod,
+        totalPayment: totalPayment,
+        transactionCreatedAt: transactionCreatedAt,
+        paymentCode: paymentCode,
+        paymentCodeLabel: paymentCodeLabel,
+        paymentInstruction: paymentInstruction,
+        deeplinkUrl: deeplinkUrl,
+        qrCodeUrl: qrCodeUrl,
+        qrString: qrString,
+      );
+    }).toList();
+
+    if (changed) {
+      emit(state.copyWith(messages: next));
+    }
+  }
+
+  String? _normalizePaymentMethod(String? value) {
+    final raw = (value ?? '').trim();
+    if (raw.isEmpty) {
+      return null;
+    }
+
+    final normalized = raw.toLowerCase();
+    if (normalized == 'belum dipilih' ||
+        normalized == 'not selected' ||
+        normalized == '-' ||
+        normalized == 'null') {
+      return null;
+    }
+
+    return raw;
+  }
+
+  bool markOrderPaid({int? orderId, int? transactionId}) {
+    bool changed = false;
+    final next = state.messages.map((message) {
+      if (message.isUser || message.isPaid) {
+        return message;
+      }
+
+      final matchesOrder = orderId != null &&
+          message.orderId != null &&
+          message.orderId == orderId;
+      final matchesTx = transactionId != null &&
+          transactionId > 0 &&
+          message.transactionId != null &&
+          message.transactionId == transactionId;
+
+      if (!matchesOrder && !matchesTx) {
+        return message;
+      }
+
+      changed = true;
+      return message.copyWith(isPaid: true);
+    }).toList();
+
+    if (changed) {
+      emit(state.copyWith(messages: next));
+    }
+
+    return changed;
+  }
+
   void removeSelectedMember(int id) {
     final nextIds = Set<int>.from(state.selectedMemberIds)..remove(id);
     final nextNames = Map<int, String>.from(state.selectedMemberNames)
@@ -195,5 +306,32 @@ class ChatbotCubit extends Cubit<ChatbotState> {
     } catch (e) {
       print('Error deleting history: $e');
     }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchPaymentMethods() async {
+    final result = await _apiService.getMidtransPaymentMethods();
+    if (result['success'] != true || result['data'] is! List) {
+      return const <Map<String, dynamic>>[];
+    }
+
+    return (result['data'] as List)
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+  }
+
+  Future<Map<String, dynamic>> createPaymentForOrder({
+    required int orderId,
+    required String paymentMethod,
+  }) async {
+    return _apiService.createMidtransPayment(
+      orderId,
+      paymentMethod: paymentMethod,
+      reuseIfPending: true,
+    );
+  }
+
+  Future<Map<String, dynamic>> fetchPaymentStatus(String orderRef) async {
+    return _apiService.getPaymentStatus(orderRef);
   }
 }
