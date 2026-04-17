@@ -248,89 +248,9 @@ class _HomelistItemWidgetState extends State<HomelistItemWidget> {
                               fontSize: 13.fSize,
                               fontWeight: FontWeight.w600,
                             ),
-                          ),
-                          SizedBox(height: 8.h),
-                          Row(
-                            children: [
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 10.h,
-                                  vertical: 6.h,
-                                ),
-                                decoration: BoxDecoration(
-                                  color:
-                                      const Color(0xFF1B8A5A).withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8.h),
-                                ),
-                                child: Text(
-                                  'Score: ${widget.topsisRecommendation!.score.toStringAsFixed(2)}',
-                                  style: TextStyle(
-                                    fontSize: 12.fSize,
-                                    fontWeight: FontWeight.w700,
-                                    color: const Color(0xFF1B8A5A),
-                                  ),
-                                ),
-                              ),
-                              SizedBox(width: 8.h),
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 10.h,
-                                  vertical: 6.h,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: _riskColor(
-                                          widget.topsisRecommendation!.risk)
-                                      .withOpacity(0.12),
-                                  borderRadius: BorderRadius.circular(8.h),
-                                ),
-                                child: Text(
-                                  'Risk: ${widget.topsisRecommendation!.risk}',
-                                  style: TextStyle(
-                                    fontSize: 12.fSize,
-                                    fontWeight: FontWeight.w700,
-                                    color: _riskColor(
-                                        widget.topsisRecommendation!.risk),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                          ),                          
                         ],
-                        if (!widget.isRecommended &&
-                            recommendation != null) ...[
-                          SizedBox(height: 12.h),
-                          Row(
-                            children: [
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 10.h,
-                                  vertical: 6.h,
-                                ),
-                                decoration: BoxDecoration(
-                                  color:
-                                      const Color(0xFF1B8A5A).withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8.h),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.analytics_rounded,
-                                        size: 14.h,
-                                        color: const Color(0xFF1B8A5A)),
-                                    SizedBox(width: 4.h),
-                                    Text(
-                                      'Risk: ${recommendation.riskLevel.toUpperCase()}',
-                                      style: TextStyle(
-                                        fontSize: 12.fSize,
-                                        fontWeight: FontWeight.w700,
-                                        color: const Color(0xFF1B8A5A),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                        
                       ],
                     ),
                   ),
@@ -341,17 +261,6 @@ class _HomelistItemWidgetState extends State<HomelistItemWidget> {
         ),
       ),
     );
-  }
-
-  Color _riskColor(String risk) {
-    final value = risk.toUpperCase();
-    if (value == 'SAFE' || value == 'LOW') {
-      return const Color(0xFF1B8A5A);
-    }
-    if (value == 'MEDIUM') {
-      return const Color(0xFFF59E0B);
-    }
-    return const Color(0xFFDC2626);
   }
 }
 

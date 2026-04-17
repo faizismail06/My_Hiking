@@ -529,7 +529,7 @@ class HomeInitialPageState extends State<HomeInitialPage> {
                   _buildSectionHeader(
                       'Rekomendasi Untuk Anda', Icons.auto_awesome_rounded),
                   SizedBox(
-                    height: 340.h,
+                    height: 285.h,
                     child: ListView.separated(
                       padding: EdgeInsets.symmetric(vertical: 4.h),
                       scrollDirection: Axis.horizontal,
@@ -551,7 +551,7 @@ class HomeInitialPageState extends State<HomeInitialPage> {
                       'Rekomendasi Untuk Anda', Icons.auto_awesome_rounded),
                   if (topThree.isNotEmpty)
                     SizedBox(
-                      height: 340.h,
+                      height: 285.h,
                       child: ListView.separated(
                         padding: EdgeInsets.symmetric(vertical: 4.h),
                         scrollDirection: Axis.horizontal,
@@ -810,54 +810,7 @@ class HomeInitialPageState extends State<HomeInitialPage> {
                 fontWeight: FontWeight.w600,
                 color: Colors.grey[800],
               ),
-            ),
-            SizedBox(height: 10.h),
-            Text(
-              'Data detail gunung belum tersedia, silakan refresh.',
-              style: TextStyle(
-                fontSize: 12.fSize,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey[600],
-              ),
-            ),
-            SizedBox(height: 10.h),
-            Row(
-              children: [
-                Container(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 10.h, vertical: 6.h),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1B8A5A).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10.h),
-                  ),
-                  child: Text(
-                    'Score: ${item.score.toStringAsFixed(2)}',
-                    style: TextStyle(
-                      fontSize: 12.fSize,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF1B8A5A),
-                    ),
-                  ),
-                ),
-                SizedBox(width: 8.h),
-                Container(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 10.h, vertical: 6.h),
-                  decoration: BoxDecoration(
-                    color: _riskColor(item.risk).withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(10.h),
-                  ),
-                  child: Text(
-                    'Risk: ${item.risk}',
-                    style: TextStyle(
-                      fontSize: 12.fSize,
-                      fontWeight: FontWeight.w700,
-                      color: _riskColor(item.risk),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            ),            
           ],
         ),
       ),
@@ -877,16 +830,6 @@ class HomeInitialPageState extends State<HomeInitialPage> {
     return '🏔';
   }
 
-  Color _riskColor(String risk) {
-    final value = risk.toUpperCase();
-    if (value == 'SAFE' || value == 'LOW') {
-      return const Color(0xFF1B8A5A);
-    }
-    if (value == 'MEDIUM') {
-      return const Color(0xFFF59E0B);
-    }
-    return const Color(0xFFDC2626);
-  }
 
   /// Modern Section Header
   Widget _buildSectionHeader(String title, IconData icon) {
