@@ -493,6 +493,61 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
     return points;
   }
 
+  List<OfflineGpxWaypoint> _parseGpxWaypoints(String gpxContent) {
+    final waypointRegex = RegExp(
+      r'<wpt\b([^>]*)>([\s\S]*?)<\/wpt>|<wpt\b([^>]*)\/\s*>',
+      caseSensitive: false,
+      multiLine: true,
+    );
+
+    final waypoints = <OfflineGpxWaypoint>[];
+
+    for (final match in waypointRegex.allMatches(gpxContent)) {
+      final attributes = (match.group(1) ?? match.group(3) ?? '').trim();
+      final innerContent = (match.group(2) ?? '').trim();
+
+      final lat = _extractAttribute(attributes, 'lat');
+      final lon = _extractAttribute(attributes, 'lon');
+
+      final latVal = _parseCoordinate(lat);
+      final lonVal = _parseCoordinate(lon);
+
+      if (latVal == null || lonVal == null) {
+        continue;
+      }
+
+      if (latVal < -90 || latVal > 90 || lonVal < -180 || lonVal > 180) {
+        continue;
+      }
+
+      final parsedName = _extractElementText(innerContent, 'name');
+      final parsedDescription = _extractElementText(innerContent, 'desc');
+
+      waypoints.add(
+        OfflineGpxWaypoint(
+          point: LatLng(latVal, lonVal),
+          name: parsedName ?? 'Pos ${waypoints.length + 1}',
+          description: parsedDescription,
+        ),
+      );
+    }
+
+    return waypoints;
+  }
+
+  double? _parseCoordinate(String? value) {
+    if (value == null) {
+      return null;
+    }
+
+    final normalized = value.trim().replaceAll(',', '.');
+    if (normalized.isEmpty) {
+      return null;
+    }
+
+    return double.tryParse(normalized);
+  }
+
   String? _extractAttribute(String tag, String key) {
     final attrRegex = RegExp(
       """$key\\s*=\\s*["']([^"']+)["']""",
@@ -500,6 +555,36 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
     );
     final match = attrRegex.firstMatch(tag);
     return match?.group(1);
+  }
+
+  String? _extractElementText(String content, String tagName) {
+    if (content.trim().isEmpty) {
+      return null;
+    }
+
+    final tagRegex = RegExp(
+      '<$tagName\\b[^>]*>([\\s\\S]*?)<\\/$tagName>',
+      caseSensitive: false,
+      multiLine: true,
+    );
+
+    final match = tagRegex.firstMatch(content);
+    if (match == null) {
+      return null;
+    }
+
+    final rawText = (match.group(1) ?? '').replaceAll(RegExp(r'<[^>]+>'), '');
+    final decoded = _decodeXmlText(rawText.trim());
+    return decoded.isEmpty ? null : decoded;
+  }
+
+  String _decodeXmlText(String value) {
+    return value
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&apos;', "'")
+        .replaceAll('&amp;', '&');
   }
 
   Future<void> _uploadGpx() async {
@@ -528,12 +613,17 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
 
       final content = utf8.decode(bytes, allowMalformed: true);
       final parsedPoints = _parseGpxPoints(content);
+      final parsedWaypoints = _parseGpxWaypoints(content);
 
       if (parsedPoints.length < 2) {
         throw Exception('File GPX minimal harus memiliki 2 titik jalur');
       }
 
-      _cubit.setGpxData(points: parsedPoints, fileName: file.name);
+      _cubit.setGpxData(
+        points: parsedPoints,
+        waypoints: parsedWaypoints,
+        fileName: file.name,
+      );
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _fitMapToAllPoints();
@@ -545,7 +635,9 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('GPX berhasil dimuat (${parsedPoints.length} titik)'),
+          content: Text(
+            'GPX dimuat: ${parsedPoints.length} titik jalur, ${parsedWaypoints.length} titik pos.',
+          ),
           backgroundColor: Colors.green,
         ),
       );
@@ -900,6 +992,7 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
   void _fitMapToAllPoints() {
     final all = <LatLng>[
       ..._state.gpxRoutePoints,
+      ..._state.gpxWaypoints.map((waypoint) => waypoint.point),
       ..._state.trackedPoints,
     ];
 
@@ -1156,6 +1249,8 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
                 Text('Durasi: ${_formatDuration(elapsed)}'),
                 const SizedBox(width: 8),
                 Text('Titik: ${state.trackedPoints.length}'),
+                const SizedBox(width: 8),
+                Text('Pos: ${state.gpxWaypoints.length}'),
               ],
             ),
           ],
@@ -1267,6 +1362,24 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
                         size: 30,
                       ),
                     ),
+                  ...state.gpxWaypoints.map(
+                    (waypoint) => Marker(
+                      point: waypoint.point,
+                      width: 40,
+                      height: 40,
+                      child: Tooltip(
+                        message: waypoint.description == null ||
+                                waypoint.description!.trim().isEmpty
+                            ? waypoint.name
+                            : '${waypoint.name}\n${waypoint.description}',
+                        child: const Icon(
+                          Icons.location_pin,
+                          color: Colors.deepOrange,
+                          size: 28,
+                        ),
+                      ),
+                    ),
+                  ),
                   if (state.gpxRoutePoints.isNotEmpty)
                     Marker(
                       point: state.gpxRoutePoints.first,

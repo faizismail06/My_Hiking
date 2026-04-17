@@ -15,9 +15,14 @@ class OfflineTrackingCubit extends Cubit<OfflineTrackingState> {
     emit(state.copyWith(isUploadingGpx: value));
   }
 
-  void setGpxData({required List<LatLng> points, String? fileName}) {
+  void setGpxData({
+    required List<LatLng> points,
+    List<OfflineGpxWaypoint>? waypoints,
+    String? fileName,
+  }) {
     emit(state.copyWith(
       gpxRoutePoints: List<LatLng>.from(points),
+      gpxWaypoints: List<OfflineGpxWaypoint>.from(waypoints ?? const []),
       selectedGpxName: fileName,
     ));
   }

@@ -561,29 +561,25 @@ class HomeInitialPageState extends State<HomeInitialPage> {
                             SizedBox(width: 12.h),
                         itemBuilder: (context, index) {
                           final recommendation = topThree[index];
-                          final mountain = _findMountainByRecommendation(
+                          final HomelistItemModel safeMountain = _findMountainByRecommendation(
                             recommendation,
                             mountainPool,
+                          ) ?? HomelistItemModel(
+                            id: null,
+                            namaGunung: recommendation.mountainName,
+                            gambar: '',
                           );
-
-                          if (mountain == null) {
-                            return SizedBox(
-                              width: 280.h,
-                              child: _buildRecommendationFallbackCard(
-                                  recommendation),
-                            );
-                          }
 
                           return SizedBox(
                             width: 280.h,
                             child: HomelistItemWidget(
-                              mountain,
+                              safeMountain,
                               isRecommended: true,
                               topsisRecommendation: recommendation,
                               onTap: () => _openRecommendedRoute(
                                 context,
                                 recommendation,
-                                mountain,
+                                safeMountain,
                               ),
                             ),
                           );
@@ -775,63 +771,6 @@ class HomeInitialPageState extends State<HomeInitialPage> {
     );
   }
 
-  Widget _buildRecommendationFallbackCard(RecommendationModel item) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20.h),
-        color: Colors.white,
-        border: Border.all(color: Colors.grey.withOpacity(0.1), width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 16.h,
-            offset: Offset(0, 6.h),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(16.h),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '${_rankMedal(item.rank)} #${item.rank} ${item.mountainName}',
-              style: TextStyle(
-                fontSize: 16.fSize,
-                fontWeight: FontWeight.w800,
-                color: const Color(0xFF1B8A5A),
-              ),
-            ),
-            SizedBox(height: 8.h),
-            Text(
-              'Route: ${item.routeName}',
-              style: TextStyle(
-                fontSize: 13.fSize,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[800],
-              ),
-            ),            
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _rankMedal(int rank) {
-    if (rank == 1) {
-      return '🥇';
-    }
-    if (rank == 2) {
-      return '🥈';
-    }
-    if (rank == 3) {
-      return '🥉';
-    }
-    return '🏔';
-  }
-
-
-  /// Modern Section Header
   Widget _buildSectionHeader(String title, IconData icon) {
     return Padding(
       padding: EdgeInsets.only(bottom: 12.h, top: 8.h),

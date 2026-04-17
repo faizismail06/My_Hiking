@@ -519,6 +519,149 @@ class _WaitingPaymentPageState extends State<WaitingPaymentPage> {
     return '$minutes:$seconds';
   }
 
+  String _resolvePaymentMethodKey() {
+    final source =
+        '${_paymentMethod.toLowerCase()} ${(_paymentCodeLabel ?? '').toLowerCase()}';
+
+    if (source.contains('qris')) {
+      return 'qris';
+    }
+    if (source.contains('gopay')) {
+      return 'gopay';
+    }
+    if (source.contains('shopee')) {
+      return 'shopeepay';
+    }
+    if (source.contains('indomaret')) {
+      return 'indomaret';
+    }
+    if (source.contains('alfamart')) {
+      return 'alfamart';
+    }
+    if (source.contains('permata')) {
+      return 'permata_va';
+    }
+    if (source.contains('mandiri') || source.contains('echannel')) {
+      return 'mandiri_va';
+    }
+    if (source.contains('cimb')) {
+      return 'cimb_va';
+    }
+    if (source.contains('bca')) {
+      return 'bca_va';
+    }
+    if (source.contains('bni')) {
+      return 'bni_va';
+    }
+    if (source.contains('bri')) {
+      return 'bri_va';
+    }
+    if (source.contains('bank transfer') ||
+        source.contains('bank_transfer') ||
+        source.contains('virtual account')) {
+      return 'bank_transfer';
+    }
+
+    return 'unknown';
+  }
+
+  String? _resolvePaymentMethodAsset(String methodKey) {
+    switch (methodKey) {
+      case 'qris':
+        return ImageConstant.imgPngwingCom1;
+      case 'bri_va':
+        return ImageConstant.imgLogoBankBri;
+      default:
+        // Add more assets here when logo files are available per method.
+        return null;
+    }
+  }
+
+  String _resolvePaymentMethodBadgeText(String methodKey) {
+    switch (methodKey) {
+      case 'qris':
+        return 'QRIS';
+      case 'gopay':
+        return 'GOPAY';
+      case 'shopeepay':
+        return 'SHOPEE';
+      case 'bca_va':
+        return 'BCA';
+      case 'bni_va':
+        return 'BNI';
+      case 'bri_va':
+        return 'BRI';
+      case 'mandiri_va':
+        return 'MANDIRI';
+      case 'permata_va':
+        return 'PERMATA';
+      case 'cimb_va':
+        return 'CIMB';
+      case 'indomaret':
+        return 'INDOMARET';
+      case 'alfamart':
+        return 'ALFAMART';
+      case 'bank_transfer':
+        return 'BANK';
+      default:
+        return 'PAY';
+    }
+  }
+
+  Color _resolvePaymentMethodBadgeColor(String methodKey) {
+    switch (methodKey) {
+      case 'gopay':
+        return const Color(0xFF00AED6);
+      case 'shopeepay':
+        return const Color(0xFFEE4D2D);
+      case 'qris':
+        return const Color(0xFF016A70);
+      case 'indomaret':
+        return const Color(0xFF1F4C9A);
+      case 'alfamart':
+        return const Color(0xFFEE3124);
+      default:
+        return appTheme.teal900;
+    }
+  }
+
+  Widget _buildPaymentMethodLogo({required double height}) {
+    final methodKey = _resolvePaymentMethodKey();
+    final assetPath = _resolvePaymentMethodAsset(methodKey);
+
+    if (assetPath != null) {
+      return CustomImageView(
+        imagePath: assetPath,
+        height: height,
+        fit: BoxFit.contain,
+      );
+    }
+
+    final badgeColor = _resolvePaymentMethodBadgeColor(methodKey);
+    final badgeText = _resolvePaymentMethodBadgeText(methodKey);
+
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8.h, vertical: 4.h),
+      decoration: BoxDecoration(
+        color: badgeColor.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8.h),
+        border: Border.all(
+          color: badgeColor.withValues(alpha: 0.35),
+          width: 1,
+        ),
+      ),
+      child: Text(
+        badgeText,
+        style: TextStyle(
+          fontSize: 10.h,
+          color: badgeColor,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.2,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -804,11 +947,7 @@ class _WaitingPaymentPageState extends State<WaitingPaymentPage> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        CustomImageView(
-          imagePath: ImageConstant.imgPngwingCom1,
-          height: 48.h,
-          fit: BoxFit.contain,
-        ),
+        _buildPaymentMethodLogo(height: 48.h),
         SizedBox(height: 20.h),
         Text(
           'Scan QR untuk Membayar',
@@ -999,11 +1138,7 @@ class _WaitingPaymentPageState extends State<WaitingPaymentPage> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CustomImageView(
-              imagePath: ImageConstant.imgLogoBankBri,
-              height: 24.h,
-              fit: BoxFit.contain,
-            ),
+            _buildPaymentMethodLogo(height: 24.h),
             SizedBox(width: 8.h),
             Flexible(
               child: Text(

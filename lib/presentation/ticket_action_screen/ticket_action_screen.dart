@@ -161,6 +161,51 @@ class _TicketActionScreenState extends State<TicketActionScreen> {
     return buffer.toString();
   }
 
+  List<Map<String, dynamic>> _normalizeMapList(dynamic rawValue) {
+    if (rawValue is! List) {
+      return const [];
+    }
+
+    return rawValue
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+  }
+
+  List<Map<String, dynamic>> _extractPostsFromPreviewPayload({
+    required Map<String, dynamic> previewResponse,
+    required Map<String, dynamic>? routePreview,
+    required Map<String, dynamic>? order,
+  }) {
+    final fromPreviewRoot = _normalizeMapList(previewResponse['posts']);
+    if (fromPreviewRoot.isNotEmpty) {
+      return fromPreviewRoot;
+    }
+
+    final fromRoutePreview = _normalizeMapList(routePreview?['posts']);
+    if (fromRoutePreview.isNotEmpty) {
+      return fromRoutePreview;
+    }
+
+    final trailFromPreview = previewResponse['trail'];
+    if (trailFromPreview is Map) {
+      final fromNestedTrail = _normalizeMapList(trailFromPreview['posts']);
+      if (fromNestedTrail.isNotEmpty) {
+        return fromNestedTrail;
+      }
+    }
+
+    final trailFromOrder = order?['trail'];
+    if (trailFromOrder is Map) {
+      final fromOrderTrail = _normalizeMapList(trailFromOrder['posts']);
+      if (fromOrderTrail.isNotEmpty) {
+        return fromOrderTrail;
+      }
+    }
+
+    return const [];
+  }
+
   Future<void> _downloadOrderedRoute() async {
     if (_state.isRouteDownloadLoading) {
       return;
@@ -195,10 +240,11 @@ class _TicketActionScreenState extends State<TicketActionScreen> {
           .whereType<Map>()
           .map((item) => Map<String, dynamic>.from(item))
           .toList();
-      final posts = ((previewResponse['posts'] as List?) ?? const [])
-          .whereType<Map>()
-          .map((item) => Map<String, dynamic>.from(item))
-          .toList();
+      final posts = _extractPostsFromPreviewPayload(
+        previewResponse: previewResponse,
+        routePreview: routePreview,
+        order: order,
+      );
 
       final trailName = (order?['trail']?['nama'] ?? 'jalur').toString();
       final mountainName =
