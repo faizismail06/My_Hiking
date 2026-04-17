@@ -504,9 +504,9 @@ class HomeInitialPageState extends State<HomeInitialPage> {
         builder: (context, state) {
           final homeInitialModelObj = state.homeInitialModelObj;
           final mountains = homeInitialModelObj?.homelistItemList ?? [];
-          final recommendations = [...state.recommendations]
-            ..sort((a, b) => b.score.compareTo(a.score));
+          final recommendations = [...state.recommendations];
           final topThree = recommendations.take(3).toList();
+          final showRecommendationSection = state.hasCompletedExperience;
 
           final mountainPool = <HomelistItemModel>[
             if (state.baseRecommendedMountain != null)
@@ -524,80 +524,83 @@ class HomeInitialPageState extends State<HomeInitialPage> {
               SizedBox(height: 8.h), // Spacing after sticky header
 
               // Recommended Section
-              if (isLoading) ...[
-                _buildSectionHeader(
-                    'Rekomendasi Untuk Anda', Icons.auto_awesome_rounded),
-                SizedBox(
-                  height: 340.h,
-                  child: ListView.separated(
-                    padding: EdgeInsets.symmetric(vertical: 4.h),
-                    scrollDirection: Axis.horizontal,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: 2,
-                    separatorBuilder: (context, index) => SizedBox(width: 12.h),
-                    itemBuilder: (context, index) {
-                      return SizedBox(
-                        width: 280.h,
-                        child: _buildRecommendationLoading(),
-                      );
-                    },
-                  ),
-                ),
-                SizedBox(height: 24.h),
-              ] else ...[
-                _buildSectionHeader(
-                    'Rekomendasi Untuk Anda', Icons.auto_awesome_rounded),
-                if (topThree.isNotEmpty)
+              if (showRecommendationSection) ...[
+                if (isLoading) ...[
+                  _buildSectionHeader(
+                      'Rekomendasi Untuk Anda', Icons.auto_awesome_rounded),
                   SizedBox(
                     height: 340.h,
                     child: ListView.separated(
                       padding: EdgeInsets.symmetric(vertical: 4.h),
                       scrollDirection: Axis.horizontal,
-                      physics: const BouncingScrollPhysics(),
-                      itemCount: topThree.length,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: 2,
                       separatorBuilder: (context, index) =>
                           SizedBox(width: 12.h),
                       itemBuilder: (context, index) {
-                        final recommendation = topThree[index];
-                        final mountain = _findMountainByRecommendation(
-                          recommendation,
-                          mountainPool,
-                        );
-
-                        if (mountain == null) {
-                          return SizedBox(
-                            width: 280.h,
-                            child: _buildRecommendationFallbackCard(
-                                recommendation),
-                          );
-                        }
-
                         return SizedBox(
                           width: 280.h,
-                          child: HomelistItemWidget(
-                            mountain,
-                            isRecommended: true,
-                            topsisRecommendation: recommendation,
-                            onTap: () => _openRecommendedRoute(
-                              context,
-                              recommendation,
-                              mountain,
-                            ),
-                          ),
+                          child: _buildRecommendationLoading(),
                         );
                       },
                     ),
-                  )
-                else if (recommendationError != null)
-                  _buildRecommendationError(
-                    recommendationError,
-                    onRetry: () => context.read<HomeBloc>().add(
-                          HomeRefreshEvent(),
-                        ),
-                  )
-                else
-                  _buildRecommendationEmpty(),
-                SizedBox(height: 24.h),
+                  ),
+                  SizedBox(height: 24.h),
+                ] else ...[
+                  _buildSectionHeader(
+                      'Rekomendasi Untuk Anda', Icons.auto_awesome_rounded),
+                  if (topThree.isNotEmpty)
+                    SizedBox(
+                      height: 340.h,
+                      child: ListView.separated(
+                        padding: EdgeInsets.symmetric(vertical: 4.h),
+                        scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
+                        itemCount: topThree.length,
+                        separatorBuilder: (context, index) =>
+                            SizedBox(width: 12.h),
+                        itemBuilder: (context, index) {
+                          final recommendation = topThree[index];
+                          final mountain = _findMountainByRecommendation(
+                            recommendation,
+                            mountainPool,
+                          );
+
+                          if (mountain == null) {
+                            return SizedBox(
+                              width: 280.h,
+                              child: _buildRecommendationFallbackCard(
+                                  recommendation),
+                            );
+                          }
+
+                          return SizedBox(
+                            width: 280.h,
+                            child: HomelistItemWidget(
+                              mountain,
+                              isRecommended: true,
+                              topsisRecommendation: recommendation,
+                              onTap: () => _openRecommendedRoute(
+                                context,
+                                recommendation,
+                                mountain,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    )
+                  else if (recommendationError != null)
+                    _buildRecommendationError(
+                      recommendationError,
+                      onRetry: () => context.read<HomeBloc>().add(
+                            HomeRefreshEvent(),
+                          ),
+                    )
+                  else
+                    _buildRecommendationEmpty(),
+                  SizedBox(height: 24.h),
+                ],
               ],
 
               if (otherMountains.isNotEmpty) ...[

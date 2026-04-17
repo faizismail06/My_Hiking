@@ -48,9 +48,12 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     Emitter<HomeState> emit, {
     required bool useCache,
   }) async {
+    final hasCompletedExperience = await _hasCompletedExperienceOnboarding();
+
     emit(state.copyWith(
       searchController: TextEditingController(),
-      isLoadingRecommended: true,
+      isLoadingRecommended: hasCompletedExperience,
+      hasCompletedExperience: hasCompletedExperience,
       clearRecommendationError: true,
     ));
 
@@ -61,7 +64,11 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         final cachedPayload = await _apiService.getCachedHomeFeed();
         if (cachedPayload != null) {
           cachedFeed = _parseHomeFeed(cachedPayload);
-          emit(_buildStateWithFeed(cachedFeed, state.recommendations));
+          emit(_buildStateWithFeed(
+            cachedFeed,
+            hasCompletedExperience ? state.recommendations : const [],
+            hasCompletedExperience: hasCompletedExperience,
+          ));
         }
       } catch (e) {
         print('Error reading cached home feed: $e');
@@ -79,30 +86,65 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         print('Error fetching data: $e');
         emit(state.copyWith(
           isLoadingRecommended: false,
+          hasCompletedExperience: hasCompletedExperience,
           recommendationError: 'Gagal memuat data home.',
         ));
         return;
       } else {
-        emit(state.copyWith(isLoadingRecommended: false));
+        emit(state.copyWith(
+          isLoadingRecommended: false,
+          hasCompletedExperience: hasCompletedExperience,
+        ));
       }
     }
 
-    List<RecommendationModel> topRecommendations = state.baseRecommendations;
+    List<RecommendationModel> topRecommendations =
+        hasCompletedExperience ? state.baseRecommendations : const [];
     String? recommendationError;
 
-    try {
-      topRecommendations = await _apiService.fetchRecommendations(limit: 30);
-      topRecommendations = _sortAndRankRecommendations(topRecommendations);
-    } catch (e) {
-      recommendationError = 'Gagal memuat rekomendasi TOPSIS.';
-      print('Error fetching recommendations: $e');
+    if (hasCompletedExperience) {
+      try {
+        topRecommendations = await _apiService.fetchRecommendations(limit: 30);
+        topRecommendations = _sortAndRankRecommendations(topRecommendations);
+      } catch (e) {
+        recommendationError = 'Gagal memuat rekomendasi TOPSIS.';
+        print('Error fetching recommendations: $e');
+      }
     }
 
     emit(_buildStateWithFeed(
       currentFeed,
       topRecommendations,
+      hasCompletedExperience: hasCompletedExperience,
       recommendationError: recommendationError,
     ));
+  }
+
+  Future<bool> _hasCompletedExperienceOnboarding() async {
+    try {
+      final token = await _apiService.getToken();
+      if (token == null || token.isEmpty) {
+        return false;
+      }
+
+      final response = await _apiService.getOnboardingExperienceStatus(token);
+      final rawData = response['data'];
+      final data = rawData is Map<String, dynamic>
+          ? rawData
+          : rawData is Map
+              ? Map<String, dynamic>.from(rawData)
+              : <String, dynamic>{};
+
+      final rawCompleted = data['experience_completed'];
+      if (rawCompleted is bool) {
+        return rawCompleted;
+      }
+
+      return rawCompleted?.toString().toLowerCase() == 'true';
+    } catch (e) {
+      print('Error checking onboarding status: $e');
+      return false;
+    }
   }
 
   Future<void> _onSearch(
@@ -205,6 +247,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   HomeState _buildStateWithFeed(
     HomeFeedResult feed,
     List<RecommendationModel> recommendations, {
+    required bool hasCompletedExperience,
     String? recommendationError,
   }) {
     return state.copyWith(
@@ -217,6 +260,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       baseAllMountains: feed.mountains,
       selectedProvince: null,
       isLoadingRecommended: false,
+      hasCompletedExperience: hasCompletedExperience,
       homeInitialModelObj: state.homeInitialModelObj?.copyWith(
         homelistItemList: feed.mountains,
       ),
@@ -226,7 +270,14 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   List<RecommendationModel> _sortAndRankRecommendations(
     List<RecommendationModel> items,
   ) {
-    final sorted = [...items]..sort((a, b) => b.score.compareTo(a.score));
+    final sorted = [...items]..sort((a, b) {
+        final riskCompare =
+            _riskPriority(a.risk).compareTo(_riskPriority(b.risk));
+        if (riskCompare != 0) {
+          return riskCompare;
+        }
+        return b.score.compareTo(a.score);
+      });
     final uniqueByMountain = <RecommendationModel>[];
     final seenMountains = <String>{};
 
@@ -251,6 +302,17 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
       return item.copyWith(rank: index + 1);
     }).toList();
+  }
+
+  int _riskPriority(String risk) {
+    final value = risk.toUpperCase().trim();
+    if (value == 'SAFE' || value == 'LOW') {
+      return 1;
+    }
+    if (value == 'MEDIUM' || value == 'CAUTION') {
+      return 2;
+    }
+    return 3;
   }
 }
 

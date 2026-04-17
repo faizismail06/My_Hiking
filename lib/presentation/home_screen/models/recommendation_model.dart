@@ -33,7 +33,7 @@ class RecommendationModel {
         ? int.tryParse(json['route_id'])
         : (json['route_id'] as num?)?.toInt();
 
-    final risk = (json['risk'] ?? '').toString().trim().toUpperCase();
+    final risk = _normalizeRisk((json['risk'] ?? '').toString());
 
     return RecommendationModel(
       rank: rank ?? (fallbackRank ?? 0),
@@ -74,5 +74,24 @@ class RecommendationModel {
       return 'MEDIUM';
     }
     return 'HIGH';
+  }
+
+  static String _normalizeRisk(String raw) {
+    final value = raw.trim().toUpperCase();
+
+    if (value == 'HIGH_RISK') {
+      return 'HIGH';
+    }
+    if (value == 'CAUTION') {
+      return 'MEDIUM';
+    }
+    if (value == 'SAFE' ||
+        value == 'LOW' ||
+        value == 'MEDIUM' ||
+        value == 'HIGH') {
+      return value;
+    }
+
+    return '';
   }
 }

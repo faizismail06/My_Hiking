@@ -17,6 +17,7 @@ class HomeState extends Equatable {
     this.baseRecommendations = const [],
     this.recommendationError,
     this.isLoadingRecommended = false,
+    this.hasCompletedExperience = false,
   });
 
   TextEditingController? searchController;
@@ -32,6 +33,7 @@ class HomeState extends Equatable {
   String? recommendationError;
   String? selectedProvince;
   bool isLoadingRecommended;
+  bool hasCompletedExperience;
 
   @override
   List<Object?> get props => [
@@ -48,6 +50,7 @@ class HomeState extends Equatable {
         recommendationError,
         selectedProvince,
         isLoadingRecommended,
+        hasCompletedExperience,
       ];
 
   HomeState copyWith({
@@ -67,6 +70,7 @@ class HomeState extends Equatable {
     String? recommendationError,
     String? selectedProvince,
     bool? isLoadingRecommended,
+    bool? hasCompletedExperience,
   }) {
     return HomeState(
       searchController: searchController ?? this.searchController,
@@ -88,6 +92,8 @@ class HomeState extends Equatable {
           : (recommendationError ?? this.recommendationError),
       selectedProvince: selectedProvince ?? this.selectedProvince,
       isLoadingRecommended: isLoadingRecommended ?? this.isLoadingRecommended,
+      hasCompletedExperience:
+          hasCompletedExperience ?? this.hasCompletedExperience,
     );
   }
 }
