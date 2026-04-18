@@ -1464,10 +1464,10 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
                       point: state.gpxRoutePoints.first,
                       width: 36,
                       height: 36,
-                      child: const Icon(
-                        Icons.play_circle_fill,
-                        color: Colors.green,
-                        size: 30,
+                      child: _buildMarkerAsset(
+                        assetPath: 'assets/images/start.png',
+                        fallbackIcon: Icons.play_circle_fill,
+                        fallbackColor: Colors.green,
                       ),
                     ),
                   if (state.gpxRoutePoints.length > 1)
