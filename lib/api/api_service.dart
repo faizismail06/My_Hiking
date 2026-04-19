@@ -11,7 +11,15 @@ import 'package:myhiking/presentation/data_profile_screen/models/res_user.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
-const String baseUrl = 'http://127.0.0.1:8000/api';
+const String baseUrl = String.fromEnvironment(
+  'API_BASE_URL',
+  defaultValue: 'http://127.0.0.1:8000/api',
+);
+
+const String chatbotBaseUrl = String.fromEnvironment(
+  'CHATBOT_BASE_URL',
+  defaultValue: 'http://127.0.0.1:5000/api',
+);
 
 class ApiActionException implements Exception {
   final String code;
@@ -1333,9 +1341,6 @@ class ApiService {
   // ============================================
   // CHATBOT METHODS
   // ============================================
-
-  /// Base URL for chatbot server (Python Flask)
-  static const String chatbotBaseUrl = 'http://127.0.0.1:5000/api';
 
   /// Send message to chatbot and get response
   Future<Map<String, dynamic>> sendChatMessage({

@@ -333,7 +333,7 @@ class LoginScreen extends StatelessWidget {
       final password = passwordController.text;
 
       // Endpoint URL
-      final url = Uri.parse("http://127.0.0.1:8000/api/login");
+      final url = Uri.parse('$baseUrl/login');
 
       try {
         // Mengirim request ke server
@@ -365,7 +365,10 @@ class LoginScreen extends StatelessWidget {
           );
         }
       } on SocketException {
-        _showErrorDialog(context, "Tidak ada koneksi internet.");
+        _showErrorDialog(
+          context,
+          "Tidak bisa terhubung ke server. Pastikan backend aktif dan URL API benar.",
+        );
       } on FormatException catch (e) {
         debugPrint('FORMAT ERROR: $e');
         _showErrorDialog(context, "Response server tidak valid.");

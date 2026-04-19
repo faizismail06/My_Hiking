@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 // ignore_for_file: must_be_immutable
 class NavigatorService {
-  static GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
   static Future<dynamic> pushNamed(
     String routeName, {
@@ -12,7 +12,10 @@ class NavigatorService {
   }
 
   static void goBack() {
-    return navigatorKey.currentState?.pop();
+    final navigator = navigatorKey.currentState;
+    if (navigator != null && navigator.canPop()) {
+      navigator.pop();
+    }
   }
 
   static Future<dynamic> pushNamedAndRemoveUntil(

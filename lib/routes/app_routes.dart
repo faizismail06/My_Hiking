@@ -32,6 +32,7 @@ import '../presentation/refund_request_result_page/refund_request_result_page.da
 
 class AppRoutes {
   static const String landingScreen = '/landing_screen';
+  static const String root = '/';
   static const String loginScreen = '/login_screen';
   static const String registScreen = '/regist_screen';
   static const String resetKirimEmailScreen = '/reset_kirim_email_screen';
@@ -62,7 +63,7 @@ class AppRoutes {
   static const String refundRequestResultPage = '/refund_request_result_page';
   static const String experienceOnboardingScreen = '/experience_onboarding_screen';
   static const String appNavigationScreen = '/app_navigation_screen';
-  static const String initialRoute = '/initialRoute';
+  static const String initialRoute = root;
 
   // Legacy route aliases for backward compatibility
   static const String berandaScreen = homeScreen;
@@ -79,6 +80,7 @@ class AppRoutes {
   static const String riwayatPage = historyPage;
 
   static Map<String, WidgetBuilder> get routes => {
+      root: LandingScreen.builder,
         landingScreen: LandingScreen.builder,
         loginScreen: LoginScreen.builder,
         registScreen: RegistScreen.builder,
@@ -143,7 +145,6 @@ class AppRoutes {
           );
         },
         appNavigationScreen: AppNavigationScreen.builder,
-        initialRoute: LandingScreen.builder,
         transactionPage: TransactionPage.builder,
         historyPage: HistoryPage.builder,
         tiketSayaPage: TiketSayaPage.builder,
