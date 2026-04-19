@@ -20,6 +20,7 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
     on<UpdateBookingDateEvent>(_onUpdateBookingDate);
     on<UpdateReturnDateEvent>(_onUpdateReturnDate);
     on<CreateBookingEvent>(_onCreateBooking); // Add the handler here
+    on<FetchBookingQuotaEvent>(_onFetchBookingQuota);
     on<UpdateMemberIdField>(_onUpdateAnggotaID);
     on<UpdateSelectedMembers>(_onUpdateSelectedMembers);
     on<AddSelectedMember>(_onAddSelectedMember);
@@ -106,19 +107,55 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
 
   Future<void> _onUpdateBookingDate(
       UpdateBookingDateEvent event, Emitter<BookingState> emit) async {
-    // Update the state with the new date in the controller
-    emit(state.copyWith(
+    final nextState = state.copyWith(
       bookingDateFieldController:
           TextEditingController(text: event.formattedDate),
-    ));
+    );
+    emit(nextState);
+    await _triggerQuotaFetchIfPossible(nextState, emit);
   }
 
   Future<void> _onUpdateReturnDate(
       UpdateReturnDateEvent event, Emitter<BookingState> emit) async {
-    emit(state.copyWith(
+    final nextState = state.copyWith(
       returnDateFieldController:
           TextEditingController(text: event.formattedDate),
+    );
+    emit(nextState);
+    await _triggerQuotaFetchIfPossible(nextState, emit);
+  }
+
+  Future<void> _onFetchBookingQuota(
+      FetchBookingQuotaEvent event, Emitter<BookingState> emit) async {
+    emit(state.copyWith(
+      isQuotaLoading: true,
+      quotaError: '',
     ));
+
+    try {
+      final response = await apiService.fetchTrailBookingAvailability(
+        mountainId: event.idGunung,
+        trailId: event.jalurId,
+        tanggalNaik: event.tanggalNaik,
+        tanggalTurun: event.tanggalTurun,
+      );
+
+      emit(state.copyWith(
+        isQuotaLoading: false,
+        quotaError: '',
+        bookingQuotaAvailability: BookingQuotaAvailability.fromJson(
+          response,
+          tanggalNaik: event.tanggalNaik,
+          tanggalTurun: event.tanggalTurun,
+        ),
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        isQuotaLoading: false,
+        quotaError: e.toString(),
+        bookingQuotaAvailability: null,
+      ));
+    }
   }
 
   Future<void> _onUpdateAnggotaID(
@@ -133,8 +170,9 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
 
   Future<void> _onAddSelectedMember(
       AddSelectedMember event, Emitter<BookingState> emit) async {
-    final currentMembers = List<SelectedMember>.from(state.selectedMembers ?? []);
-    
+    final currentMembers =
+        List<SelectedMember>.from(state.selectedMembers ?? []);
+
     // Check if member already exists
     if (!currentMembers.any((m) => m.id == event.member.id)) {
       currentMembers.add(event.member);
@@ -144,8 +182,45 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
 
   Future<void> _onRemoveSelectedMember(
       RemoveSelectedMember event, Emitter<BookingState> emit) async {
-    final currentMembers = List<SelectedMember>.from(state.selectedMembers ?? []);
+    final currentMembers =
+        List<SelectedMember>.from(state.selectedMembers ?? []);
     currentMembers.removeWhere((m) => m.id == event.memberId);
     emit(state.copyWith(selectedMembers: currentMembers));
+  }
+
+  Future<void> _triggerQuotaFetchIfPossible(
+    BookingState nextState,
+    Emitter<BookingState> emit,
+  ) async {
+    final trail = nextState.trail;
+    final mountain = nextState.mountain;
+    final tanggalNaik = nextState.bookingDateFieldController?.text.trim();
+
+    if (trail == null ||
+        mountain == null ||
+        tanggalNaik == null ||
+        tanggalNaik.isEmpty) {
+      emit(nextState.copyWith(
+        bookingQuotaAvailability: null,
+        quotaError: '',
+        isQuotaLoading: false,
+      ));
+      return;
+    }
+
+    final tanggalTurun =
+        (nextState.returnDateFieldController?.text.trim().isNotEmpty ?? false)
+            ? nextState.returnDateFieldController!.text.trim()
+            : tanggalNaik;
+
+    await _onFetchBookingQuota(
+      FetchBookingQuotaEvent(
+        idGunung: mountain.id,
+        jalurId: trail.id,
+        tanggalNaik: tanggalNaik,
+        tanggalTurun: tanggalTurun,
+      ),
+      emit,
+    );
   }
 }

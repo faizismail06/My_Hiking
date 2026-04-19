@@ -246,11 +246,22 @@ class _TicketScreenState extends State<TicketScreen> {
                                                 .titleMediumBlack900),
                                         SizedBox(height: 12.h),
                                         Text(
-                                          "lbl_tanggal".tr,
+                                          "Tanggal Naik",
                                           style: theme.textTheme.bodyLarge,
                                         ),
                                         SizedBox(height: 4.h),
                                         Text('${ticket.tanggalNaik}'.tr,
+                                            maxLines: 4,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: CustomTextStyles
+                                                .titleMediumBlack900),
+                                        SizedBox(height: 12.h),
+                                        Text(
+                                          "Tanggal Turun",
+                                          style: theme.textTheme.bodyLarge,
+                                        ),
+                                        SizedBox(height: 4.h),
+                                        Text('${ticket.tanggalTurun}'.tr,
                                             maxLines: 4,
                                             overflow: TextOverflow.ellipsis,
                                             style: CustomTextStyles
