@@ -535,6 +535,41 @@ class ApiService {
     }
   }
 
+  Future<Map<String, dynamic>> fetchTrailBookingAvailability({
+    required int mountainId,
+    required int trailId,
+    required String tanggalNaik,
+    required String tanggalTurun,
+  }) async {
+    final token = await getToken();
+    final response = await http.get(
+      Uri.parse(
+        '$baseUrl/mountains/$mountainId/trails/$trailId/booking'
+        '?tanggal_naik=$tanggalNaik&tanggal_turun=$tanggalTurun',
+      ),
+      headers: {
+        'Accept': 'application/json',
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+    );
+
+    final decoded = jsonDecode(response.body);
+    final responseData = decoded is Map<String, dynamic>
+        ? decoded
+        : decoded is Map
+            ? Map<String, dynamic>.from(decoded)
+            : <String, dynamic>{};
+
+    if (response.statusCode == 200) {
+      return responseData;
+    }
+
+    throw Exception(
+      responseData['message']?.toString() ??
+          'Gagal memuat kuota pendaki. Status ${response.statusCode}',
+    );
+  }
+
   // Fungsi untuk mengambil data Pesanan berdasarkan ID
   Future<Map<String, dynamic>> fetchPesanan(int orderId) async {
     final response = await http.get(Uri.parse('$baseUrl/orders/$orderId'));

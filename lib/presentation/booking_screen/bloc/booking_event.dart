@@ -65,6 +65,23 @@ class UpdateReturnDateEvent extends BookingEvent {
   List<Object?> get props => [formattedDate];
 }
 
+class FetchBookingQuotaEvent extends BookingEvent {
+  final int idGunung;
+  final int jalurId;
+  final String tanggalNaik;
+  final String tanggalTurun;
+
+  FetchBookingQuotaEvent({
+    required this.idGunung,
+    required this.jalurId,
+    required this.tanggalNaik,
+    required this.tanggalTurun,
+  });
+
+  @override
+  List<Object?> get props => [idGunung, jalurId, tanggalNaik, tanggalTurun];
+}
+
 class CreateBookingEvent extends BookingEvent {
   final ModelBooking modelBooking;
 
@@ -110,7 +127,6 @@ class RemoveSelectedMember extends BookingEvent {
   @override
   List<Object?> get props => [memberId];
 }
-
 
 /// Event triggered when the user updates their booking details.
 // class UpdateBookingEvent extends BookingEvent {

@@ -1,19 +1,13 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:another_stepper/dto/stepper_data.dart';
-import 'package:another_stepper/widgets/another_stepper.dart';
 import 'package:intl/intl.dart';
 import 'package:myhiking/api/api_service.dart';
-import 'package:myhiking/models/bookingModel.dart';
 import 'package:myhiking/models/trail_model.dart';
 import 'package:myhiking/presentation/payment_method_screen/payment_method_screen.dart';
 import '../../core/app_export.dart';
 import '../../theme/custom_button_style.dart';
-import '../../widgets/app_bar/appbar_subtitle.dart';
-import '../../widgets/app_bar/custom_app_bar.dart';
 import '../../widgets/custom_outlined_button.dart';
-import '../../widgets/custom_text_form_field.dart';
 import 'bloc/booking_bloc.dart';
 import 'models/booking_model.dart';
 
@@ -161,66 +155,246 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   Widget _buildFormContainer(BuildContext context) {
-    return Container(
-      width: double.maxFinite,
-      padding: EdgeInsets.all(16.h),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16.h),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            spreadRadius: 2.h,
-            blurRadius: 4.h,
-            offset: const Offset(0, 2),
+    return BlocBuilder<BookingBloc, BookingState>(
+      builder: (context, state) {
+        return Container(
+          width: double.maxFinite,
+          padding: EdgeInsets.all(16.h),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16.h),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                spreadRadius: 2.h,
+                blurRadius: 4.h,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-        ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Lengkapi Detail Pesanan",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              SizedBox(height: 16.h),
+              Text(
+                "Tanggal Naik",
+                style: TextStyle(fontSize: 13, color: Colors.black87),
+              ),
+              SizedBox(height: 8.h),
+              _buildBookingDateField(context),
+              SizedBox(height: 16.h),
+              Text(
+                "Tanggal Turun",
+                style: TextStyle(fontSize: 13, color: Colors.black87),
+              ),
+              SizedBox(height: 8.h),
+              _buildReturnDateField(context),
+              SizedBox(height: 4.h),
+              Text(
+                "Tektok: tanggal naik = tanggal turun. Camping: tanggal turun setelah tanggal naik.",
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+              ),
+              SizedBox(height: 14.h),
+              _buildQuotaInfoSection(context, state),
+              SizedBox(height: 16.h),
+              Text(
+                "Tambah Anggota",
+                style: TextStyle(fontSize: 13, color: Colors.black87),
+              ),
+              SizedBox(height: 8.h),
+              _buildMemberIdField(context),
+              SizedBox(height: 8.h),
+              Text(
+                "Max 10 Orang per Booking.",
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildQuotaInfoSection(BuildContext context, BookingState state) {
+    final quota = state.bookingQuotaAvailability;
+    final startDay = quota?.startDay;
+    final hasDate =
+        (state.bookingDateFieldController?.text.isNotEmpty ?? false);
+    final isMultiDay = quota != null && quota.tanggalNaik != quota.tanggalTurun;
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(12.h),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAF9),
+        borderRadius: BorderRadius.circular(12.h),
+        border: Border.all(color: Colors.grey.shade200),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Lengkapi Detail Pesanan",
+            "Info Kuota Pendaki",
             style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
               color: Colors.black87,
             ),
           ),
-          SizedBox(height: 16.h),
+          SizedBox(height: 10.h),
+          if (state.isQuotaLoading)
+            Row(
+              children: [
+                SizedBox(
+                  width: 14.h,
+                  height: 14.h,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: const Color(0xFF1B8A5F),
+                  ),
+                ),
+                SizedBox(width: 8.h),
+                Text(
+                  'Memuat info kuota...',
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
+                ),
+              ],
+            )
+          else if (!hasDate)
+            Text(
+              'Pilih tanggal naik untuk melihat kuota pendaki.',
+              style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+            )
+          else ...[
+            Row(
+              children: [
+                Expanded(
+                  child: _buildQuotaSummaryItem(
+                    label: 'Limit Pendaki Harian',
+                    value: quota?.dailyHikerLimit?.toString() ?? '-',
+                  ),
+                ),
+                SizedBox(width: 10.h),
+                Expanded(
+                  child: _buildQuotaSummaryItem(
+                    label: 'Sisa Slot Tanggal Naik',
+                    value: startDay?.remainingSlots?.toString() ?? '-',
+                  ),
+                ),
+              ],
+            ),
+            if (quota != null && isMultiDay && quota.days.isNotEmpty) ...[
+              SizedBox(height: 10.h),
+              ...quota.days.map((day) => Padding(
+                    padding: EdgeInsets.only(bottom: 6.h),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _formatQuotaDate(day.date),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey.shade700,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          '${day.remainingSlots ?? '-'} slot',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: day.isFull
+                                ? Colors.red.shade700
+                                : Colors.black87,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )),
+            ],
+            if (quota?.hasFullDay == true) ...[
+              SizedBox(height: 6.h),
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.symmetric(horizontal: 10.h, vertical: 8.h),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF1F1),
+                  borderRadius: BorderRadius.circular(8.h),
+                ),
+                child: Text(
+                  'Ada tanggal yang sudah penuh. Silakan pilih tanggal lain.',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.red.shade700,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+            if (state.quotaError.isNotEmpty && quota == null) ...[
+              SizedBox(height: 8.h),
+              Text(
+                'Info kuota belum tersedia.',
+                style: TextStyle(fontSize: 11, color: Colors.red.shade700),
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuotaSummaryItem({
+    required String label,
+    required String value,
+  }) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 10.h, vertical: 10.h),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10.h),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Text(
-            "Tanggal Naik",
-            style: TextStyle(fontSize: 13, color: Colors.black87),
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              color: Colors.grey.shade600,
+            ),
           ),
-          SizedBox(height: 8.h),
-          _buildBookingDateField(context),
-          SizedBox(height: 16.h),
+          SizedBox(height: 6.h),
           Text(
-            "Tanggal Turun",
-            style: TextStyle(fontSize: 13, color: Colors.black87),
-          ),
-          SizedBox(height: 8.h),
-          _buildReturnDateField(context),
-          SizedBox(height: 4.h),
-          Text(
-            "Tektok: tanggal naik = tanggal turun. Camping: tanggal turun setelah tanggal naik.",
-            style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-          ),
-          SizedBox(height: 16.h),
-          Text(
-            "Tambah Anggota",
-            style: TextStyle(fontSize: 13, color: Colors.black87),
-          ),
-          SizedBox(height: 8.h),
-          _buildMemberIdField(context),
-          SizedBox(height: 8.h),
-          Text(
-            "Max 10 Orang per Booking.",
-            style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+            value,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF1B8A5F),
+            ),
           ),
         ],
       ),
     );
+  }
+
+  String _formatQuotaDate(String rawDate) {
+    final parsed = DateTime.tryParse(rawDate);
+    if (parsed == null) {
+      return rawDate;
+    }
+
+    return DateFormat('dd MMM yyyy', 'id_ID').format(parsed);
   }
 
   Widget _buildBottomBar(
@@ -939,10 +1113,12 @@ class _BookingScreenState extends State<BookingScreen> {
         return dateFormat.format(dateTime);
       }
 
-      final formattedDate =
-          bookingDate != null && bookingDate.isNotEmpty ? formatTanggal(bookingDate) : null;
-      final formattedReturnDate =
-          returnDate != null && returnDate.isNotEmpty ? formatTanggal(returnDate) : null;
+      final formattedDate = bookingDate != null && bookingDate.isNotEmpty
+          ? formatTanggal(bookingDate)
+          : null;
+      final formattedReturnDate = returnDate != null && returnDate.isNotEmpty
+          ? formatTanggal(returnDate)
+          : null;
 
       List<int>? anggotaIds = selectedMembers.isNotEmpty
           ? selectedMembers.map((m) => m.id).toList()
@@ -955,7 +1131,9 @@ class _BookingScreenState extends State<BookingScreen> {
           userIdInt == null ||
           biaya == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Harap lengkapi data pemesanan, termasuk tanggal naik dan tanggal turun.')),
+          const SnackBar(
+              content: Text(
+                  'Harap lengkapi data pemesanan, termasuk tanggal naik dan tanggal turun.')),
         );
         return;
       }
@@ -965,7 +1143,8 @@ class _BookingScreenState extends State<BookingScreen> {
       final dtTurun = DateTime.parse(formattedReturnDate);
       if (dtTurun.isBefore(dtNaik)) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Tanggal turun tidak boleh sebelum tanggal naik.')),
+          const SnackBar(
+              content: Text('Tanggal turun tidak boleh sebelum tanggal naik.')),
         );
         return;
       }
