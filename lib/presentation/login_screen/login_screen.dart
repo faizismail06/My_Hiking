@@ -315,10 +315,7 @@ class LoginScreen extends StatelessWidget {
       style: ButtonStyle(
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         padding: WidgetStateProperty.all(
-          EdgeInsets.symmetric(
-            horizontal: compact ? 10.h : 12.h,
-            vertical: compact ? 4.h : 6.h,
-          ),
+          EdgeInsets.symmetric(vertical: compact ? 2.h : 0),
         ),
         minimumSize: WidgetStateProperty.all(Size.zero),
         visualDensity: VisualDensity.compact,
@@ -328,11 +325,7 @@ class LoginScreen extends StatelessWidget {
           if (states.contains(WidgetState.pressed)) {
             return appTheme.teal900;
           }
-          if (states.contains(WidgetState.hovered) ||
-              states.contains(WidgetState.focused)) {
-            return theme.colorScheme.primary;
-          }
-          return compact ? appTheme.gray60001 : theme.colorScheme.primary;
+          return theme.colorScheme.primary;
         }),
         textStyle: WidgetStateProperty.resolveWith((states) {
           final isActive = states.contains(WidgetState.hovered) ||
@@ -342,66 +335,28 @@ class LoginScreen extends StatelessWidget {
               ? CustomTextStyles.labelMediumGray60001
               : CustomTextStyles.labelMedium10;
           return baseStyle.copyWith(
+            color: theme.colorScheme.primary,
             fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
             decoration:
                 isActive ? TextDecoration.underline : TextDecoration.none,
             decorationColor: theme.colorScheme.primary,
           );
         }),
-        backgroundColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.pressed)) {
-            return appTheme.blueGray50;
-          }
-          if (states.contains(WidgetState.hovered) ||
-              states.contains(WidgetState.focused)) {
-            return appTheme.blueGray50.withValues(alpha: 0.9);
-          }
-          return compact
-              ? Colors.transparent
-              : theme.colorScheme.primary.withValues(alpha: 0.08);
-        }),
+        backgroundColor: WidgetStateProperty.all(Colors.transparent),
         overlayColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.pressed)) {
-            return theme.colorScheme.primary.withValues(alpha: 0.14);
+            return theme.colorScheme.primary.withValues(alpha: 0.12);
           }
           if (states.contains(WidgetState.hovered)) {
-            return theme.colorScheme.primary.withValues(alpha: 0.06);
+            return theme.colorScheme.primary.withValues(alpha: 0.05);
           }
           return null;
         }),
-        side: WidgetStateProperty.resolveWith((states) {
-          final isActive = states.contains(WidgetState.hovered) ||
-              states.contains(WidgetState.focused) ||
-              states.contains(WidgetState.pressed);
-          return BorderSide(
-            color: compact
-                ? (isActive
-                    ? theme.colorScheme.primary.withValues(alpha: 0.22)
-                    : Colors.transparent)
-                : theme.colorScheme.primary.withValues(
-                    alpha: isActive ? 0.38 : 0.2,
-                  ),
-          );
-        }),
-        shape: WidgetStateProperty.all(
-          RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(999.h),
-          ),
-        ),
+        side: WidgetStateProperty.all(
+            const BorderSide(color: Colors.transparent)),
+        shape: WidgetStateProperty.all(const RoundedRectangleBorder()),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(label),
-          if (!compact) ...[
-            SizedBox(width: 4.h),
-            Icon(
-              Icons.arrow_outward_rounded,
-              size: 12.h,
-            ),
-          ],
-        ],
-      ),
+      child: Text(label),
     );
   }
 

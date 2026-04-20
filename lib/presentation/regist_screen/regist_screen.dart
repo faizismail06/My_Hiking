@@ -13,7 +13,6 @@ import 'bloc/regist_bloc.dart';
 import 'models/regist_model.dart';
 import 'package:http/http.dart' as http;
 
-
 class RegistScreen extends StatelessWidget {
   RegistScreen({super.key});
 
@@ -42,15 +41,16 @@ class RegistScreen extends StatelessWidget {
                 child: SingleChildScrollView(
                   child: Container(
                     width: double.maxFinite,
-                    padding: EdgeInsets.only(left: 24.h, top: 56.h, right: 24.h),
+                    padding:
+                        EdgeInsets.only(left: 24.h, top: 24.h, right: 24.h),
                     child: Column(
                       children: [
                         Column(
                           children: [
                             CustomImageView(
                               imagePath: ImageConstant.imgNn,
-                              height: 54.h,
-                              width: 68.h,
+                              height: 48.h,
+                              width: 62.h,
                             ),
                             Text(
                               "lbl_myhiking".tr,
@@ -62,12 +62,12 @@ class RegistScreen extends StatelessWidget {
                             ),
                           ],
                         ),
-                        SizedBox(height: 70.h),
+                        SizedBox(height: 38.h),
                         Text(
                           "lbl_registrasi".tr,
                           style: CustomTextStyles.titleLargeBluegray800,
                         ),
-                        SizedBox(height: 54.h),
+                        SizedBox(height: 34.h),
                         _buildFullNameSection(context),
                         SizedBox(height: 14.h),
                         _buildEmailSection(context),
@@ -75,7 +75,7 @@ class RegistScreen extends StatelessWidget {
                         _buildPasswordSection(context),
                         SizedBox(height: 16.h),
                         _buildConfirmPasswordSection(context),
-                        SizedBox(height: 44.h),
+                        SizedBox(height: 30.h),
                         _buildRegisterButton(context),
                         SizedBox(height: 12.h),
                         _buildGoogleRegisterButton(context),
@@ -250,6 +250,11 @@ class RegistScreen extends StatelessWidget {
     final confirmPassword =
         context.read<RegistBloc>().state.passwordthreeController?.text;
 
+    if ((password ?? '').length < 8) {
+      _showErrorDialog(context, 'Password minimal 8 karakter.');
+      return;
+    }
+
     if (password != confirmPassword) {
       _showErrorDialog(context, 'Password tidak sesuai.');
       return;
@@ -364,8 +369,6 @@ class RegistScreen extends StatelessWidget {
       },
     );
   }
-  
-
 
   /// Full name input field
   Widget _buildEdittextone(BuildContext context) {
@@ -393,61 +396,60 @@ class RegistScreen extends StatelessWidget {
     );
   }
 
-/// Password input field
-Widget _buildPasswordtwo(BuildContext context) {
-  return BlocSelector<RegistBloc, RegistState, bool>(
-    selector: (state) => state.isPassword2Visible ?? false,
-    builder: (context, isVisible) {
-      return BlocSelector<RegistBloc, RegistState, TextEditingController?>(
-        selector: (state) => state.passwordtwoController,
-        builder: (context, passwordtwoController) {
-          return CustomTextFormField(
-            controller: passwordtwoController,
-            obscureText: !isVisible,
-            contentPadding: EdgeInsets.all(12.h),
-            suffix: IconButton(
-              icon: Icon(
-                isVisible ? Icons.visibility : Icons.visibility_off,
-                color: Colors.grey,
+  /// Password input field
+  Widget _buildPasswordtwo(BuildContext context) {
+    return BlocSelector<RegistBloc, RegistState, bool>(
+      selector: (state) => state.isPassword2Visible ?? false,
+      builder: (context, isVisible) {
+        return BlocSelector<RegistBloc, RegistState, TextEditingController?>(
+          selector: (state) => state.passwordtwoController,
+          builder: (context, passwordtwoController) {
+            return CustomTextFormField(
+              controller: passwordtwoController,
+              obscureText: !isVisible,
+              contentPadding: EdgeInsets.all(12.h),
+              suffix: IconButton(
+                icon: Icon(
+                  isVisible ? Icons.visibility : Icons.visibility_off,
+                  color: Colors.grey,
+                ),
+                onPressed: () {
+                  context.read<RegistBloc>().add(TogglePassword2Visibility());
+                },
               ),
-              onPressed: () {
-                context.read<RegistBloc>().add(TogglePassword2Visibility());
-              },
-            ),
-          );
-        },
-      );
-    },
-  );
-}
+            );
+          },
+        );
+      },
+    );
+  }
 
-/// Confirm password input field
-Widget _buildPasswordthree(BuildContext context) {
-  return BlocSelector<RegistBloc, RegistState, bool>(
-    selector: (state) => state.isPassword3Visible ?? false,
-    builder: (context, isVisible) {
-      return BlocSelector<RegistBloc, RegistState, TextEditingController?>(
-        selector: (state) => state.passwordthreeController,
-        builder: (context, passwordthreeController) {
-          return CustomTextFormField(
-            controller: passwordthreeController,
-            textInputAction: TextInputAction.done,
-            obscureText: !isVisible,
-            contentPadding: EdgeInsets.all(12.h),
-            suffix: IconButton(
-              icon: Icon(
-                isVisible ? Icons.visibility : Icons.visibility_off,
-                color: Colors.grey,
+  /// Confirm password input field
+  Widget _buildPasswordthree(BuildContext context) {
+    return BlocSelector<RegistBloc, RegistState, bool>(
+      selector: (state) => state.isPassword3Visible ?? false,
+      builder: (context, isVisible) {
+        return BlocSelector<RegistBloc, RegistState, TextEditingController?>(
+          selector: (state) => state.passwordthreeController,
+          builder: (context, passwordthreeController) {
+            return CustomTextFormField(
+              controller: passwordthreeController,
+              textInputAction: TextInputAction.done,
+              obscureText: !isVisible,
+              contentPadding: EdgeInsets.all(12.h),
+              suffix: IconButton(
+                icon: Icon(
+                  isVisible ? Icons.visibility : Icons.visibility_off,
+                  color: Colors.grey,
+                ),
+                onPressed: () {
+                  context.read<RegistBloc>().add(TogglePassword3Visibility());
+                },
               ),
-              onPressed: () {
-                context.read<RegistBloc>().add(TogglePassword3Visibility());
-              },
-            ),
-          );
-        },
-      );
-    },
-  );
-}
-
+            );
+          },
+        );
+      },
+    );
+  }
 }
