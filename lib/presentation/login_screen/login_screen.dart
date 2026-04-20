@@ -40,29 +40,29 @@ class LoginScreen extends StatelessWidget {
               width: double.maxFinite,
               padding: EdgeInsets.only(
                 left: 24.h,
-                top: 12.h,
+                top: 6.h,
                 right: 24.h,
               ),
               child: Column(
                 children: [
                   SizedBox(
-                    width: 184.h,
+                    width: 176.h,
                     child: Column(
                       children: [
                         SizedBox(
-                          height: 54.h,
-                          width: 68.h,
+                          height: 48.h,
+                          width: 62.h,
                           child: Stack(
                             alignment: Alignment.center,
                             children: [
                               CustomImageView(
                                 imagePath: ImageConstant.imgNn,
-                                height: 52.h,
+                                height: 46.h,
                                 width: double.maxFinite,
                               ),
                               CustomImageView(
                                 imagePath: ImageConstant.imgNn,
-                                height: 54.h,
+                                height: 48.h,
                                 width: double.maxFinite,
                               )
                             ],
@@ -79,25 +79,24 @@ class LoginScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-                  SizedBox(height: 74.h),
+                  SizedBox(height: 34.h),
                   CustomImageView(
                     imagePath: ImageConstant.img37081,
-                    height: 192.h,
+                    height: 172.h,
                     width: double.maxFinite,
                     margin: EdgeInsets.only(
                       left: 4.h,
                       right: 18.h,
                     ),
                   ),
-                  SizedBox(height: 20.h),
+                  SizedBox(height: 12.h),
+                  SizedBox(height: 7.h),
                   Align(
-                    alignment: Alignment.centerLeft,
-                    child: Padding(
-                      padding: EdgeInsets.only(left: 10.h),
-                      child: Text(
-                        "LOGIN".tr,
-                        style: CustomTextStyles.titleMediumSemiBold,
-                      ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      "LOGIN".tr,
+                      style: CustomTextStyles.titleMediumSemiBold,
+                      textAlign: TextAlign.center,
                     ),
                   ),
                   SizedBox(height: 10.h),
@@ -117,20 +116,17 @@ class LoginScreen extends StatelessWidget {
                   SizedBox(height: 10.h),
                   Align(
                     alignment: Alignment.centerRight,
-                    child: GestureDetector(
-                      onTap: () {
-                        onTapTxtLupapassword(context);
-                      },
-                      child: Padding(
-                        padding: EdgeInsets.only(right: 6.h),
-                        child: Text(
-                          "lbl_lupa_password".tr,
-                          style: CustomTextStyles.labelMediumGray60001,
-                        ),
+                    child: Padding(
+                      padding: EdgeInsets.only(right: 6.h),
+                      child: _buildInlineActionButton(
+                        context,
+                        label: "lbl_lupa_password".tr,
+                        onPressed: () => onTapTxtLupapassword(context),
+                        compact: true,
                       ),
                     ),
                   ),
-                  SizedBox(height: 20.h),
+                  SizedBox(height: 14.h),
                   CustomElevatedButton(
                     text: "lbl_masuk".tr,
                     margin: EdgeInsets.symmetric(horizontal: 66.h),
@@ -138,7 +134,7 @@ class LoginScreen extends StatelessWidget {
                       onTapMasuk(context);
                     },
                   ),
-                  SizedBox(height: 12.h),
+                  SizedBox(height: 8.h),
                 ],
               ),
             ),
@@ -287,29 +283,123 @@ class LoginScreen extends StatelessWidget {
   /// Section Widget
   Widget _buildRegistrationPrompt(BuildContext context) {
     return SizedBox(
-      height: 28.h,
+      height: 44.h,
       width: double.maxFinite,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Padding(
-            padding: EdgeInsets.only(bottom: 12.h),
-            child: Text(
-              "msg_belum_punya_akun".tr,
-              style: CustomTextStyles.labelMediumGray60001,
-            ),
+          Text(
+            "msg_belum_punya_akun".tr,
+            style: CustomTextStyles.labelMediumGray60001,
           ),
           SizedBox(width: 2.h),
-          GestureDetector(
-            onTap: () {
-              onTapTxtRegistrasidi(context);
-            },
-            child: Text(
-              "msg_registrasi_di_sini".tr,
-              style: CustomTextStyles.labelMedium10,
+          _buildInlineActionButton(
+            context,
+            label: "msg_registrasi_di_sini".tr,
+            onPressed: () => onTapTxtRegistrasidi(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInlineActionButton(
+    BuildContext context, {
+    required String label,
+    required VoidCallback onPressed,
+    bool compact = false,
+  }) {
+    return TextButton(
+      onPressed: onPressed,
+      style: ButtonStyle(
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        padding: WidgetStateProperty.all(
+          EdgeInsets.symmetric(
+            horizontal: compact ? 10.h : 12.h,
+            vertical: compact ? 4.h : 6.h,
+          ),
+        ),
+        minimumSize: WidgetStateProperty.all(Size.zero),
+        visualDensity: VisualDensity.compact,
+        animationDuration: const Duration(milliseconds: 180),
+        splashFactory: InkRipple.splashFactory,
+        foregroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.pressed)) {
+            return appTheme.teal900;
+          }
+          if (states.contains(WidgetState.hovered) ||
+              states.contains(WidgetState.focused)) {
+            return theme.colorScheme.primary;
+          }
+          return compact ? appTheme.gray60001 : theme.colorScheme.primary;
+        }),
+        textStyle: WidgetStateProperty.resolveWith((states) {
+          final isActive = states.contains(WidgetState.hovered) ||
+              states.contains(WidgetState.focused) ||
+              states.contains(WidgetState.pressed);
+          final baseStyle = compact
+              ? CustomTextStyles.labelMediumGray60001
+              : CustomTextStyles.labelMedium10;
+          return baseStyle.copyWith(
+            fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
+            decoration:
+                isActive ? TextDecoration.underline : TextDecoration.none,
+            decorationColor: theme.colorScheme.primary,
+          );
+        }),
+        backgroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.pressed)) {
+            return appTheme.blueGray50;
+          }
+          if (states.contains(WidgetState.hovered) ||
+              states.contains(WidgetState.focused)) {
+            return appTheme.blueGray50.withValues(alpha: 0.9);
+          }
+          return compact
+              ? Colors.transparent
+              : theme.colorScheme.primary.withValues(alpha: 0.08);
+        }),
+        overlayColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.pressed)) {
+            return theme.colorScheme.primary.withValues(alpha: 0.14);
+          }
+          if (states.contains(WidgetState.hovered)) {
+            return theme.colorScheme.primary.withValues(alpha: 0.06);
+          }
+          return null;
+        }),
+        side: WidgetStateProperty.resolveWith((states) {
+          final isActive = states.contains(WidgetState.hovered) ||
+              states.contains(WidgetState.focused) ||
+              states.contains(WidgetState.pressed);
+          return BorderSide(
+            color: compact
+                ? (isActive
+                    ? theme.colorScheme.primary.withValues(alpha: 0.22)
+                    : Colors.transparent)
+                : theme.colorScheme.primary.withValues(
+                    alpha: isActive ? 0.38 : 0.2,
+                  ),
+          );
+        }),
+        shape: WidgetStateProperty.all(
+          RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(999.h),
+          ),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label),
+          if (!compact) ...[
+            SizedBox(width: 4.h),
+            Icon(
+              Icons.arrow_outward_rounded,
+              size: 12.h,
             ),
-          )
+          ],
         ],
       ),
     );
