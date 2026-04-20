@@ -530,7 +530,7 @@ class LoginScreen extends StatelessWidget {
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: 34.h),
                       child: Text(
-                        'Menyiapkan rekomendasi jalur DSS, mohon tunggu...',
+                        'Mohon tunggu...',
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodyMedium,
                       ),
