@@ -259,7 +259,7 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
     return Container(
       decoration: const BoxDecoration(
         image: DecorationImage(
-          image: AssetImage('images/backgroundcuaca.jpeg'),
+          image: AssetImage('assets/images/backgroundcuaca.jpeg'),
           fit: BoxFit.cover,
         ),
       ),
@@ -296,7 +296,7 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
       ),
       decoration: const BoxDecoration(
         image: DecorationImage(
-          image: AssetImage('images/headercuaca.jpeg'),
+          image: AssetImage('assets/images/headercuaca.jpeg'),
           fit: BoxFit.cover,
         ),
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),

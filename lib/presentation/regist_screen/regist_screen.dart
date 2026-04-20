@@ -243,36 +243,44 @@ class RegistScreen extends StatelessWidget {
 
   /// Handle register button tap
   void onTapRegisterButton(BuildContext context) async {
-  final name = context.read<RegistBloc>().state.edittextoneController?.text;
-  final email = context.read<RegistBloc>().state.emailtwoController?.text;
-  final password = context.read<RegistBloc>().state.passwordtwoController?.text;
-  final confirmPassword = context.read<RegistBloc>().state.passwordthreeController?.text;
+    final name = context.read<RegistBloc>().state.edittextoneController?.text;
+    final email = context.read<RegistBloc>().state.emailtwoController?.text;
+    final password =
+        context.read<RegistBloc>().state.passwordtwoController?.text;
+    final confirmPassword =
+        context.read<RegistBloc>().state.passwordthreeController?.text;
 
-  if (password == confirmPassword) {
-    // Kirim data ke server
-    final response = await http.post(
-      Uri.parse('http://127.0.0.1:8000/api/register'),
-      headers: <String, String>{
-        'Content-Type': 'application/json; charset=UTF-8',
-      },
-      body: jsonEncode(<String, String>{
-        'name': name ?? '',
-        'email': email ?? '',
-        'password': password ?? '',
-        'password_confirmation': confirmPassword ?? '', 
-      }),
-    );
+    if (password != confirmPassword) {
+      _showErrorDialog(context, 'Password tidak sesuai.');
+      return;
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/register'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: jsonEncode(<String, String>{
+          'name': name ?? '',
+          'email': email ?? '',
+          'password': password ?? '',
+          'password_confirmation': confirmPassword ?? '',
+        }),
+      );
 
       if (response.statusCode == 201) {
-        // Registrasi berhasil
         NavigatorService.pushNamed(AppRoutes.loginScreen);
       } else {
-        // Tampilkan pesan error
-        print('Failed to register: ${response.body}');
+        _showErrorDialog(context, 'Registrasi gagal: ${response.body}');
       }
-    } else {
-      // Tampilkan pesan password tidak sesuai
-      print('Password tidak sesuai');
+    } on SocketException {
+      _showErrorDialog(
+        context,
+        'Tidak bisa terhubung ke server. Pastikan backend aktif dan URL API benar.',
+      );
+    } catch (e) {
+      _showErrorDialog(context, 'Terjadi kesalahan: $e');
     }
   }
 
