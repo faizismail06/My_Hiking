@@ -67,7 +67,12 @@ class _RiwayatTransaksiPageState extends State<RiwayatTransaksiPage> {
           elevation: 0,
           leading: IconButton(
             icon: Icon(Icons.arrow_back, color: const Color(0xFF1A1A2E)),
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => NavigatorService.pushNamedAndRemoveUntil(
+              AppRoutes.homeScreen,
+              arguments: {
+                'initialInnerRoute': AppRoutes.profileScreen,
+              },
+            ),
           ),
           title: Text(
             'Riwayat Transaksi',

@@ -81,10 +81,22 @@ class PaymentSuccessPage extends StatelessWidget {
                         height: 50.h,
                         child: ElevatedButton(
                           onPressed: () {
+                            final parsedOrderId = int.tryParse(orderId);
+                            if (parsedOrderId == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Order ID tidak valid.'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
+
                             Navigator.pushNamedAndRemoveUntil(
                               context,
-                              AppRoutes.tiketSayaPage,
+                              AppRoutes.ticketScreen,
                               (route) => false,
+                              arguments: parsedOrderId,
                             );
                           },
                           style: ElevatedButton.styleFrom(

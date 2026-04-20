@@ -9,16 +9,37 @@ import 'models/home_model.dart';
 
 // ignore_for_file: must_be_immutable
 class HomeScreen extends StatelessWidget {
-  HomeScreen({super.key});
+  HomeScreen({
+    super.key,
+    String? initialInnerRoute,
+  }) : initialInnerRoute = _normalizeInitialInnerRoute(initialInnerRoute);
 
+  final String initialInnerRoute;
   GlobalKey<NavigatorState> navigatorKey = GlobalKey();
 
+  static String _normalizeInitialInnerRoute(String? route) {
+    switch (route) {
+      case AppRoutes.tiketSayaPage:
+      case AppRoutes.profileScreen:
+      case AppRoutes.homeInitialPage:
+        return route!;
+      default:
+        return AppRoutes.homeInitialPage;
+    }
+  }
+
   static Widget builder(BuildContext context) {
+    final args = ModalRoute.of(context)?.settings.arguments;
+    String? initialInnerRoute;
+    if (args is Map<String, dynamic>) {
+      initialInnerRoute = args['initialInnerRoute'] as String?;
+    }
+
     return BlocProvider<HomeBloc>(
       create: (context) => HomeBloc(
         HomeState(homeModelObj: const HomeModel()),
       )..add(HomeInitialEvent()),
-      child: HomeScreen(),
+      child: HomeScreen(initialInnerRoute: initialInnerRoute),
     );
   }
 
@@ -39,7 +60,7 @@ class HomeScreen extends StatelessWidget {
               Expanded(
                 child: Navigator(
                   key: navigatorKey,
-                  initialRoute: AppRoutes.homeInitialPage,
+                  initialRoute: initialInnerRoute,
                   onGenerateRoute: (routeSetting) => PageRouteBuilder(
                     pageBuilder: (ctx, ani, ani1) =>
                         getCurrentPage(context, routeSetting.name!),
@@ -124,9 +145,16 @@ class HomeScreen extends StatelessWidget {
 
   /// Section Widget
   Widget _buildBottomNavigation(BuildContext context) {
+    final initialBottomIndex = switch (initialInnerRoute) {
+      AppRoutes.tiketSayaPage => 1,
+      AppRoutes.profileScreen => 2,
+      _ => 0,
+    };
+
     return SizedBox(
       width: double.maxFinite,
       child: CustomBottomBar(
+        initialIndex: initialBottomIndex,
         onChanged: (BottomBarEnum type) {
           Navigator.pushNamed(
             navigatorKey.currentContext!,
