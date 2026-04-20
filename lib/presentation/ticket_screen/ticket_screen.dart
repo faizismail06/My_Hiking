@@ -101,11 +101,16 @@ class _TicketScreenState extends State<TicketScreen> {
         } else if (state is TicketLoadedState) {
           final ticket = state.ticketModel;
           return SafeArea(
-            child: Scaffold(
-              body: Stack(
-                children: [
-                  // Latar belakang tetap
-                  _buildIconArrowColumn(context),
+            child: WillPopScope(
+              onWillPop: () async {
+                onTapIconarrowone(context);
+                return false;
+              },
+              child: Scaffold(
+                body: Stack(
+                  children: [
+                    // Latar belakang tetap
+                    _buildIconArrowColumn(context),
 
                   // Konten yang bisa digulir
                   SingleChildScrollView(
@@ -375,33 +380,34 @@ class _TicketScreenState extends State<TicketScreen> {
                       ),
                     ),
                   ),
-                  Positioned(
-                    top: 35.h,
-                    left: 16.h,
-                    child: GestureDetector(
-                      onTap: () => onTapIconarrowone(context),
-                      child: Container(
-                        padding: EdgeInsets.all(8.h),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black26,
-                              blurRadius: 4,
-                              offset: Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Icon(
-                          Icons.arrow_back,
-                          size: 24.h,
-                          color: Colors.black,
+                    Positioned(
+                      top: 35.h,
+                      left: 16.h,
+                      child: GestureDetector(
+                        onTap: () => onTapIconarrowone(context),
+                        child: Container(
+                          padding: EdgeInsets.all(8.h),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black26,
+                                blurRadius: 4,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            Icons.arrow_back,
+                            size: 24.h,
+                            color: Colors.black,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           );
@@ -440,8 +446,11 @@ class _TicketScreenState extends State<TicketScreen> {
   }
 
   onTapIconarrowone(BuildContext context) {
-    NavigatorService.pushNamed(
+    NavigatorService.pushNamedAndRemoveUntil(
       AppRoutes.homeScreen,
+      arguments: {
+        'initialInnerRoute': AppRoutes.tiketSayaPage,
+      },
     );
   }
 }

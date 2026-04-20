@@ -242,7 +242,7 @@ class OrderCancelledScreen extends StatelessWidget {
 
   /// Navigates to the riwayatTransaksiPage when the action is triggered.
   onTapLihatRiwayat(BuildContext context) {
-    NavigatorService.pushNamedAndRemoveUntil(
+    NavigatorService.pushNamed(
       AppRoutes.riwayatTransaksiPage,
     );
   }
