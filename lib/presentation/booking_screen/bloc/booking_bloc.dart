@@ -107,9 +107,17 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
 
   Future<void> _onUpdateBookingDate(
       UpdateBookingDateEvent event, Emitter<BookingState> emit) async {
+    final currentReturnDate =
+        state.returnDateFieldController?.text.trim() ?? '';
+    final shouldSyncReturnDate = currentReturnDate.isEmpty ||
+        _isBeforeDate(currentReturnDate, event.formattedDate);
+
     final nextState = state.copyWith(
       bookingDateFieldController:
           TextEditingController(text: event.formattedDate),
+      returnDateFieldController: shouldSyncReturnDate
+          ? TextEditingController(text: event.formattedDate)
+          : state.returnDateFieldController,
     );
     emit(nextState);
     await _triggerQuotaFetchIfPossible(nextState, emit);
@@ -127,7 +135,9 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
 
   Future<void> _onFetchBookingQuota(
       FetchBookingQuotaEvent event, Emitter<BookingState> emit) async {
-    emit(state.copyWith(
+    final baseState = state;
+
+    emit(baseState.copyWith(
       isQuotaLoading: true,
       quotaError: '',
     ));
@@ -140,7 +150,7 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
         tanggalTurun: event.tanggalTurun,
       );
 
-      emit(state.copyWith(
+      emit(baseState.copyWith(
         isQuotaLoading: false,
         quotaError: '',
         bookingQuotaAvailability: BookingQuotaAvailability.fromJson(
@@ -150,7 +160,7 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
         ),
       ));
     } catch (e) {
-      emit(state.copyWith(
+      emit(baseState.copyWith(
         isQuotaLoading: false,
         quotaError: e.toString(),
         bookingQuotaAvailability: null,
@@ -222,5 +232,15 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
       ),
       emit,
     );
+  }
+
+  bool _isBeforeDate(String rawDate, String compareToRawDate) {
+    final raw = DateTime.tryParse(rawDate);
+    final compareTo = DateTime.tryParse(compareToRawDate);
+    if (raw == null || compareTo == null) {
+      return false;
+    }
+
+    return raw.isBefore(compareTo);
   }
 }

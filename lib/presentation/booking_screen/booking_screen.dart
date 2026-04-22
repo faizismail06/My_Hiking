@@ -1249,6 +1249,7 @@ class _BookingScreenState extends State<BookingScreen> {
 
     DateTime? pickedDate = await showDatePicker(
       context: context,
+      useRootNavigator: false,
       initialDate: currentDate,
       firstDate: currentDate,
       lastDate: DateTime(
@@ -1282,6 +1283,7 @@ class _BookingScreenState extends State<BookingScreen> {
 
     DateTime? pickedDate = await showDatePicker(
       context: context,
+      useRootNavigator: false,
       initialDate: initialDate,
       firstDate: firstDate,
       lastDate: DateTime(
