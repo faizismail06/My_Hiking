@@ -7,8 +7,6 @@ import 'package:myhiking/presentation/profile_screen/bloc/profile_bloc.dart';
 import '../../core/app_export.dart';
 import '../../widgets/custom_icon_button.dart';
 
-final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -472,6 +470,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           create: (context) => DataProfileBloc(apiService: ApiService()),
           child: DataProfileScreen(
             userId: userId, // Use widget to access jalurId
+            redirectToHomeOnSave: false,
           ),
         ),
       ),
@@ -485,7 +484,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void onLogout(BuildContext context) {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      useRootNavigator: false,
+      builder: (BuildContext dialogContext) {
         return AlertDialog(
           title: Text(
             "Keluar dari akun Anda?",
@@ -494,14 +494,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(); // Tutup pop-up tanpa keluar
+                Navigator.of(dialogContext).pop(); // Tutup pop-up tanpa keluar
               },
               child: Text("Batalkan"),
             ),
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(); // Menutup pop-up
-                Navigator.of(context).pushNamedAndRemoveUntil(
+                Navigator.of(dialogContext).pop(); // Menutup pop-up
+                if (!mounted) {
+                  return;
+                }
+                Navigator.of(context, rootNavigator: true)
+                    .pushNamedAndRemoveUntil(
                     AppRoutes.loginScreen,
                     (route) =>
                         false); // Menuju ke halaman login dan menghapus stack

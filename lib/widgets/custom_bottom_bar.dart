@@ -45,6 +45,18 @@ class CustomBottomBarState extends State<CustomBottomBar> {
   }
 
   @override
+  void didUpdateWidget(covariant CustomBottomBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final nextIndex =
+        widget.initialIndex.clamp(0, bottomMenuList.length - 1).toInt();
+    if (nextIndex != selectedIndex) {
+      setState(() {
+        selectedIndex = nextIndex;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Container(
       height: 68.h,

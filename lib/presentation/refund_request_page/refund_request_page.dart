@@ -46,6 +46,12 @@ class _RefundRequestPageState extends State<RefundRequestPage> {
     'Other'
   ];
 
+  bool get _isRefundDisabledByGuard {
+    final message = (_previewError ?? '').toLowerCase();
+    return message.contains('tidak diizinkan') &&
+        message.contains('penjaga gunung');
+  }
+
   @override
   void initState() {
     super.initState();
@@ -92,7 +98,52 @@ class _RefundRequestPageState extends State<RefundRequestPage> {
     return null;
   }
 
+  Future<void> _submitDirectCancellation() async {
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    final result = await ApiService().cancelOrder(widget.orderId);
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = false;
+    });
+
+    if (result['success'] == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pesanan berhasil dibatalkan. Dana tidak dapat dikembalikan.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil(
+        AppRoutes.orderCancelledScreen,
+        (route) => false,
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          result['message']?.toString() ?? 'Gagal membatalkan pesanan.',
+        ),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+
   Future<void> _submitRefundRequest() async {
+    if (_isRefundDisabledByGuard) {
+      await _submitDirectCancellation();
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -240,26 +291,43 @@ class _RefundRequestPageState extends State<RefundRequestPage> {
     }
 
     if (_previewError != null) {
+      final isRefundDisabledByGuard = _isRefundDisabledByGuard;
+
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.red.shade50,
+          color: isRefundDisabledByGuard
+              ? Colors.orange.shade50
+              : Colors.red.shade50,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.red.shade200),
+          border: Border.all(
+            color: isRefundDisabledByGuard
+                ? Colors.orange.shade200
+                : Colors.red.shade200,
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              _previewError!,
-              style: TextStyle(color: Colors.red.shade800),
+              isRefundDisabledByGuard
+                  ? 'Peringatan! Jika tiket ini dibatalkan, biaya yang sudah dibayarkan tidak dapat dikembalikan.'
+                  : _previewError!,
+              style: TextStyle(
+                color: isRefundDisabledByGuard
+                    ? Colors.orange.shade900
+                    : Colors.red.shade800,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-            const SizedBox(height: 10),
-            OutlinedButton(
-              onPressed: _loadRefundPreview,
-              child: const Text('Coba lagi'),
-            ),
+            if (!isRefundDisabledByGuard) ...[
+              const SizedBox(height: 10),
+              OutlinedButton(
+                onPressed: _loadRefundPreview,
+                child: const Text('Coba lagi'),
+              ),
+            ],
           ],
         ),
       );
@@ -561,93 +629,95 @@ class _RefundRequestPageState extends State<RefundRequestPage> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Refund Method Header Container
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.black45),
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(8),
-                        topRight: Radius.circular(8),
+                  if (!_isRefundDisabledByGuard) ...[
+                    // Refund Method Header Container
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.black45),
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(8),
+                          topRight: Radius.circular(8),
+                        ),
+                      ),
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Positioned(
+                            top: -24,
+                            left: 4,
+                            child: Container(
+                              color: const Color(0xFFFBFCFC),
+                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                              child: const Text('Refund method',
+                                  style: TextStyle(color: Colors.black87)),
+                            ),
+                          ),
+                          DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: _selectedMethod,
+                              isExpanded: true,
+                              isDense: true,
+                              icon: const Icon(Icons.arrow_drop_down,
+                                  color: Colors.black87),
+                              items: const [
+                                DropdownMenuItem(
+                                  value: 'Bank Transfer',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.account_balance,
+                                          color: Colors.black87),
+                                      SizedBox(width: 10),
+                                      Text('Bank Transfer',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.w600)),
+                                    ],
+                                  ),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'DANA',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.account_balance_wallet,
+                                          color: Colors.black87),
+                                      SizedBox(width: 10),
+                                      Text('DANA',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.w600)),
+                                    ],
+                                  ),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'GoPay',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.account_balance_wallet,
+                                          color: Colors.black87),
+                                      SizedBox(width: 10),
+                                      Text('GoPay',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.w600)),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                              onChanged: (value) {
+                                if (value != null) {
+                                  setState(() {
+                                    _selectedMethod = value;
+                                  });
+                                }
+                              },
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        Positioned(
-                          top: -24,
-                          left: 4,
-                          child: Container(
-                            color: const Color(0xFFFBFCFC),
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            child: const Text('Refund method',
-                                style: TextStyle(color: Colors.black87)),
-                          ),
-                        ),
-                        DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
-                            value: _selectedMethod,
-                            isExpanded: true,
-                            isDense: true,
-                            icon: const Icon(Icons.arrow_drop_down,
-                                color: Colors.black87),
-                            items: const [
-                              DropdownMenuItem(
-                                value: 'Bank Transfer',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.account_balance,
-                                        color: Colors.black87),
-                                    SizedBox(width: 10),
-                                    Text('Bank Transfer',
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.w600)),
-                                  ],
-                                ),
-                              ),
-                              DropdownMenuItem(
-                                value: 'DANA',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.account_balance_wallet,
-                                        color: Colors.black87),
-                                    SizedBox(width: 10),
-                                    Text('DANA',
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.w600)),
-                                  ],
-                                ),
-                              ),
-                              DropdownMenuItem(
-                                value: 'GoPay',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.account_balance_wallet,
-                                        color: Colors.black87),
-                                    SizedBox(width: 10),
-                                    Text('GoPay',
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.w600)),
-                                  ],
-                                ),
-                              ),
-                            ],
-                            onChanged: (value) {
-                              if (value != null) {
-                                setState(() {
-                                  _selectedMethod = value;
-                                });
-                              }
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  _buildDynamicFields(),
-                  const SizedBox(height: 24),
+                    _buildDynamicFields(),
+                    const SizedBox(height: 24),
+                  ],
                 ],
               ),
             ),
@@ -682,8 +752,10 @@ class _RefundRequestPageState extends State<RefundRequestPage> {
                       color: Colors.white,
                     ),
                   )
-                : const Text(
-                    'SUBMIT REFUND REQUEST',
+                : Text(
+                    _isRefundDisabledByGuard
+                        ? 'SUBMIT REQUEST'
+                        : 'SUBMIT REFUND REQUEST',
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,

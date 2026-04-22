@@ -8,14 +8,13 @@ import 'bloc/home_bloc.dart';
 import 'models/home_model.dart';
 
 // ignore_for_file: must_be_immutable
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   HomeScreen({
     super.key,
     String? initialInnerRoute,
   }) : initialInnerRoute = _normalizeInitialInnerRoute(initialInnerRoute);
 
   final String initialInnerRoute;
-  GlobalKey<NavigatorState> navigatorKey = GlobalKey();
 
   static String _normalizeInitialInnerRoute(String? route) {
     switch (route) {
@@ -44,6 +43,49 @@ class HomeScreen extends StatelessWidget {
   }
 
   @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  late String _currentInnerRoute;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentInnerRoute = widget.initialInnerRoute;
+  }
+
+  void _navigateToTab(BottomBarEnum type) {
+    final targetRoute = _getCurrentRoute(type);
+    if (_currentInnerRoute == targetRoute) {
+      return;
+    }
+
+    setState(() {
+      _currentInnerRoute = targetRoute;
+    });
+  }
+
+  int _resolveBottomIndex() {
+    return switch (_currentInnerRoute) {
+      AppRoutes.tiketSayaPage => 1,
+      AppRoutes.profileScreen => 2,
+      _ => 0,
+    };
+  }
+
+  String _getCurrentRoute(BottomBarEnum type) {
+    switch (type) {
+      case BottomBarEnum.Favorite:
+        return AppRoutes.homeInitialPage;
+      case BottomBarEnum.Iconmap:
+        return AppRoutes.tiketSayaPage;
+      case BottomBarEnum.Iconprofile:
+        return AppRoutes.profileScreen;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: Scaffold(
@@ -58,19 +100,12 @@ class HomeScreen extends StatelessWidget {
           child: Column(
             children: [
               Expanded(
-                child: Navigator(
-                  key: navigatorKey,
-                  initialRoute: initialInnerRoute,
-                  onGenerateRoute: (routeSetting) => PageRouteBuilder(
-                    pageBuilder: (ctx, ani, ani1) =>
-                        getCurrentPage(context, routeSetting.name!),
-                    transitionDuration: const Duration(
-                        milliseconds:
-                            200), // Sedikit transisi agar lebih smooth
-                    transitionsBuilder:
-                        (context, animation, secondaryAnimation, child) {
-                      return FadeTransition(opacity: animation, child: child);
-                    },
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 180),
+                  child: SizedBox(
+                    key: ValueKey<String>(_currentInnerRoute),
+                    width: double.maxFinite,
+                    child: getCurrentPage(context, _currentInnerRoute),
                   ),
                 ),
               ),
@@ -145,35 +180,13 @@ class HomeScreen extends StatelessWidget {
 
   /// Section Widget
   Widget _buildBottomNavigation(BuildContext context) {
-    final initialBottomIndex = switch (initialInnerRoute) {
-      AppRoutes.tiketSayaPage => 1,
-      AppRoutes.profileScreen => 2,
-      _ => 0,
-    };
-
     return SizedBox(
       width: double.maxFinite,
       child: CustomBottomBar(
-        initialIndex: initialBottomIndex,
-        onChanged: (BottomBarEnum type) {
-          Navigator.pushNamed(
-            navigatorKey.currentContext!,
-            getCurrentRoute(type),
-          );
-        },
+        initialIndex: _resolveBottomIndex(),
+        onChanged: _navigateToTab,
       ),
     );
-  }
-
-  String getCurrentRoute(BottomBarEnum type) {
-    switch (type) {
-      case BottomBarEnum.Favorite:
-        return AppRoutes.homeInitialPage;
-      case BottomBarEnum.Iconmap:
-        return AppRoutes.tiketSayaPage;
-      case BottomBarEnum.Iconprofile:
-        return AppRoutes.profileScreen;
-    }
   }
 
   Widget getCurrentPage(BuildContext context, String currentRoute) {

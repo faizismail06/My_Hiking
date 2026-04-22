@@ -327,7 +327,7 @@ class _TicketActionScreenState extends State<TicketActionScreen> {
         ),
         title: const Text('Batalkan Pesanan?'),
         content: const Text(
-          'Lanjutkan ke formulir pembatalan dan refund?',
+          'Lanjutkan ke formulir pembatalan?',
         ),
         actions: [
           TextButton(
