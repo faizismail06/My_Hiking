@@ -617,8 +617,7 @@ class _TrailScreenState extends State<TrailScreen> {
         final allowed = await _guardBeforeBooking(context);
         if (!allowed) return;
 
-        Navigator.push(
-          context,
+        Navigator.of(context, rootNavigator: true).push(
           MaterialPageRoute(
             builder: (context) => BlocProvider(
               create: (context) => BookingBloc(apiService: ApiService()),
@@ -691,12 +690,14 @@ class _TrailScreenState extends State<TrailScreen> {
         );
 
         if (openProfile == true && context.mounted) {
-          await Navigator.push(
-            context,
+          await Navigator.of(context, rootNavigator: true).push(
             MaterialPageRoute(
               builder: (context) => BlocProvider(
                 create: (context) => DataProfileBloc(apiService: ApiService()),
-                child: DataProfileScreen(userId: currentUserId),
+                child: DataProfileScreen(
+                  userId: currentUserId,
+                  redirectToHomeOnSave: false,
+                ),
               ),
             ),
           );
@@ -726,12 +727,14 @@ class _TrailScreenState extends State<TrailScreen> {
         );
 
         if (goToProfile == true && context.mounted) {
-          await Navigator.push(
-            context,
+          await Navigator.of(context, rootNavigator: true).push(
             MaterialPageRoute(
               builder: (context) => BlocProvider(
                 create: (context) => DataProfileBloc(apiService: ApiService()),
-                child: DataProfileScreen(userId: currentUserId),
+                child: DataProfileScreen(
+                  userId: currentUserId,
+                  redirectToHomeOnSave: false,
+                ),
               ),
             ),
           );
@@ -754,8 +757,8 @@ class _TrailScreenState extends State<TrailScreen> {
         );
 
         if (openOnboarding == true && context.mounted) {
-          final completed = await Navigator.push<bool>(
-            context,
+          final completed = await Navigator.of(context, rootNavigator: true)
+              .push<bool>(
             MaterialPageRoute(
               builder: (context) => const ExperienceOnboardingScreen(),
             ),

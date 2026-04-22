@@ -180,8 +180,7 @@ class _DetailMountainScreenState extends State<DetailMountainScreen> {
             return GestureDetector(
               onTap: () {
                 // Navigasi ke TrailScreen jika ID valid
-                Navigator.push(
-                  context,
+                Navigator.of(context, rootNavigator: true).push(
                   MaterialPageRoute(
                     builder: (context) => BlocProvider(
                       create: (context) => TrailBloc(apiService: ApiService()),
