@@ -1272,11 +1272,14 @@ class ApiService {
     String? description,
   }) async {
     try {
+      final token = await getToken();
       final url = Uri.parse('$baseUrl/panic');
       final response = await http.post(
         url,
         headers: {
+          'Accept': 'application/json',
           'Content-Type': 'application/json',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
         },
         body: jsonEncode({
           'user_id': userId,
@@ -1314,8 +1317,15 @@ class ApiService {
   /// Get panic request status by order ID
   Future<Map<String, dynamic>> getPanicStatus(int orderId) async {
     try {
+      final token = await getToken();
       final url = Uri.parse('$baseUrl/panic/order/$orderId');
-      final response = await http.get(url);
+      final response = await http.get(
+        url,
+        headers: {
+          'Accept': 'application/json',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+      );
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
@@ -1341,11 +1351,14 @@ class ApiService {
   Future<Map<String, dynamic>> cancelPanicRequest(
       int panicId, int userId) async {
     try {
+      final token = await getToken();
       final url = Uri.parse('$baseUrl/panic/$panicId/cancel');
       final response = await http.post(
         url,
         headers: {
+          'Accept': 'application/json',
           'Content-Type': 'application/json',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
         },
         body: jsonEncode({
           'user_id': userId,
