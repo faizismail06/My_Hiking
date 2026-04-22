@@ -1558,13 +1558,14 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     onPressed: _startNewChat,
-                    icon: Icon(Icons.add, color: Colors.white, size: 18.h),
+                    icon: Icon(Icons.add, color: const Color(0xFF2E7D32), size: 18.h),
                     label: Text(
                       'Chat Baru',
-                      style: TextStyle(color: Colors.white, fontSize: 13.fSize),
+                      style: TextStyle(
+                          color: const Color(0xFF2E7D32), fontSize: 13.fSize),
                     ),
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.white70),
+                      side: const BorderSide(color: Color(0xFF2E7D32)),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8.h),
                       ),

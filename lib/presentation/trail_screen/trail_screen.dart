@@ -614,7 +614,7 @@ class _TrailScreenState extends State<TrailScreen> {
       buttonStyle: CustomButtonStyles.outlineBlackTL14,
       buttonTextStyle: CustomTextStyles.titleLarge_1,
       onPressed: () async {
-        final allowed = await _guardBeforeBooking(context);
+        final allowed = await _guardBeforeBooking();
         if (!allowed) return;
 
         Navigator.push(
@@ -636,7 +636,7 @@ class _TrailScreenState extends State<TrailScreen> {
     );
   }
 
-  Future<bool> _guardBeforeBooking(BuildContext context) async {
+  Future<bool> _guardBeforeBooking() async {
     try {
       final token = await ApiService().getToken();
       if (token == null || token.isEmpty) {
@@ -652,7 +652,8 @@ class _TrailScreenState extends State<TrailScreen> {
 
       final userResponse = await ApiService().getUser(token);
       if (!(userResponse['success'] == true)) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        if (!mounted) return false;
+        ScaffoldMessenger.of(this.context).showSnackBar(
           const SnackBar(content: Text('Gagal mengambil data pengguna.')),
         );
         return false;
@@ -691,8 +692,7 @@ class _TrailScreenState extends State<TrailScreen> {
         );
 
         if (openProfile == true && context.mounted) {
-          await Navigator.push(
-            context,
+          await Navigator.of(this.context).push(
             MaterialPageRoute(
               builder: (context) => BlocProvider(
                 create: (context) => DataProfileBloc(apiService: ApiService()),
@@ -701,8 +701,8 @@ class _TrailScreenState extends State<TrailScreen> {
             ),
           );
 
-          if (!context.mounted) return false;
-          return _guardBeforeBooking(context);
+          if (!mounted) return false;
+          return _guardBeforeBooking();
         }
         return false;
       }
@@ -711,9 +711,9 @@ class _TrailScreenState extends State<TrailScreen> {
           await ApiService().getOnboardingExperienceStatus(token);
       final data = (onboarding['data'] as Map<String, dynamic>?) ?? {};
 
-      final isHiker = normalizedLevel == 1 || data['is_hiker'] == true;
-      final identityComplete = data['identity_complete'] == true;
-      final experienceCompleted = data['experience_completed'] == true;
+      final isHiker = normalizedLevel == 1 || _isTrue(data['is_hiker']);
+      final identityComplete = _isTrue(data['identity_complete']);
+      final experienceCompleted = _isTrue(data['experience_completed']);
 
       if (isHiker && !identityComplete) {
         final goToProfile = await _showWarningDialog(
@@ -726,8 +726,7 @@ class _TrailScreenState extends State<TrailScreen> {
         );
 
         if (goToProfile == true && context.mounted) {
-          await Navigator.push(
-            context,
+          await Navigator.of(this.context).push(
             MaterialPageRoute(
               builder: (context) => BlocProvider(
                 create: (context) => DataProfileBloc(apiService: ApiService()),
@@ -736,8 +735,8 @@ class _TrailScreenState extends State<TrailScreen> {
             ),
           );
 
-          if (!context.mounted) return false;
-          return _guardBeforeBooking(context);
+          if (!mounted) return false;
+          return _guardBeforeBooking();
         }
         return false;
       }
@@ -754,16 +753,15 @@ class _TrailScreenState extends State<TrailScreen> {
         );
 
         if (openOnboarding == true && context.mounted) {
-          final completed = await Navigator.push<bool>(
-            context,
+          final completed = await Navigator.of(this.context).push<bool>(
             MaterialPageRoute(
               builder: (context) => const ExperienceOnboardingScreen(),
             ),
           );
 
-          if (!context.mounted) return false;
+          if (!mounted) return false;
           if (completed == true) {
-            return _guardBeforeBooking(context);
+            return _guardBeforeBooking();
           }
         }
         return false;
@@ -771,12 +769,14 @@ class _TrailScreenState extends State<TrailScreen> {
 
       return true;
     } on ApiActionException catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      if (!mounted) return false;
+      ScaffoldMessenger.of(this.context).showSnackBar(
         SnackBar(content: Text(e.message)),
       );
       return false;
     } catch (_) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      if (!mounted) return false;
+      ScaffoldMessenger.of(this.context).showSnackBar(
         const SnackBar(content: Text('Gagal memeriksa kesiapan booking.')),
       );
       return false;
@@ -789,6 +789,13 @@ class _TrailScreenState extends State<TrailScreen> {
     return text.isEmpty || text == 'null' || text == '-';
   }
 
+  bool _isTrue(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    final text = value?.toString().trim().toLowerCase();
+    return text == 'true' || text == '1' || text == 'yes';
+  }
+
   Future<bool?> _showWarningDialog({
     required String title,
     required String message,
@@ -798,8 +805,10 @@ class _TrailScreenState extends State<TrailScreen> {
     String? cancelText,
   }) {
     return showDialog<bool>(
-      context: context,
-      builder: (context) => Dialog(
+      context: this.context,
+      barrierDismissible: false,
+      useRootNavigator: false,
+      builder: (dialogContext) => Dialog(
         backgroundColor: Colors.transparent,
         elevation: 0,
         child: Container(
@@ -843,7 +852,7 @@ class _TrailScreenState extends State<TrailScreen> {
                       text: cancelText,
                       buttonStyle: CustomButtonStyles.fillRed,
                       buttonTextStyle: CustomTextStyles.labelMediumOnPrimary,
-                      onPressed: () => Navigator.of(context).pop(false),
+                      onPressed: () => Navigator.of(dialogContext).pop(false),
                     ),
                   CustomElevatedButton(
                     height: 35.h,
@@ -851,7 +860,7 @@ class _TrailScreenState extends State<TrailScreen> {
                     text: confirmText,
                     buttonStyle: CustomButtonStyles.fillPrimaryTL12,
                     buttonTextStyle: CustomTextStyles.labelMediumOnPrimary,
-                    onPressed: () => Navigator.of(context).pop(true),
+                    onPressed: () => Navigator.of(dialogContext).pop(true),
                   )
                 ],
               )

@@ -444,7 +444,7 @@ class _RouteScreenState extends State<RouteScreen> {
       buttonStyle: CustomButtonStyles.outlineBlackTL14,
       buttonTextStyle: CustomTextStyles.titleLarge_1,
       onPressed: () async {
-        final allowed = await _guardBeforeBooking(context);
+        final allowed = await _guardBeforeBooking();
         if (!allowed) return;
 
         Navigator.push(
@@ -466,7 +466,7 @@ class _RouteScreenState extends State<RouteScreen> {
     );
   }
 
-  Future<bool> _guardBeforeBooking(BuildContext context) async {
+  Future<bool> _guardBeforeBooking() async {
     try {
       final token = await ApiService().getToken();
       if (token == null || token.isEmpty) {
@@ -482,7 +482,8 @@ class _RouteScreenState extends State<RouteScreen> {
 
       final userResponse = await ApiService().getUser(token);
       if (!(userResponse['success'] == true)) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        if (!mounted) return false;
+        ScaffoldMessenger.of(this.context).showSnackBar(
           const SnackBar(content: Text('Gagal mengambil data pengguna.')),
         );
         return false;
@@ -496,7 +497,7 @@ class _RouteScreenState extends State<RouteScreen> {
       final userLevel = userData['level'] is int
           ? userData['level'] as int
           : int.tryParse((userData['level'] ?? '').toString()) ?? 0;
-        final normalizedLevel = userLevel == 0 ? 1 : userLevel;
+      final normalizedLevel = userLevel == 0 ? 1 : userLevel;
 
       final missingProfileFields = <String>[];
       if (_isMissing(userData['nik'])) missingProfileFields.add('NIK');
@@ -521,8 +522,7 @@ class _RouteScreenState extends State<RouteScreen> {
         );
 
         if (openProfile == true && context.mounted) {
-          await Navigator.push(
-            context,
+          await Navigator.of(this.context).push(
             MaterialPageRoute(
               builder: (context) => BlocProvider(
                 create: (context) => DataProfileBloc(apiService: ApiService()),
@@ -531,8 +531,8 @@ class _RouteScreenState extends State<RouteScreen> {
             ),
           );
 
-          if (!context.mounted) return false;
-          return _guardBeforeBooking(context);
+          if (!mounted) return false;
+          return _guardBeforeBooking();
         }
         return false;
       }
@@ -540,9 +540,9 @@ class _RouteScreenState extends State<RouteScreen> {
       final onboarding = await ApiService().getOnboardingExperienceStatus(token);
       final data = (onboarding['data'] as Map<String, dynamic>?) ?? {};
 
-      final isHiker = normalizedLevel == 1 || data['is_hiker'] == true;
-      final identityComplete = data['identity_complete'] == true;
-      final experienceCompleted = data['experience_completed'] == true;
+      final isHiker = normalizedLevel == 1 || _isTrue(data['is_hiker']);
+      final identityComplete = _isTrue(data['identity_complete']);
+      final experienceCompleted = _isTrue(data['experience_completed']);
 
       if (isHiker && !identityComplete) {
         final goToProfile = await _showWarningDialog(
@@ -555,8 +555,7 @@ class _RouteScreenState extends State<RouteScreen> {
         );
 
         if (goToProfile == true && context.mounted) {
-          await Navigator.push(
-            context,
+          await Navigator.of(this.context).push(
             MaterialPageRoute(
               builder: (context) => BlocProvider(
                 create: (context) => DataProfileBloc(apiService: ApiService()),
@@ -565,8 +564,8 @@ class _RouteScreenState extends State<RouteScreen> {
             ),
           );
 
-          if (!context.mounted) return false;
-          return _guardBeforeBooking(context);
+          if (!mounted) return false;
+          return _guardBeforeBooking();
         }
         return false;
       }
@@ -583,16 +582,15 @@ class _RouteScreenState extends State<RouteScreen> {
         );
 
         if (openOnboarding == true && context.mounted) {
-          final completed = await Navigator.push<bool>(
-            context,
+          final completed = await Navigator.of(this.context).push<bool>(
             MaterialPageRoute(
               builder: (context) => const ExperienceOnboardingScreen(),
             ),
           );
 
-          if (!context.mounted) return false;
+          if (!mounted) return false;
           if (completed == true) {
-            return _guardBeforeBooking(context);
+            return _guardBeforeBooking();
           }
         }
         return false;
@@ -600,12 +598,14 @@ class _RouteScreenState extends State<RouteScreen> {
 
       return true;
     } on ApiActionException catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      if (!mounted) return false;
+      ScaffoldMessenger.of(this.context).showSnackBar(
         SnackBar(content: Text(e.message)),
       );
       return false;
     } catch (_) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      if (!mounted) return false;
+      ScaffoldMessenger.of(this.context).showSnackBar(
         const SnackBar(content: Text('Gagal memeriksa kesiapan booking.')),
       );
       return false;
@@ -618,6 +618,13 @@ class _RouteScreenState extends State<RouteScreen> {
     return text.isEmpty || text == 'null' || text == '-';
   }
 
+  bool _isTrue(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    final text = value?.toString().trim().toLowerCase();
+    return text == 'true' || text == '1' || text == 'yes';
+  }
+
   Future<bool?> _showWarningDialog({
     required String title,
     required String message,
@@ -627,8 +634,10 @@ class _RouteScreenState extends State<RouteScreen> {
     String? cancelText,
   }) {
     return showDialog<bool>(
-      context: context,
-      builder: (context) => Dialog(
+      context: this.context,
+      barrierDismissible: false,
+      useRootNavigator: false,
+      builder: (dialogContext) => Dialog(
         backgroundColor: Colors.transparent,
         elevation: 0,
         child: Container(
@@ -672,7 +681,7 @@ class _RouteScreenState extends State<RouteScreen> {
                       text: cancelText,
                       buttonStyle: CustomButtonStyles.fillRed,
                       buttonTextStyle: CustomTextStyles.labelMediumOnPrimary,
-                      onPressed: () => Navigator.of(context).pop(false),
+                      onPressed: () => Navigator.of(dialogContext).pop(false),
                     ),
                   CustomElevatedButton(
                     height: 35.h,
@@ -680,7 +689,7 @@ class _RouteScreenState extends State<RouteScreen> {
                     text: confirmText,
                     buttonStyle: CustomButtonStyles.fillPrimaryTL12,
                     buttonTextStyle: CustomTextStyles.labelMediumOnPrimary,
-                    onPressed: () => Navigator.of(context).pop(true),
+                    onPressed: () => Navigator.of(dialogContext).pop(true),
                   )
                 ],
               )
