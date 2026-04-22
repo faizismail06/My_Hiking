@@ -13,7 +13,13 @@ import 'package:file_picker/file_picker.dart';
 // ignore_for_file: must_be_immutable
 class DataProfileScreen extends StatefulWidget {
   final int userId;
-  const DataProfileScreen({super.key, required this.userId});
+  final bool redirectToHomeOnSave;
+
+  const DataProfileScreen({
+    super.key,
+    required this.userId,
+    this.redirectToHomeOnSave = true,
+  });
 
   // static Widget builder(BuildContext context) {
   //   return BlocProvider<DataProfileBloc>(
@@ -330,10 +336,12 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
 
       print("Response API: $response");
 
+      if (!mounted) return;
+
       // Jika berhasil, tampilkan dialog sukses
       showDialog(
         context: context,
-        builder: (BuildContext context) {
+        builder: (BuildContext dialogContext) {
           return AlertDialog(
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12.0),
@@ -360,8 +368,12 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
                 SizedBox(height: 20),
                 ElevatedButton(
                   onPressed: () {
-                    Navigator.of(context).pop();
-                    Navigator.pushNamed(context, AppRoutes.homeScreen);
+                    Navigator.of(dialogContext).pop();
+                    if (widget.redirectToHomeOnSave) {
+                      Navigator.pushNamed(context, AppRoutes.homeScreen);
+                      return;
+                    }
+                    Navigator.of(context).pop(true);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color.fromARGB(255, 33, 117, 84),
@@ -389,6 +401,8 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
       print("Error saat mengupdate profil:");
       print(e);
       print(stackTrace);
+
+      if (!mounted) return;
 
       // Tampilkan dialog error
       showDialog(

@@ -447,8 +447,7 @@ class _RouteScreenState extends State<RouteScreen> {
         final allowed = await _guardBeforeBooking();
         if (!allowed) return;
 
-        Navigator.push(
-          context,
+        Navigator.of(context, rootNavigator: true).push(
           MaterialPageRoute(
             builder: (context) => BlocProvider(
               create: (context) => BookingBloc(apiService: ApiService()),
@@ -526,7 +525,10 @@ class _RouteScreenState extends State<RouteScreen> {
             MaterialPageRoute(
               builder: (context) => BlocProvider(
                 create: (context) => DataProfileBloc(apiService: ApiService()),
-                child: DataProfileScreen(userId: currentUserId),
+                child: DataProfileScreen(
+                  userId: currentUserId,
+                  redirectToHomeOnSave: false,
+                ),
               ),
             ),
           );
@@ -559,7 +561,10 @@ class _RouteScreenState extends State<RouteScreen> {
             MaterialPageRoute(
               builder: (context) => BlocProvider(
                 create: (context) => DataProfileBloc(apiService: ApiService()),
-                child: DataProfileScreen(userId: currentUserId),
+                child: DataProfileScreen(
+                  userId: currentUserId,
+                  redirectToHomeOnSave: false,
+                ),
               ),
             ),
           );
