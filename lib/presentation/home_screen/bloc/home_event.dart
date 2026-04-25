@@ -41,3 +41,16 @@ class HomeFilterProvinceEvent extends HomeEvent {
   @override
   List<Object?> get props => [province];
 }
+
+/// Dispatched after the user submits the DssPreferenceScreen.
+/// Triggers a fresh recommendation fetch using the chosen priority weights.
+class HomeFetchWithWeightsEvent extends HomeEvent {
+  /// Priority weight map using backend keys, e.g.:
+  ///   { 'priority_cost': 4.0, 'priority_panorama': 5.0, ... }
+  final Map<String, double> weights;
+
+  HomeFetchWithWeightsEvent({required this.weights});
+
+  @override
+  List<Object?> get props => [weights];
+}

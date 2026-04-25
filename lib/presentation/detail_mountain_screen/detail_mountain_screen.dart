@@ -7,6 +7,7 @@ import '../../core/app_export.dart';
 import '../../theme/custom_button_style.dart';
 import '../../widgets/app_bar/appbar_leading_iconbutton.dart';
 import '../../widgets/app_bar/custom_app_bar.dart';
+import '../../widgets/app_loading_indicator.dart';
 import '../../widgets/custom_elevated_button.dart';
 import '../../widgets/weather_widget.dart' show WeatherBadge;
 import '../trail_screen/bloc/trail_bloc.dart';
@@ -91,7 +92,9 @@ class _DetailMountainScreenState extends State<DetailMountainScreen> {
       builder: (context, state) {
         // Jika data sedang dimuat
         if (state.isLoading) {
-          return const Center(child: CircularProgressIndicator());
+          return const AppLoadingIndicator.fullScreen(
+            message: 'Memuat detail gunung...',
+          );
         }
 
         // Jika ada error

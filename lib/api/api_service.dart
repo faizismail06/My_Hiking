@@ -186,9 +186,19 @@ class ApiService {
 
   Future<List<RecommendationModel>> fetchRecommendations({
     int limit = 3,
+    Map<String, double> weights = const {},
   }) async {
     final token = await getToken();
-    final uri = Uri.parse('$baseUrl/recommendations?limit=$limit');
+
+    // Build query parameters: limit + all priority weight keys
+    final params = <String, String>{'limit': '$limit'};
+    weights.forEach((key, value) {
+      params[key] = value.toStringAsFixed(2);
+    });
+
+    final uri = Uri.parse('$baseUrl/recommendations').replace(
+      queryParameters: params,
+    );
 
     final response = await http.get(
       uri,
@@ -231,6 +241,7 @@ class ApiService {
 
     return parsed;
   }
+
 
   Future<Map<String, dynamic>> loginWithGoogle(String idToken) async {
     final url = Uri.parse('$baseUrl/auth/google');

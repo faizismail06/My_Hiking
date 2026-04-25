@@ -5,9 +5,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:lottie/lottie.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:myhiking/api/api_service.dart';
+import 'package:myhiking/widgets/app_loading_overlay.dart';
 import '../../core/app_export.dart';
 import '../../widgets/custom_elevated_button.dart';
 import '../../widgets/custom_text_form_field.dart';
@@ -516,7 +516,10 @@ class LoginScreen extends StatelessWidget {
       final hasCache = await _apiService.hasHomeFeedCache();
       if (!hasCache && context.mounted) {
         dialogShown = true;
-        _showDssWarmupDialog(context);
+        AppLoadingOverlay.show(
+          context,
+          message: 'Mohon tunggu...',
+        );
       }
 
       await _apiService.warmHomeFeedCache();
@@ -524,79 +527,13 @@ class LoginScreen extends StatelessWidget {
       debugPrint('DSS warmup error: $e');
     } finally {
       if (dialogShown && context.mounted) {
-        Navigator.of(context, rootNavigator: true).pop();
+        AppLoadingOverlay.hide(context);
       }
     }
 
     if (context.mounted) {
       NavigatorService.pushNamed(AppRoutes.homeScreen);
     }
-  }
-
-  void _showDssWarmupDialog(BuildContext context) {
-    showGeneralDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      barrierLabel: 'DSS Warmup',
-      barrierColor: Colors.white,
-      transitionDuration: const Duration(milliseconds: 220),
-      pageBuilder: (BuildContext dialogContext, Animation<double> animation,
-          Animation<double> secondaryAnimation) {
-        return PopScope(
-          canPop: false,
-          child: Material(
-            color: Colors.white,
-            child: SafeArea(
-              child: SizedBox.expand(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CustomImageView(
-                      imagePath: ImageConstant.imgNn,
-                      height: 56.h,
-                      width: 70.h,
-                    ),
-                    SizedBox(height: 14.h),
-                    Text(
-                      'MyHiking',
-                      style: theme.textTheme.headlineLarge,
-                    ),
-                    SizedBox(height: 26.h),
-                    SizedBox(
-                      height: 180.h,
-                      width: 180.h,
-                      child: Lottie.asset(
-                        'assets/lottie/sandy_loading.json',
-                        repeat: true,
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                    SizedBox(height: 20.h),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 34.h),
-                      child: Text(
-                        'Mohon tunggu...',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodyMedium,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-      transitionBuilder: (context, animation, secondaryAnimation, child) {
-        return FadeTransition(
-          opacity: CurvedAnimation(
-            parent: animation,
-            curve: Curves.easeOut,
-          ),
-          child: child,
-        );
-      },
-    );
   }
 
   /// Navigates to the registScreen when the action is triggered.

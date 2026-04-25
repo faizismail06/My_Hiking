@@ -15,6 +15,7 @@ import 'package:myhiking/api/api_service.dart';
 import 'quick_access_handler_page.dart';
 import 'weather_screen.dart';
 import '../trail_screen/trail_screen.dart';
+import '../dss_preference_screen/dss_preference_screen.dart';
 
 class HomeInitialPage extends StatefulWidget {
   const HomeInitialPage({super.key});
@@ -526,8 +527,7 @@ class HomeInitialPageState extends State<HomeInitialPage> {
               // Recommended Section
               if (showRecommendationSection) ...[
                 if (isLoading) ...[
-                  _buildSectionHeader(
-                      'Rekomendasi Untuk Anda', Icons.auto_awesome_rounded),
+                  _buildRecommendationSectionHeader(context),
                   SizedBox(
                     height: 285.h,
                     child: ListView.separated(
@@ -547,8 +547,7 @@ class HomeInitialPageState extends State<HomeInitialPage> {
                   ),
                   SizedBox(height: 24.h),
                 ] else ...[
-                  _buildSectionHeader(
-                      'Rekomendasi Untuk Anda', Icons.auto_awesome_rounded),
+                  _buildRecommendationSectionHeader(context),
                   if (topThree.isNotEmpty)
                     SizedBox(
                       height: 285.h,
@@ -768,6 +767,95 @@ class HomeInitialPageState extends State<HomeInitialPage> {
           fontWeight: FontWeight.w600,
         ),
       ),
+    );
+  }
+
+  Widget _buildRecommendationSectionHeader(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: 12.h, top: 8.h),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(6.h),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1B8A5A).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8.h),
+            ),
+            child: Icon(
+              Icons.auto_awesome_rounded,
+              color: const Color(0xFF1B8A5A),
+              size: 18.h,
+            ),
+          ),
+          SizedBox(width: 10.h),
+          Expanded(
+            child: Text(
+              'Rekomendasi Untuk Anda',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+                fontSize: 16.fSize,
+                color: const Color(0xFF1B8A5A),
+              ),
+            ),
+          ),
+          // Preference button
+          GestureDetector(
+            onTap: () => _openPreferenceScreen(context),
+            child: Container(
+              padding:
+                  EdgeInsets.symmetric(horizontal: 10.h, vertical: 6.h),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1B8A5A).withOpacity(0.08),
+                borderRadius: BorderRadius.circular(20.h),
+                border: Border.all(
+                  color: const Color(0xFF1B8A5A).withOpacity(0.25),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.tune_rounded,
+                    color: const Color(0xFF1B8A5A),
+                    size: 14.h,
+                  ),
+                  SizedBox(width: 4.h),
+                  Text(
+                    'Preferensi',
+                    style: TextStyle(
+                      color: const Color(0xFF1B8A5A),
+                      fontSize: 11.fSize,
+                      fontWeight: FontWeight.w700,
+                      fontFamily: 'Poppins',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Opens the DssPreferenceScreen, waits for the returned weights map,
+  /// then dispatches HomeFetchWithWeightsEvent to refresh recommendations.
+  Future<void> _openPreferenceScreen(BuildContext context) async {
+    final result = await Navigator.of(context, rootNavigator: true).push<Map<String, double>>(
+      MaterialPageRoute(
+        builder: (_) => const DssPreferenceScreen(),
+      ),
+    );
+
+    if (!mounted) return;
+
+    // result is null if user pressed the Android back button.
+    // result is the weights map if user tapped Submit or Lewati.
+    final weights = result ?? {};
+
+    // Dispatch to bloc — even empty weights is valid (= equal weight fetch).
+    context.read<HomeBloc>().add(
+      HomeFetchWithWeightsEvent(weights: weights),
     );
   }
 

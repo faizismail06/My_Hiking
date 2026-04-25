@@ -22,6 +22,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     on<HomeRefreshEvent>(_onRefresh);
     on<HomeSearchEvent>(_onSearch);
     on<HomeFilterProvinceEvent>(_onFilterProvince);
+    on<HomeFetchWithWeightsEvent>(_onFetchWithWeights);
   }
 
   Future<void> _onInitialize(
@@ -104,7 +105,11 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
     if (hasCompletedExperience) {
       try {
-        topRecommendations = await _apiService.fetchRecommendations(limit: 30);
+        // Default fetch uses equal weights (no params = server uses defaults)
+        topRecommendations = await _apiService.fetchRecommendations(
+          limit: 30,
+          weights: const {},
+        );
         topRecommendations = _sortAndRankRecommendations(topRecommendations);
       } catch (e) {
         recommendationError = 'Gagal memuat rekomendasi TOPSIS.';
@@ -144,6 +149,42 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     } catch (e) {
       print('Error checking onboarding status: $e');
       return false;
+    }
+  }
+
+  /// Handles the user returning from DssPreferenceScreen with custom weights.
+  /// Re-fetches recommendations using the supplied weights without reloading
+  /// the home feed (mountains / hero data stays intact).
+  Future<void> _onFetchWithWeights(
+    HomeFetchWithWeightsEvent event,
+    Emitter<HomeState> emit,
+  ) async {
+    if (!state.hasCompletedExperience) return;
+
+    // Show loading spinner inside the recommendation section only.
+    emit(state.copyWith(
+      isLoadingRecommended: true,
+      clearRecommendationError: true,
+    ));
+
+    try {
+      var results = await _apiService.fetchRecommendations(
+        limit: 30,
+        weights: event.weights,
+      );
+      results = _sortAndRankRecommendations(results);
+
+      emit(state.copyWith(
+        recommendations: results,
+        baseRecommendations: results,
+        isLoadingRecommended: false,
+      ));
+    } catch (e) {
+      print('Error fetching weighted recommendations: $e');
+      emit(state.copyWith(
+        isLoadingRecommended: false,
+        recommendationError: 'Gagal memuat rekomendasi. Coba lagi.',
+      ));
     }
   }
 

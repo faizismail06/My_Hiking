@@ -3,6 +3,7 @@ import 'package:myhiking/presentation/history_page/history_page.dart';
 import 'package:myhiking/presentation/transaction_page/transaction_page.dart';
 import 'package:myhiking/presentation/tiket_saya_page/tiket_saya_page.dart';
 import 'package:myhiking/presentation/riwayat_transaksi_page/riwayat_transaksi_page.dart';
+import '../presentation/dss_preference_screen/dss_preference_screen.dart';
 import '../presentation/app_navigation_screen/app_navigation_screen.dart';
 import '../presentation/home_screen/home_screen.dart';
 import '../presentation/booking_screen/booking_screen.dart';
@@ -63,6 +64,7 @@ class AppRoutes {
   static const String refundRequestResultPage = '/refund_request_result_page';
   static const String experienceOnboardingScreen = '/experience_onboarding_screen';
   static const String appNavigationScreen = '/app_navigation_screen';
+  static const String dssPreferenceScreen = '/dss_preference_screen';
   static const String initialRoute = root;
 
   // Legacy route aliases for backward compatibility
@@ -192,5 +194,6 @@ class AppRoutes {
           );
         },
         experienceOnboardingScreen: (context) => const ExperienceOnboardingScreen(),
+        dssPreferenceScreen: (context) => const DssPreferenceScreen(),
       };
 }
