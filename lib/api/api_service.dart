@@ -77,6 +77,10 @@ class BookingDecisionResult {
 
 class ApiService {
   static const String _homeFeedCachePrefix = 'home_feed_cache_v2_';
+  static const Duration _userCacheTtl = Duration(seconds: 45);
+  static final Map<String, Map<String, dynamic>> _userMemoryCache = {};
+  static final Map<String, DateTime> _userMemoryCacheAt = {};
+  static final Map<String, Future<Map<String, dynamic>>> _userInFlight = {};
 
   Future<String?> getToken() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -265,24 +269,60 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> getUser(String token) async {
-    final url = Uri.parse('$baseUrl/user');
-    final response = await http.get(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
+    final now = DateTime.now();
+    final cachedAt = _userMemoryCacheAt[token];
+    final cachedData = _userMemoryCache[token];
 
-    if (response.statusCode == 200) {
-      final responseData = jsonDecode(response.body);
+    if (cachedAt != null &&
+        cachedData != null &&
+        now.difference(cachedAt) <= _userCacheTtl) {
       return {
         'success': true,
-        'data': responseData,
+        'data': cachedData,
       };
-    } else {
+    }
+
+    final existingRequest = _userInFlight[token];
+    if (existingRequest != null) {
+      return existingRequest;
+    }
+
+    final request = () async {
+      final url = Uri.parse('$baseUrl/user');
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        final parsed = responseData is Map<String, dynamic>
+            ? responseData
+            : responseData is Map
+                ? Map<String, dynamic>.from(responseData)
+                : <String, dynamic>{};
+
+        _userMemoryCache[token] = parsed;
+        _userMemoryCacheAt[token] = DateTime.now();
+
+        return {
+          'success': true,
+          'data': parsed,
+        };
+      }
+
       final errorData = jsonDecode(response.body);
       return {'success': false, 'errors': errorData};
+    }();
+
+    _userInFlight[token] = request;
+    try {
+      return await request;
+    } finally {
+      _userInFlight.remove(token);
     }
   }
 

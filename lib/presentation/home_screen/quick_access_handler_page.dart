@@ -69,8 +69,8 @@ class _QuickAccessHandlerPageState extends State<QuickAccessHandlerPage> {
     }
 
     final responses = await Future.wait([
-      http.get(Uri.parse('$baseUrl/orders')),
-      http.get(Uri.parse('$baseUrl/transactions')),
+      http.get(Uri.parse('$baseUrl/orders?user_id=$_userId&per_page=50')),
+      http.get(Uri.parse('$baseUrl/transactions?user_id=$_userId&per_page=50')),
     ]);
 
     final ordersResponse = responses[0];
@@ -97,11 +97,6 @@ class _QuickAccessHandlerPageState extends State<QuickAccessHandlerPage> {
       }
 
       final item = Map<String, dynamic>.from(raw);
-      final pemesan = int.tryParse((item['pemesan'] ?? '').toString()) ?? 0;
-      if (pemesan != _userId) {
-        continue;
-      }
-
       final orderId = int.tryParse((item['id_pesanan'] ?? '').toString()) ?? 0;
       if (orderId <= 0) {
         continue;
@@ -118,11 +113,6 @@ class _QuickAccessHandlerPageState extends State<QuickAccessHandlerPage> {
       }
 
       final item = Map<String, dynamic>.from(raw);
-      final orderUserId = int.tryParse((item['id_user'] ?? '').toString()) ?? 0;
-      if (orderUserId != _userId) {
-        continue;
-      }
-
       final orderId = int.tryParse((item['id'] ?? '').toString()) ?? 0;
       if (orderId <= 0) {
         continue;

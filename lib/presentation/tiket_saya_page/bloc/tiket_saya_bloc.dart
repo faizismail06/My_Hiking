@@ -73,18 +73,18 @@ class TiketSayaBloc extends Bloc<TiketSayaEvent, TiketSayaState> {
   }
 
   Future<List<TiketItemModel>> _fetchOrders(String userId) async {
-    final response = await http.get(Uri.parse('$baseUrl/orders'));
+    final response = await http.get(
+      Uri.parse('$baseUrl/orders?user_id=$userId&per_page=50'),
+    );
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body)['data'] as List;
 
-      final filteredData =
-          data.where((item) => item['id_user'].toString() == userId).toList()
-            ..sort((a, b) {
-              final aId = int.tryParse(a['id'].toString()) ?? 0;
-              final bId = int.tryParse(b['id'].toString()) ?? 0;
-              return bId.compareTo(aId); // newest first
-            });
+      final filteredData = List.of(data)..sort((a, b) {
+        final aId = int.tryParse(a['id'].toString()) ?? 0;
+        final bId = int.tryParse(b['id'].toString()) ?? 0;
+        return bId.compareTo(aId); // newest first
+      });
 
       return filteredData.map((item) => TiketItemModel.fromJson(item)).toList();
     } else {
@@ -94,7 +94,9 @@ class TiketSayaBloc extends Bloc<TiketSayaEvent, TiketSayaState> {
 
   Future<List<TransaksiItemModel>> _fetchTransactions(String userId) async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/transactions'));
+      final response = await http.get(
+        Uri.parse('$baseUrl/transactions?user_id=$userId&per_page=50'),
+      );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body)['data'] as List;
@@ -102,7 +104,6 @@ class TiketSayaBloc extends Bloc<TiketSayaEvent, TiketSayaState> {
         if (userId.isEmpty) return [];
 
         return data
-            .where((item) => item['pemesan'].toString() == userId)
             .map((item) => TransaksiItemModel.fromJson(item))
             .toList();
       } else {

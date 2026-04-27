@@ -51,19 +51,22 @@ class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
   // Function untuk mengambil data dari API dengan userId
   Future<List<RecentclimbinglistItemModel>> fetchRecentClimbingList(
       String userId) async {
-    final response = await http.get(Uri.parse('$baseUrl/orders'));
+    if (userId.isEmpty) {
+      return [];
+    }
+
+    final response = await http.get(
+      Uri.parse('$baseUrl/orders?user_id=$userId&per_page=50'),
+    );
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body)['data'] as List;
 
-      // Filter data berdasarkan userId yang diterima
-      final filteredData =
-          data.where((item) => item['id_user'].toString() == userId).toList()
-            ..sort((a, b) {
-              final aId = int.tryParse(a['id'].toString()) ?? 0;
-              final bId = int.tryParse(b['id'].toString()) ?? 0;
-              return aId.compareTo(bId);
-            });
+      final filteredData = List.of(data)..sort((a, b) {
+        final aId = int.tryParse(a['id'].toString()) ?? 0;
+        final bId = int.tryParse(b['id'].toString()) ?? 0;
+        return aId.compareTo(bId);
+      });
 
       return filteredData
           .map((item) => RecentclimbinglistItemModel.fromJson(item))
@@ -78,26 +81,13 @@ class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
     HistoryInitialEvent event,
     Emitter<HistoryState> emit,
   ) async {
-    try {
-      // Mengambil data dari API tanpa menggunakan userId (untuk kasus inisialisasi)
-      List<RecentclimbinglistItemModel> recentClimbingList =
-          await fetchRecentClimbingList("");
-
-      // Emit state dengan data yang diambil
-      emit(
-        state.copyWith(
-          historyModelObj: state.historyModelObj?.copyWith(
-            recentclimbinglistItemList: recentClimbingList,
-          ),
-          errorMessage: '',
+    emit(
+      state.copyWith(
+        historyModelObj: state.historyModelObj?.copyWith(
+          recentclimbinglistItemList: const [],
         ),
-      );
-    } catch (e) {
-      emit(
-        state.copyWith(
-          errorMessage: 'Failed to fetch data: $e',
-        ),
-      );
-    }
+        errorMessage: '',
+      ),
+    );
   }
 }

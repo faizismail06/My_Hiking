@@ -42,17 +42,15 @@ class RiwayatTransaksiBloc
   }
 
   Future<List<TiketItemModel>> _fetchHistoryOrders(String userId) async {
-    final response = await http.get(Uri.parse('$baseUrl/orders'));
+    final response = await http.get(
+      Uri.parse('$baseUrl/orders?user_id=$userId&per_page=50'),
+    );
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body)['data'] as List;
 
       final filteredData = data
           .where((item) {
-            if (item['id_user'].toString() != userId) {
-              return false;
-            }
-
             final status = (item['status'] ?? '').toString().trim().toLowerCase();
             return status == 'selesai' ||
                 status == 'expired' ||

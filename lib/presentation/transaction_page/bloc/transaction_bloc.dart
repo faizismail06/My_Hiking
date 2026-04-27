@@ -41,28 +41,21 @@ class TransactionBloc extends Bloc<TransactionEvent, TransactionState> {
     try {
       print("Fetching transactions for userId: $userId");
 
-      final response = await http.get(Uri.parse('$baseUrl/transactions'));
+      if (userId.isEmpty) {
+        print('UserId is empty, returning empty list');
+        return [];
+      }
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/transactions?user_id=$userId&per_page=50'),
+      );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body)['data'] as List;
         print('Raw API data: $data');
 
-        if (userId.isEmpty) {
-          print('UserId is empty, returning empty list');
-          return [];
-        }
-
-        final filteredData = data.where((item) {
-          String pemesanId = item['pemesan'].toString();
-          bool matches = pemesanId == userId;
-          print(
-              'Comparing pemesan: $pemesanId with userId: $userId, matches: $matches');
-          return matches;
-        }).toList();
-
-        final transactions = filteredData
-            .map((item) => TransactionItemModel.fromJson(item))
-            .toList();
+        final transactions =
+            data.map((item) => TransactionItemModel.fromJson(item)).toList();
 
         print('Filtered transactions count: ${transactions.length}');
         return transactions;
