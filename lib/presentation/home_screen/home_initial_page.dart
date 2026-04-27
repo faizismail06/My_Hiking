@@ -600,7 +600,9 @@ class HomeInitialPageState extends State<HomeInitialPage> {
 
               if (otherMountains.isNotEmpty) ...[
                 Text(
-                  'Pilihan Lainnya',
+                  showRecommendationSection
+                      ? 'Pilihan Lainnya'
+                      : 'Pilihan Gunung',
                   style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w800,
                     fontSize: 18.fSize,
