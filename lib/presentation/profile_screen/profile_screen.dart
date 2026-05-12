@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:myhiking/api/api_service.dart';
 import 'package:myhiking/presentation/data_profile_screen/bloc/data_profile_bloc.dart';
 import 'package:myhiking/presentation/data_profile_screen/data_profile_screen.dart';
@@ -499,11 +500,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Text("Batalkan"),
             ),
             TextButton(
-              onPressed: () {
+              onPressed: () async {
                 Navigator.of(dialogContext).pop(); // Menutup pop-up
                 if (!mounted) {
                   return;
                 }
+
+                // Clear DSS preferences
+                final prefs = await SharedPreferences.getInstance();
+                final keys = prefs.getKeys();
+                for (final key in keys) {
+                  if (key.startsWith('dss_pref_')) {
+                    await prefs.remove(key);
+                  }
+                }
+                // Clear token
+                await prefs.remove('token');
+
                 Navigator.of(context, rootNavigator: true)
                     .pushNamedAndRemoveUntil(
                     AppRoutes.loginScreen,

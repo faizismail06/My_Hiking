@@ -1,14 +1,15 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/http.dart';
 import 'package:myhiking/models/bookingModel.dart';
 import 'package:myhiking/models/model.dart';
 import 'package:myhiking/presentation/home_screen/models/recommendation_model.dart';
 import 'package:myhiking/presentation/data_profile_screen/models/res_user.dart';
-import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const String baseUrl = String.fromEnvironment(
@@ -247,14 +248,23 @@ class ApiService {
   }
 
 
-  Future<Map<String, dynamic>> loginWithGoogle(String idToken) async {
+  Future<Map<String, dynamic>> loginWithGoogle(String token) async {
     final url = Uri.parse('$baseUrl/auth/google');
+    
+    // Android sends id_token, Web sends access_token
+    final isWeb = kIsWeb;
+    final body = jsonEncode(
+      isWeb 
+        ? {'access_token': token}
+        : {'id_token': token},
+    );
+    
     final response = await http.post(
       url,
       headers: {
         'Content-Type': 'application/json',
       },
-      body: jsonEncode({'id_token': idToken}),
+      body: body,
     );
 
     final responseData = jsonDecode(response.body);
@@ -1876,6 +1886,47 @@ class ApiService {
         'success': false,
         'message': 'Tidak dapat terhubung ke server',
       };
+    }
+  }
+
+  Future<Map<String, double>> getDssPreferences() async {
+    final url = Uri.parse('$baseUrl/dss-preferences');
+    final token = await getToken();
+
+    final response = await http.get(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final responseData = jsonDecode(response.body);
+      final preferences = Map<String, double>.from(
+        responseData['preferences'] ?? {},
+      );
+      return preferences;
+    }
+
+    throw Exception('Gagal mengambil preferensi DSS');
+  }
+
+  Future<void> saveDssPreferences(Map<String, double> preferences) async {
+    final url = Uri.parse('$baseUrl/dss-preferences');
+    final token = await getToken();
+
+    final response = await http.post(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'preferences': preferences}),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Gagal menyimpan preferensi DSS');
     }
   }
 }

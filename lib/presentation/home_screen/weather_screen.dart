@@ -148,7 +148,13 @@ class _WeatherScreenState extends State<WeatherScreen> {
       actions: [
         IconButton(
           icon: Icon(Icons.search, color: Colors.white, size: 22.h),
-          onPressed: () {},
+          onPressed: () {
+            if (_mountains.isEmpty) return;
+            showSearch(
+              context: context,
+              delegate: _MountainWeatherSearchDelegate(_mountains),
+            );
+          },
         ),
         IconButton(
           icon: Icon(Icons.filter_alt_outlined, color: Colors.white, size: 22.h),
@@ -160,6 +166,103 @@ class _WeatherScreenState extends State<WeatherScreen> {
           bottom: Radius.circular(20),
         ),
       ),
+    );
+  }
+}
+
+class _MountainWeatherSearchDelegate extends SearchDelegate<HomelistItemModel?> {
+  _MountainWeatherSearchDelegate(this._mountains);
+
+  final List<HomelistItemModel> _mountains;
+
+  @override
+  String get searchFieldLabel => 'Cari item';
+
+  @override
+  TextStyle get searchFieldStyle => const TextStyle(color: Colors.black87);
+
+  @override
+  ThemeData appBarTheme(BuildContext context) {
+    final baseTheme = Theme.of(context);
+    return baseTheme.copyWith(
+      appBarTheme: baseTheme.appBarTheme.copyWith(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.black54),
+        titleTextStyle: const TextStyle(color: Colors.black87),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        border: OutlineInputBorder(
+          borderSide: const BorderSide(color: Colors.grey),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderSide: const BorderSide(color: Colors.grey),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderSide: const BorderSide(color: Colors.grey),
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    );
+  }
+
+  @override
+  List<Widget> buildActions(BuildContext context) {
+    return [
+      if (query.isNotEmpty)
+        IconButton(
+          icon: const Icon(Icons.clear),
+          onPressed: () => query = '',
+        ),
+    ];
+  }
+
+  @override
+  Widget buildLeading(BuildContext context) {
+    return IconButton(
+      icon: const Icon(Icons.arrow_back),
+      onPressed: () => close(context, null),
+    );
+  }
+
+  @override
+  Widget buildResults(BuildContext context) {
+    final results = _filterMountains(query);
+    return _buildResultsList(results);
+  }
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    final results = _filterMountains(query);
+    return _buildResultsList(results);
+  }
+
+  List<HomelistItemModel> _filterMountains(String input) {
+    final normalized = input.trim().toLowerCase();
+    if (normalized.isEmpty) return _mountains;
+    return _mountains.where((item) {
+      final name = (item.namaGunung ?? '').toLowerCase();
+      final location = (item.province?.name ?? '').toLowerCase();
+      return name.contains(normalized) || location.contains(normalized);
+    }).toList();
+  }
+
+  Widget _buildResultsList(List<HomelistItemModel> results) {
+    if (results.isEmpty) {
+      return const Center(
+        child: Text('Tidak ada hasil.', style: TextStyle(color: Colors.black54)),
+      );
+    }
+
+    return ListView.separated(
+      padding: EdgeInsets.symmetric(horizontal: 16.h, vertical: 16.h),
+      itemCount: results.length,
+      separatorBuilder: (context, index) => SizedBox(height: 16.h),
+      itemBuilder: (context, index) {
+        return WeatherItemWidget(mountain: results[index]);
+      },
     );
   }
 }

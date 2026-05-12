@@ -32,7 +32,10 @@ class _HomelistItemWidgetState extends State<HomelistItemWidget> {
   @override
   Widget build(BuildContext context) {
     final imageUrl = widget.homelistItemModelObj.gambar ?? '';
-    final recommendation = widget.homelistItemModelObj.dss;
+    final rec = widget.topsisRecommendation;
+
+    // Determine risk for border accent when risk != safe
+    final riskBorderColor = _riskBorderColor(rec?.rawRisk ?? '');
 
     final cardScale = _isPressed
         ? 0.985
@@ -70,9 +73,10 @@ class _HomelistItemWidgetState extends State<HomelistItemWidget> {
           color: Colors.white,
           border: Border.all(
             color: _isHovered
-                ? const Color(0xFF1B8A5A).withOpacity(0.35)
-                : Colors.grey.withOpacity(0.1),
-            width: 1,
+                ? (riskBorderColor ?? const Color(0xFF1B8A5A)).withOpacity(0.35)
+                : riskBorderColor?.withOpacity(0.20) ??
+                    Colors.grey.withOpacity(0.1),
+            width: riskBorderColor != null ? 1.5 : 1,
           ),
           boxShadow: [
             BoxShadow(
@@ -180,8 +184,8 @@ class _HomelistItemWidgetState extends State<HomelistItemWidget> {
                                     ),
                                     SizedBox(width: 6.h),
                                     Text(
-                                      widget.topsisRecommendation != null
-                                          ? 'TOP #${widget.topsisRecommendation!.rank}'
+                                      rec != null
+                                          ? 'TOP #${rec.rank}'
                                           : 'Rekomendasi DSS',
                                       style: TextStyle(
                                         color: Colors.white,
@@ -195,6 +199,14 @@ class _HomelistItemWidgetState extends State<HomelistItemWidget> {
                               ),
                             ),
                           ),
+                        ),
+
+                      // Risk badge (shown for caution / high_risk)
+                      if (widget.isRecommended && rec != null && rec.warning)
+                        Positioned(
+                          top: 16.h,
+                          left: 16.h,
+                          child: _buildRiskBadge(rec.rawRisk),
                         ),
                     ],
                   ),
@@ -238,19 +250,20 @@ class _HomelistItemWidgetState extends State<HomelistItemWidget> {
                             ),
                           ],
                         ),
-                        if (widget.isRecommended &&
-                            widget.topsisRecommendation != null) ...[
+                        if (widget.isRecommended && rec != null) ...[
                           SizedBox(height: 12.h),
                           Text(
-                            'Route: ${widget.topsisRecommendation!.routeName}',
+                            'Route: ${rec.routeName}',
                             style: TextStyle(
                               color: Colors.grey[700],
                               fontSize: 13.fSize,
                               fontWeight: FontWeight.w600,
                             ),
-                          ),                          
+                          ),
+                          // Risk indicator row (safe = green, caution = amber, high_risk = red)
+                          SizedBox(height: 8.h),
+                          _buildRiskIndicatorRow(rec.rawRisk),
                         ],
-                        
                       ],
                     ),
                   ),
@@ -262,6 +275,110 @@ class _HomelistItemWidgetState extends State<HomelistItemWidget> {
       ),
     );
   }
+
+  // ── Risk badge overlay (top-left of image) ──────────────────────────────
+
+  Widget _buildRiskBadge(String rawRisk) {
+    final isHighRisk = rawRisk == 'high_risk';
+    final color = isHighRisk ? const Color(0xFFD32F2F) : const Color(0xFFF57C00);
+    final icon = isHighRisk ? Icons.warning_rounded : Icons.info_outline_rounded;
+    final label = isHighRisk ? 'Risiko Tinggi' : 'Perlu Perhatian';
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10.h),
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 8.h, vertical: 4.h),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.85),
+            borderRadius: BorderRadius.circular(10.h),
+            border: Border.all(color: Colors.white.withOpacity(0.25), width: 1),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: Colors.white, size: 12.h),
+              SizedBox(width: 4.h),
+              Text(
+                label,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 10.fSize,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Risk indicator row (inside card content) ────────────────────────────
+
+  Widget _buildRiskIndicatorRow(String rawRisk) {
+    final data = _riskIndicatorData(rawRisk);
+    if (data == null) return const SizedBox.shrink();
+
+    return Row(
+      children: [
+        Container(
+          width: 8.h,
+          height: 8.h,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: data.color,
+          ),
+        ),
+        SizedBox(width: 6.h),
+        Text(
+          data.label,
+          style: TextStyle(
+            fontSize: 11.fSize,
+            fontWeight: FontWeight.w600,
+            color: data.color,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── Helpers ─────────────────────────────────────────────────────────────
+
+  Color? _riskBorderColor(String rawRisk) {
+    if (rawRisk == 'high_risk') return const Color(0xFFD32F2F);
+    if (rawRisk == 'caution') return const Color(0xFFF57C00);
+    return null; // safe → no accent border
+  }
+
+  _RiskIndicatorData? _riskIndicatorData(String rawRisk) {
+    if (rawRisk == 'high_risk') {
+      return _RiskIndicatorData(
+        color: const Color(0xFFD32F2F),
+        label: 'Risiko Tinggi',
+      );
+    }
+    if (rawRisk == 'caution') {
+      return _RiskIndicatorData(
+        color: const Color(0xFFF57C00),
+        label: 'Perlu Perhatian',
+      );
+    }
+    if (rawRisk == 'safe') {
+      return _RiskIndicatorData(
+        color: const Color(0xFF1B8A5A),
+        label: 'Aman',
+      );
+    }
+    return null;
+  }
+}
+
+class _RiskIndicatorData {
+  final Color color;
+  final String label;
+  const _RiskIndicatorData({required this.color, required this.label});
 }
 
 Future<void> onTapImgGunung(

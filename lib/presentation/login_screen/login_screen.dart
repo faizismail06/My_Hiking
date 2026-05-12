@@ -14,6 +14,18 @@ import '../../widgets/custom_text_form_field.dart';
 import 'bloc/login_bloc.dart';
 import 'models/login_model.dart';
 
+// Android: Mobile OAuth Client ID
+const String _googleServerClientId = String.fromEnvironment(
+  'GOOGLE_CLIENT_ID',
+  defaultValue: '',
+);
+
+// Web: Web OAuth Client ID (untuk Flutter Web)
+const String _googleWebClientId = String.fromEnvironment(
+  'GOOGLE_WEB_CLIENT_ID',
+  defaultValue: '',
+);
+
 class LoginScreen extends StatelessWidget {
   LoginScreen({super.key});
 
@@ -399,6 +411,17 @@ class LoginScreen extends StatelessWidget {
           SharedPreferences prefs = await SharedPreferences.getInstance();
           await prefs.setString('token', responseData['token']);
 
+          // Fetch and cache DSS preferences from backend
+          try {
+            final dssPrefs = await _apiService.getDssPreferences();
+            for (final entry in dssPrefs.entries) {
+              await prefs.setDouble('dss_pref_${entry.key}', entry.value);
+            }
+          } catch (e) {
+            // Non-blocking: preferences fetch error won't prevent login
+            print('DSS preferences fetch error: $e');
+          }
+
           await _navigateToHomeWithDssWarmup(context);
         } else {
           // Jika login gagal, tampilkan pop-up error
@@ -457,8 +480,26 @@ class LoginScreen extends StatelessWidget {
       return;
     }
 
+    // Validasi: pastikan client ID untuk platform yang aktif sudah diisi
+    final clientIdToUse = kIsWeb ? _googleWebClientId : _googleServerClientId;
+    final platformName = kIsWeb ? 'Web' : 'Android';
+    
+    if (clientIdToUse.isEmpty) {
+      _showErrorDialog(
+        context,
+        'GOOGLE_${kIsWeb ? 'WEB_' : ''}CLIENT_ID belum terbaca di Flutter. Jalankan ulang dengan --dart-define=GOOGLE_${kIsWeb ? 'WEB_' : ''}CLIENT_ID=... ($platformName).',
+      );
+      return;
+    }
+
     try {
-      final GoogleSignIn googleSignIn = GoogleSignIn(scopes: ['email']);
+      final GoogleSignIn googleSignIn = GoogleSignIn(
+        scopes: ['email'],
+        // serverClientId hanya dipakai di Android untuk server-side verification
+        serverClientId: kIsWeb ? null : _googleServerClientId,
+        // clientId untuk Web OAuth Client
+        clientId: kIsWeb ? _googleWebClientId : null,
+      );
       await googleSignIn.signOut();
       final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
 
@@ -468,14 +509,20 @@ class LoginScreen extends StatelessWidget {
 
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
-      final String? idToken = googleAuth.idToken;
+      
+      // Android: gunakan idToken
+      // Web: gunakan accessToken jika idToken tidak ada
+      final String? googleToken = googleAuth.idToken ?? googleAuth.accessToken;
 
-      if (idToken == null || idToken.isEmpty) {
-        _showErrorDialog(context, 'Gagal mendapatkan token Google.');
+      if (googleToken == null || googleToken.isEmpty) {
+        _showErrorDialog(
+          context,
+          'Gagal mendapatkan token Google. Pastikan GOOGLE_${kIsWeb ? 'WEB_' : ''}CLIENT_ID ($platformName) valid dan dijalankan via --dart-define.',
+        );
         return;
       }
 
-      final responseData = await _apiService.loginWithGoogle(idToken);
+      final responseData = await _apiService.loginWithGoogle(googleToken);
       final token = responseData['token']?.toString();
 
       if (token == null || token.isEmpty) {
@@ -485,6 +532,17 @@ class LoginScreen extends StatelessWidget {
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('token', token);
+
+      // Fetch and cache DSS preferences from backend
+      try {
+        final dssPrefs = await _apiService.getDssPreferences();
+        for (final entry in dssPrefs.entries) {
+          await prefs.setDouble('dss_pref_${entry.key}', entry.value);
+        }
+      } catch (e) {
+        // Non-blocking: preferences fetch error won't prevent login
+        print('DSS preferences fetch error: $e');
+      }
 
       await _navigateToHomeWithDssWarmup(context);
     } on SocketException {

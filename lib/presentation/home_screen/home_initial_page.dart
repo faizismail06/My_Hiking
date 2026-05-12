@@ -16,6 +16,7 @@ import 'quick_access_handler_page.dart';
 import 'weather_screen.dart';
 import '../trail_screen/trail_screen.dart';
 import '../dss_preference_screen/dss_preference_screen.dart';
+import '../shared/widgets/risk_warning_dialog.dart';
 
 class HomeInitialPage extends StatefulWidget {
   const HomeInitialPage({super.key});
@@ -38,6 +39,9 @@ class HomeInitialPage extends StatefulWidget {
 class HomeInitialPageState extends State<HomeInitialPage> {
   String userName = '';
   int userId = 0;
+  /// User tier as returned by the API (e.g. "pemula", "menengah", "mahir").
+  /// Used to personalise the risk warning dialog message.
+  String userTier = '';
   bool isLoading = true;
   bool _isFriendHovered = false;
   bool _isFriendPressed = false;
@@ -120,6 +124,8 @@ class HomeInitialPageState extends State<HomeInitialPage> {
           setState(() {
             userName = response['data']['name'];
             userId = response['data']['id'];
+            // Capture tier for risk warning dialog personalisation.
+            userTier = (response['data']['tier'] ?? '').toString();
             isLoading = false;
           });
         }
@@ -529,7 +535,7 @@ class HomeInitialPageState extends State<HomeInitialPage> {
                 if (isLoading) ...[
                   _buildRecommendationSectionHeader(context),
                   SizedBox(
-                    height: 285.h,
+                    height: 310.h,
                     child: ListView.separated(
                       padding: EdgeInsets.symmetric(vertical: 4.h),
                       scrollDirection: Axis.horizontal,
@@ -550,7 +556,7 @@ class HomeInitialPageState extends State<HomeInitialPage> {
                   _buildRecommendationSectionHeader(context),
                   if (topThree.isNotEmpty)
                     SizedBox(
-                      height: 285.h,
+                      height: 310.h,
                       child: ListView.separated(
                         padding: EdgeInsets.symmetric(vertical: 4.h),
                         scrollDirection: Axis.horizontal,
@@ -663,11 +669,11 @@ class HomeInitialPageState extends State<HomeInitialPage> {
     return null;
   }
 
-  void _openRecommendedRoute(
+  Future<void> _openRecommendedRoute(
     BuildContext context,
     RecommendationModel recommendation,
     HomelistItemModel mountain,
-  ) {
+  ) async {
     final idGunung = mountain.id;
     final jalurId = recommendation.routeId;
 
@@ -676,6 +682,27 @@ class HomeInitialPageState extends State<HomeInitialPage> {
         const SnackBar(content: Text('Data jalur rekomendasi belum valid.')),
       );
       return;
+    }
+
+    // Show risk warning for caution / high_risk routes before navigating.
+    // User is NEVER blocked — they can always choose "Lanjut".
+    if (recommendation.warning &&
+        (recommendation.rawRisk == 'caution' ||
+            recommendation.rawRisk == 'high_risk')) {
+      final result = await RiskWarningDialog.show(
+        context,
+        recommendation: recommendation,
+        userTier: userTier,
+      );
+
+      if (!mounted) return;
+
+      // null → user tapped Batal or dismissed → do nothing
+      if (result == null) return;
+
+      // 'continue' or 'detail' both proceed to the trail screen.
+      // If 'detail' is returned in the future we could pass a flag, but for now
+      // both outcomes navigate to TrailScreen (full detail is there anyway).
     }
 
     Navigator.of(context, rootNavigator: true).push(
@@ -697,24 +724,7 @@ class HomeInitialPageState extends State<HomeInitialPage> {
   }
 
   Widget _buildRecommendationLoading() {
-    return Stack(
-      children: [
-        _buildShimmerLoadingCard(),
-        Positioned.fill(
-          child: Container(
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24.h),
-              color: Colors.white.withOpacity(0.35),
-            ),
-            child: const CircularProgressIndicator(
-              color: Color(0xFF1B8A5A),
-              strokeWidth: 2.8,
-            ),
-          ),
-        ),
-      ],
-    );
+    return _buildShimmerLoadingCard();
   }
 
   Widget _buildRecommendationError(
@@ -955,8 +965,8 @@ class HomeInitialPageState extends State<HomeInitialPage> {
         return Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
               colors: [
                 Colors.white.withOpacity(0.0),
                 Colors.white.withOpacity(0.6),

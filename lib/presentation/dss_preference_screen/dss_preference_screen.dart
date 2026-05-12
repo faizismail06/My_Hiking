@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:myhiking/api/api_service.dart';
 
 // ─── Persistence helper ──────────────────────────────────────────────────────
 
@@ -66,6 +67,7 @@ class _PrefItem {
   final String lowLabel;       // label at value = 1
   final String highLabel;      // label at value = 5
   final IconData icon;
+  final CriteriaType type;     // 'cost' or 'benefit'
 
   const _PrefItem({
     required this.weightKey,
@@ -73,7 +75,14 @@ class _PrefItem {
     required this.lowLabel,
     required this.highLabel,
     required this.icon,
+    required this.type,
   });
+}
+
+/// Enum untuk tipe kriteria
+enum CriteriaType {
+  cost,      // semakin rendah semakin baik (biaya, jarak, durasi, dll)
+  benefit,   // semakin tinggi semakin baik (panorama, fasilitas, keamanan, dll)
 }
 
 class _DssPreferenceScreenState extends State<DssPreferenceScreen>
@@ -81,12 +90,14 @@ class _DssPreferenceScreenState extends State<DssPreferenceScreen>
   // ─── Slider definitions ───────────────────────────────────────────────────
 
   static const List<_PrefItem> _items = [
+    // ─── COST CRITERIA (semakin rendah semakin baik) ─────────────────────
     _PrefItem(
       weightKey: 'priority_cost',
       question: 'Seberapa penting biaya perjalanan?',
       lowLabel: 'Tak peduli',
       highLabel: 'Sangat penting',
       icon: Icons.payments_outlined,
+      type: CriteriaType.cost,
     ),
     _PrefItem(
       weightKey: 'priority_distance',
@@ -94,6 +105,7 @@ class _DssPreferenceScreenState extends State<DssPreferenceScreen>
       lowLabel: 'Tak peduli',
       highLabel: 'Sangat penting',
       icon: Icons.straighten_outlined,
+      type: CriteriaType.cost,
     ),
     _PrefItem(
       weightKey: 'priority_duration',
@@ -101,6 +113,7 @@ class _DssPreferenceScreenState extends State<DssPreferenceScreen>
       lowLabel: 'Tak peduli',
       highLabel: 'Sangat penting',
       icon: Icons.timer_outlined,
+      type: CriteriaType.cost,
     ),
     _PrefItem(
       weightKey: 'priority_difficulty',
@@ -108,41 +121,7 @@ class _DssPreferenceScreenState extends State<DssPreferenceScreen>
       lowLabel: 'Tak peduli',
       highLabel: 'Sangat penting',
       icon: Icons.terrain_outlined,
-    ),
-    _PrefItem(
-      weightKey: 'priority_panorama',
-      question: 'Seberapa penting panorama / pemandangan?',
-      lowLabel: 'Tak peduli',
-      highLabel: 'Sangat penting',
-      icon: Icons.landscape_outlined,
-    ),
-    _PrefItem(
-      weightKey: 'priority_fasilitas',
-      question: 'Seberapa penting fasilitas di jalur?',
-      lowLabel: 'Tak peduli',
-      highLabel: 'Sangat penting',
-      icon: Icons.cabin_outlined,
-    ),
-    _PrefItem(
-      weightKey: 'priority_crowd_level',
-      question: 'Seberapa penting tingkat keramaian jalur?',
-      lowLabel: 'Tak peduli',
-      highLabel: 'Sangat penting',
-      icon: Icons.people_outline,
-    ),
-    _PrefItem(
-      weightKey: 'priority_popularity',
-      question: 'Seberapa penting popularitas jalur?',
-      lowLabel: 'Tak peduli',
-      highLabel: 'Sangat penting',
-      icon: Icons.trending_up_outlined,
-    ),
-    _PrefItem(
-      weightKey: 'priority_safety',
-      question: 'Seberapa penting keamanan jalur?',
-      lowLabel: 'Tak peduli',
-      highLabel: 'Sangat penting',
-      icon: Icons.shield_outlined,
+      type: CriteriaType.cost,
     ),
     _PrefItem(
       weightKey: 'priority_elevation',
@@ -150,6 +129,48 @@ class _DssPreferenceScreenState extends State<DssPreferenceScreen>
       lowLabel: 'Tak peduli',
       highLabel: 'Sangat penting',
       icon: Icons.height_outlined,
+      type: CriteriaType.cost,
+    ),
+    // ─── BENEFIT CRITERIA (semakin tinggi semakin baik) ─────────────────
+    _PrefItem(
+      weightKey: 'priority_panorama',
+      question: 'Seberapa penting panorama / pemandangan?',
+      lowLabel: 'Tak peduli',
+      highLabel: 'Sangat penting',
+      icon: Icons.landscape_outlined,
+      type: CriteriaType.benefit,
+    ),
+    _PrefItem(
+      weightKey: 'priority_fasilitas',
+      question: 'Seberapa penting fasilitas di jalur?',
+      lowLabel: 'Tak peduli',
+      highLabel: 'Sangat penting',
+      icon: Icons.cabin_outlined,
+      type: CriteriaType.benefit,
+    ),
+    _PrefItem(
+      weightKey: 'priority_crowd_level',
+      question: 'Seberapa penting tingkat keramaian jalur?',
+      lowLabel: 'Tak peduli',
+      highLabel: 'Sangat penting',
+      icon: Icons.people_outline,
+      type: CriteriaType.benefit,
+    ),
+    _PrefItem(
+      weightKey: 'priority_popularity',
+      question: 'Seberapa penting popularitas jalur?',
+      lowLabel: 'Tak peduli',
+      highLabel: 'Sangat penting',
+      icon: Icons.trending_up_outlined,
+      type: CriteriaType.benefit,
+    ),
+    _PrefItem(
+      weightKey: 'priority_safety',
+      question: 'Seberapa penting keamanan jalur?',
+      lowLabel: 'Tak peduli',
+      highLabel: 'Sangat penting',
+      icon: Icons.shield_outlined,
+      type: CriteriaType.benefit,
     ),
   ];
 
@@ -163,6 +184,7 @@ class _DssPreferenceScreenState extends State<DssPreferenceScreen>
 
   late final AnimationController _animController;
   late final Animation<double> _fadeAnim;
+  late final ApiService _apiService;
 
   static const double _defaultValue = 3;
   static const Color _primary = Color(0xFF127857);
@@ -183,6 +205,7 @@ class _DssPreferenceScreenState extends State<DssPreferenceScreen>
       parent: _animController,
       curve: Curves.easeOutCubic,
     );
+    _apiService = ApiService();
 
     // Load persisted preferences and then start the fade-in animation.
     _loadSavedPrefs();
@@ -269,6 +292,12 @@ class _DssPreferenceScreenState extends State<DssPreferenceScreen>
     );
 
     if (!mounted) return;
+
+    // Async sync to backend (non-blocking, doesn't delay return to previous screen)
+    _apiService.saveDssPreferences(_values).catchError((e) {
+      print('DSS preferences backend sync error: $e');
+    });
+
     Navigator.of(context).pop(customised);
   }
 
@@ -298,7 +327,25 @@ class _DssPreferenceScreenState extends State<DssPreferenceScreen>
                       children: [
                         _buildHeader(),
                         const SizedBox(height: 16),
-                        ..._items.map(_buildSliderCard),
+                        _buildSectionHeader(
+                          'Kriteria Efisiensi',
+                          'Semakin tinggi, semakin cari yang MURAH, DEKAT, dan CEPAT',
+                          CriteriaType.cost,
+                        ),
+                        const SizedBox(height: 12),
+                        ..._items
+                            .where((item) => item.type == CriteriaType.cost)
+                            .map(_buildSliderCard),
+                        const SizedBox(height: 20),
+                        _buildSectionHeader(
+                          'Kriteria Kualitas',
+                          'Semakin tinggi, semakin cari yang LEBIH BAGUS',
+                          CriteriaType.benefit,
+                        ),
+                        const SizedBox(height: 12),
+                        ..._items
+                            .where((item) => item.type == CriteriaType.benefit)
+                            .map(_buildSliderCard),
                         const SizedBox(height: 8),
                         _buildResetButton(),
                         const SizedBox(height: 16),
@@ -313,7 +360,6 @@ class _DssPreferenceScreenState extends State<DssPreferenceScreen>
   }
 
   // ─── Saved banner ─────────────────────────────────────────────────────────
-
   /// Small top banner indicating that the displayed values are the user's
   /// last-saved preferences (not the app defaults).
   Widget _buildSavedBanner() {
@@ -338,6 +384,279 @@ class _DssPreferenceScreenState extends State<DssPreferenceScreen>
           ),
         ],
       ),
+    );
+  }
+
+  // ─── Section Header dengan Info Button ──────────────────────────────────
+
+  Widget _buildSectionHeader(
+    String title,
+    String description,
+    CriteriaType type,
+  ) {
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                  color: Color(0xFF1A1A2E),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                description,
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        GestureDetector(
+          onTap: () => _showCriteriaExplanation(type),
+          child: Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: _primary.withOpacity(0.15),
+              border: Border.all(color: _primary.withOpacity(0.3), width: 1.5),
+            ),
+            child: const Center(
+              child: Text(
+                '?',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                  color: _primary,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Tampilkan dialog penjelasan tentang cost vs benefit criteria
+  void _showCriteriaExplanation(CriteriaType type) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        if (type == CriteriaType.cost) {
+          return _buildCostExplanationDialog();
+        } else {
+          return _buildBenefitExplanationDialog();
+        }
+      },
+    );
+  }
+
+  /// Dialog untuk menjelaskan COST criteria
+  Widget _buildCostExplanationDialog() {
+    return AlertDialog(
+      title: const Row(
+        children: [
+          Icon(Icons.info_outlined, color: Color(0xFF127857)),
+          SizedBox(width: 8),
+          Text(
+            'Kriteria Efisiensi',
+            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF127857).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Text(
+              'Semakin tinggi slider, semakin sistem cari jalur yang HEMAT dan PRAKTIS',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF127857),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildExplanationItem(
+            'Biaya',
+            'Slider tinggi = cari rute yang MURAH, Slider rendah = abaikan harga',
+          ),
+          const SizedBox(height: 12),
+          _buildExplanationItem(
+            'Jarak',
+            'Slider tinggi = cari rute yang DEKAT, Slider rendah = abaikan jarak jauh',
+          ),
+          const SizedBox(height: 12),
+          _buildExplanationItem(
+            'Durasi',
+            'Slider tinggi = cari rute yang CEPAT, Slider rendah = abaikan waktu lama',
+          ),
+          const SizedBox(height: 12),
+          _buildExplanationItem(
+            'Kesulitan',
+            'Slider tinggi = cari rute yang GAMPANG, Slider rendah = boleh rute sulit',
+          ),
+          const SizedBox(height: 12),
+          _buildExplanationItem(
+            'Elevasi',
+            'Slider tinggi = cari rute dengan ketinggian RENDAH, Slider rendah = boleh tinggi',
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: Navigator.of(context).pop,
+          child: const Text(
+            'Mengerti',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF127857),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Dialog untuk menjelaskan BENEFIT criteria
+  Widget _buildBenefitExplanationDialog() {
+    return AlertDialog(
+      title: const Row(
+        children: [
+          Icon(Icons.info_outlined, color: Color(0xFF127857)),
+          SizedBox(width: 8),
+          Text(
+            'Kriteria Kualitas',
+            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF127857).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Text(
+              'Semakin tinggi slider, semakin sistem cari jalur dengan kualitas TERBAIK',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF127857),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildExplanationItem(
+            'Panorama',
+            'Slider tinggi = cari rute dengan pemandangan BAGUS, Slider rendah = abaikan keindahan',
+          ),
+          const SizedBox(height: 12),
+          _buildExplanationItem(
+            'Fasilitas',
+            'Slider tinggi = cari rute dengan fasilitas LENGKAP, Slider rendah = abaikan fasilitas',
+          ),
+          const SizedBox(height: 12),
+          _buildExplanationItem(
+            'Keramaian',
+            'Slider tinggi = cari rute yang SEPI, Slider rendah = tidak masalah ramai',
+          ),
+          const SizedBox(height: 12),
+          _buildExplanationItem(
+            'Popularitas',
+            'Slider tinggi = cari rute yang POPULER/terkenal, Slider rendah = boleh yang jarang',
+          ),
+          const SizedBox(height: 12),
+          _buildExplanationItem(
+            'Keamanan',
+            'Slider tinggi = cari rute yang AMAN, Slider rendah = abaikan risiko',
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: Navigator.of(context).pop,
+          child: const Text(
+            'Mengerti',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF127857),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Helper untuk membuat satu item penjelasan
+  Widget _buildExplanationItem(String title, String description) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          margin: const EdgeInsets.only(top: 2),
+          width: 6,
+          height: 6,
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            color: Color(0xFF127857),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                  color: Color(0xFF1A1A2E),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                description,
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 11.5,
+                  color: Colors.grey[700],
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

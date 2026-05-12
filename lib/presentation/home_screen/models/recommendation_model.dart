@@ -5,9 +5,13 @@ class RecommendationModel {
   final String mountainName;
   final double score;
   final String risk;
+  /// Raw risk_level string as returned by the API (e.g. "high_risk", "caution", "safe").
+  final String rawRisk;
   final String explanation;
   final String keyFactor;
   final bool warning;
+  /// Short human-readable risk reason from DSSService.
+  final String shortReason;
 
   const RecommendationModel({
     required this.rank,
@@ -16,9 +20,11 @@ class RecommendationModel {
     required this.mountainName,
     required this.score,
     required this.risk,
+    this.rawRisk = '',
     this.explanation = '',
     this.keyFactor = '',
     this.warning = false,
+    this.shortReason = '',
   });
 
   factory RecommendationModel.fromJson(
@@ -40,8 +46,8 @@ class RecommendationModel {
         : (json['route_id'] as num?)?.toInt();
 
     // Support both old 'risk' field and new 'risk_level' field
-    final rawRisk = (json['risk_level'] ?? json['risk'] ?? '').toString();
-    final risk = _normalizeRisk(rawRisk);
+    final rawRiskStr = (json['risk_level'] ?? json['risk'] ?? '').toString();
+    final risk = _normalizeRisk(rawRiskStr);
 
     return RecommendationModel(
       rank: rank ?? (fallbackRank ?? 0),
@@ -50,11 +56,13 @@ class RecommendationModel {
       mountainName: (json['mountain_name'] ?? '-').toString(),
       score: score,
       risk: risk.isNotEmpty ? risk : _riskFromScore(score),
+      rawRisk: rawRiskStr.toLowerCase().trim(),
       explanation: (json['explanation'] ?? '').toString(),
       keyFactor: (json['key_factor'] ?? '').toString(),
       warning: json['warning'] is bool
           ? json['warning'] as bool
           : (json['warning']?.toString().toLowerCase() == 'true'),
+      shortReason: (json['short_reason'] ?? '').toString(),
     );
   }
 
@@ -65,9 +73,11 @@ class RecommendationModel {
     String? mountainName,
     double? score,
     String? risk,
+    String? rawRisk,
     String? explanation,
     String? keyFactor,
     bool? warning,
+    String? shortReason,
   }) {
     return RecommendationModel(
       rank: rank ?? this.rank,
@@ -76,9 +86,11 @@ class RecommendationModel {
       mountainName: mountainName ?? this.mountainName,
       score: score ?? this.score,
       risk: risk ?? this.risk,
+      rawRisk: rawRisk ?? this.rawRisk,
       explanation: explanation ?? this.explanation,
       keyFactor: keyFactor ?? this.keyFactor,
       warning: warning ?? this.warning,
+      shortReason: shortReason ?? this.shortReason,
     );
   }
 
