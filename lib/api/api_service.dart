@@ -1889,9 +1889,9 @@ class ApiService {
     }
   }
 
-  Future<Map<String, double>> getDssPreferences() async {
+  Future<Map<String, double>> getDssPreferences({String? tokenOverride}) async {
     final url = Uri.parse('$baseUrl/dss-preferences');
-    final token = await getToken();
+    final token = tokenOverride ?? await getToken();
 
     final response = await http.get(
       url,
@@ -1903,9 +1903,14 @@ class ApiService {
 
     if (response.statusCode == 200) {
       final responseData = jsonDecode(response.body);
-      final preferences = Map<String, double>.from(
-        responseData['preferences'] ?? {},
-      );
+      final rawPrefs = responseData['preferences'] ?? {};
+      final preferences = <String, double>{};
+      for (final entry in rawPrefs.entries) {
+        final val = entry.value;
+        if (val is num) {
+          preferences[entry.key as String] = val.toDouble();
+        }
+      }
       return preferences;
     }
 

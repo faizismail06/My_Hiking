@@ -282,14 +282,10 @@ class _DssPreferenceScreenState extends State<DssPreferenceScreen>
     // Persist current values before leaving the screen.
     await _DssPrefsStorage.save(_values);
 
-    // Only return keys where the user actually deviated from the default.
-    // Sending all-equal weights (all = 3.0) is mathematically identical to
-    // sending no weights — the backend normalises them to 1/n either way.
-    // By stripping default-value keys we make the backend's `weights_applied`
-    // flag meaningful AND ensure ranking visibly changes when sliders are moved.
-    final customised = Map<String, double>.fromEntries(
-      _values.entries.where((e) => e.value != _defaultValue),
-    );
+    // Send all slider values to the backend.
+    // Previously, we stripped out the default values (3.0), which caused
+    // the backend to calculate TOPSIS using incomplete criteria (e.g. only cost).
+    final customised = Map<String, double>.from(_values);
 
     if (!mounted) return;
 

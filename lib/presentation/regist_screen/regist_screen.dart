@@ -364,8 +364,9 @@ class RegistScreen extends StatelessWidget {
       await prefs.setString('token', token);
 
       // Fetch and cache DSS preferences from backend
+      // Pass token langsung agar tidak tergantung SharedPreferences flush
       try {
-        final dssPrefs = await _apiService.getDssPreferences();
+        final dssPrefs = await _apiService.getDssPreferences(tokenOverride: token);
         for (final entry in dssPrefs.entries) {
           await prefs.setDouble('dss_pref_${entry.key}', entry.value);
         }

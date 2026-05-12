@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:myhiking/api/api_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/app_export.dart';
 import '../models/home_initial_model.dart';
 import '../models/home_model.dart';
@@ -105,10 +106,24 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
     if (hasCompletedExperience) {
       try {
-        // Default fetch uses equal weights (no params = server uses defaults)
+        // Retrieve persisted DSS preferences so that recommendation uses user settings
+        // instead of falling back to default equal weights.
+        final prefs = await SharedPreferences.getInstance();
+        final customWeights = <String, double>{};
+        final keys = prefs.getKeys();
+        for (final key in keys) {
+          if (key.startsWith('dss_pref_')) {
+            final val = prefs.getDouble(key);
+            if (val != null) {
+              final backendKey = key.replaceFirst('dss_pref_', '');
+              customWeights[backendKey] = val;
+            }
+          }
+        }
+
         topRecommendations = await _apiService.fetchRecommendations(
           limit: 30,
-          weights: const {},
+          weights: customWeights,
         );
         topRecommendations = _sortAndRankRecommendations(topRecommendations);
       } catch (e) {
