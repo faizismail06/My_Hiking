@@ -802,7 +802,7 @@ class HomeInitialPageState extends State<HomeInitialPage> {
           SizedBox(width: 10.h),
           Expanded(
             child: Text(
-              'Rekomendasi Untuk Anda',
+              'Saran Untuk Anda',
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w800,
                 fontSize: 16.fSize,

@@ -46,7 +46,6 @@ class _RiwayatTransaksiPageState extends State<RiwayatTransaksiPage> {
           userId = data['id'].toString();
           userName = (data['name'] ?? '').toString();
           userTier = data['tier']?.toString();
-          userTierSource = data['tier_source']?.toString();
         });
         if (mounted) {
           context

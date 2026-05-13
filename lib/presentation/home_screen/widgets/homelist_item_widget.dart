@@ -186,7 +186,7 @@ class _HomelistItemWidgetState extends State<HomelistItemWidget> {
                                     Text(
                                       rec != null
                                           ? 'TOP #${rec.rank}'
-                                          : 'Rekomendasi DSS',
+                                          : 'Saran',
                                       style: TextStyle(
                                         color: Colors.white,
                                         fontSize: 11.fSize,

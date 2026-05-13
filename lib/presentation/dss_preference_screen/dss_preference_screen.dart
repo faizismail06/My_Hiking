@@ -64,16 +64,14 @@ class DssPreferenceScreen extends StatefulWidget {
 class _PrefItem {
   final String weightKey;      // backend query param key
   final String question;       // shown above the slider
-  final String lowLabel;       // label at value = 1
-  final String highLabel;      // label at value = 5
+  final List<String> labels;   // labels for values 1, 2, 3, 4, 5
   final IconData icon;
   final CriteriaType type;     // 'cost' or 'benefit'
 
   const _PrefItem({
     required this.weightKey,
     required this.question,
-    required this.lowLabel,
-    required this.highLabel,
+    required this.labels,
     required this.icon,
     required this.type,
   });
@@ -93,82 +91,72 @@ class _DssPreferenceScreenState extends State<DssPreferenceScreen>
     // ─── COST CRITERIA (semakin rendah semakin baik) ─────────────────────
     _PrefItem(
       weightKey: 'priority_cost',
-      question: 'Seberapa penting biaya perjalanan?',
-      lowLabel: 'Tak peduli',
-      highLabel: 'Sangat penting',
+      question: 'Jika saya ingin melakukan pendakian, saya akan mengeluarkan biaya yang .....',
+      labels: ['Sangat mahal', 'Mahal', 'Standar', 'Murah', 'Sangat murah'],
       icon: Icons.payments_outlined,
       type: CriteriaType.cost,
     ),
     _PrefItem(
       weightKey: 'priority_distance',
-      question: 'Seberapa penting jarak tempuh?',
-      lowLabel: 'Tak peduli',
-      highLabel: 'Sangat penting',
+      question: 'Jika saya ingin melakukan pendakian, saya sanggup menempuh jarak sejauh .....',
+      labels: ['Sangat jauh', 'Jauh', 'Sedang', 'Dekat', 'Sangat dekat'],
       icon: Icons.straighten_outlined,
       type: CriteriaType.cost,
     ),
     _PrefItem(
       weightKey: 'priority_duration',
-      question: 'Seberapa penting durasi pendakian?',
-      lowLabel: 'Tak peduli',
-      highLabel: 'Sangat penting',
+      question: 'Jika saya ingin melakukan pendakian, saya memiliki waktu luang selama .....',
+      labels: ['Sangat lama', 'Lama', 'Cukup', 'Singkat', 'Sangat singkat'],
       icon: Icons.timer_outlined,
       type: CriteriaType.cost,
     ),
     _PrefItem(
       weightKey: 'priority_difficulty',
-      question: 'Seberapa penting tingkat kesulitan jalur?',
-      lowLabel: 'Tak peduli',
-      highLabel: 'Sangat penting',
+      question: 'Jika saya ingin melakukan pendakian, saya mampu melewati jalur dengan medan yang .....',
+      labels: ['Sangat sulit', 'Sulit', 'Menengah', 'Mudah', 'Sangat mudah'],
       icon: Icons.terrain_outlined,
       type: CriteriaType.cost,
     ),
     _PrefItem(
       weightKey: 'priority_elevation',
-      question: 'Seberapa penting ketinggian / elevasi jalur?',
-      lowLabel: 'Tak peduli',
-      highLabel: 'Sangat penting',
+      question: 'Jika saya ingin melakukan pendakian, saya sanggup mencapai ketinggian gunung yang .....',
+      labels: ['Sangat tinggi', 'Tinggi', 'Sedang', 'Rendah', 'Sangat rendah'],
       icon: Icons.height_outlined,
       type: CriteriaType.cost,
     ),
     // ─── BENEFIT CRITERIA (semakin tinggi semakin baik) ─────────────────
     _PrefItem(
       weightKey: 'priority_panorama',
-      question: 'Seberapa penting panorama / pemandangan?',
-      lowLabel: 'Tak peduli',
-      highLabel: 'Sangat penting',
+      question: 'Jika saya ingin melakukan pendakian, saya mengharapkan pemandangan alam yang .....',
+      labels: ['Biasa saja', 'Cukup bagus', 'Bagus', 'Sangat bagus', 'Luar biasa'],
       icon: Icons.landscape_outlined,
       type: CriteriaType.benefit,
     ),
     _PrefItem(
       weightKey: 'priority_fasilitas',
-      question: 'Seberapa penting fasilitas di jalur?',
-      lowLabel: 'Tak peduli',
-      highLabel: 'Sangat penting',
+      question: 'Jika saya ingin melakukan pendakian, saya membutuhkan fasilitas di jalur yang .....',
+      labels: ['Sangat minim', 'Minim', 'Cukup', 'Lengkap', 'Sangat lengkap'],
       icon: Icons.cabin_outlined,
       type: CriteriaType.benefit,
     ),
     _PrefItem(
       weightKey: 'priority_crowd_level',
-      question: 'Seberapa penting tingkat keramaian jalur?',
-      lowLabel: 'Tak peduli',
-      highLabel: 'Sangat penting',
+      question: 'Jika saya ingin melakukan pendakian, saya lebih suka mendaki di jalur yang .....',
+      labels: ['Sangat ramai', 'Ramai', 'Sedang', 'Sepi', 'Sangat sepi'],
       icon: Icons.people_outline,
       type: CriteriaType.benefit,
     ),
     _PrefItem(
       weightKey: 'priority_popularity',
-      question: 'Seberapa penting popularitas jalur?',
-      lowLabel: 'Tak peduli',
-      highLabel: 'Sangat penting',
+      question: 'Jika saya ingin melakukan pendakian, saya ingin mendaki di gunung yang popularitasnya .....',
+      labels: ['Sangat tidak populer', 'Kurang populer', 'Cukup populer', 'Populer', 'Sangat populer'],
       icon: Icons.trending_up_outlined,
       type: CriteriaType.benefit,
     ),
     _PrefItem(
       weightKey: 'priority_safety',
-      question: 'Seberapa penting keamanan jalur?',
-      lowLabel: 'Tak peduli',
-      highLabel: 'Sangat penting',
+      question: 'Jika saya ingin melakukan pendakian, saya mengharapkan tingkat keamanan jalur yang .....',
+      labels: ['Sangat berisiko', 'Berisiko', 'Cukup aman', 'Aman', 'Sangat aman'],
       icon: Icons.shield_outlined,
       type: CriteriaType.benefit,
     ),
@@ -237,20 +225,12 @@ class _DssPreferenceScreenState extends State<DssPreferenceScreen>
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
 
-  /// Converts the integer slider value (1–5) into a descriptive label.
-  String _valueLabel(double v) {
-    switch (v.round()) {
-      case 1:
-        return 'Tidak penting';
-      case 2:
-        return 'Kurang penting';
-      case 3:
-        return 'Netral';
-      case 4:
-        return 'Penting';
-      default:
-        return 'Sangat penting';
-    }
+  /// Converts the integer slider value (1–5) into a descriptive label based on the specific item.
+  String _valueLabel(double v, _PrefItem item) {
+    int index = v.round() - 1;
+    if (index < 0) index = 0;
+    if (index > 4) index = 4;
+    return item.labels[index];
   }
 
   /// Returns true only if all sliders are still at the default value,
@@ -823,7 +803,7 @@ class _DssPreferenceScreenState extends State<DssPreferenceScreen>
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
-                            _valueLabel(value),
+                            _valueLabel(value, item),
                             style: TextStyle(
                               fontFamily: 'Poppins',
                               fontSize: 11,
@@ -873,7 +853,7 @@ class _DssPreferenceScreenState extends State<DssPreferenceScreen>
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    item.lowLabel,
+                    item.labels.first,
                     style: TextStyle(
                       fontFamily: 'Poppins',
                       fontSize: 10.5,
@@ -899,7 +879,7 @@ class _DssPreferenceScreenState extends State<DssPreferenceScreen>
                     }),
                   ),
                   Text(
-                    item.highLabel,
+                    item.labels.last,
                     style: TextStyle(
                       fontFamily: 'Poppins',
                       fontSize: 10.5,
@@ -980,7 +960,7 @@ class _DssPreferenceScreenState extends State<DssPreferenceScreen>
                 Icon(Icons.auto_awesome_rounded, size: 18),
                 SizedBox(width: 8),
                 Text(
-                  'Tampilkan Rekomendasi',
+                  'Tampilkan Saran',
                   style: TextStyle(
                     fontFamily: 'Poppins',
                     fontWeight: FontWeight.w700,
