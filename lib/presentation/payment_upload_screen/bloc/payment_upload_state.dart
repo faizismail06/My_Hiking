@@ -32,12 +32,11 @@ class PaymentUploadState extends Equatable {
     return PaymentUploadState(
       isLoading: isLoading ?? this.isLoading,
       error: error ?? this.error,
-      paymentUploadModelObj: paymentUploadModelObj ??
-          this.paymentUploadModelObj,
+      paymentUploadModelObj:
+          paymentUploadModelObj ?? this.paymentUploadModelObj,
     );
   }
 
   @override
-  List<Object?> get props =>
-      [isLoading, error, paymentUploadModelObj];
+  List<Object?> get props => [isLoading, error, paymentUploadModelObj];
 }

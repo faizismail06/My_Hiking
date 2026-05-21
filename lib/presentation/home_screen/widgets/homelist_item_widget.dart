@@ -280,8 +280,10 @@ class _HomelistItemWidgetState extends State<HomelistItemWidget> {
 
   Widget _buildRiskBadge(String rawRisk) {
     final isHighRisk = rawRisk == 'high_risk';
-    final color = isHighRisk ? const Color(0xFFD32F2F) : const Color(0xFFF57C00);
-    final icon = isHighRisk ? Icons.warning_rounded : Icons.info_outline_rounded;
+    final color =
+        isHighRisk ? const Color(0xFFD32F2F) : const Color(0xFFF57C00);
+    final icon =
+        isHighRisk ? Icons.warning_rounded : Icons.info_outline_rounded;
     final label = isHighRisk ? 'Risiko Tinggi' : 'Perlu Perhatian';
 
     return ClipRRect(

@@ -25,7 +25,8 @@ class TrailBloc extends Bloc<TrailEvent, TrailState> {
       final response = await http.get(
         Uri.parse('$baseUrl/mountains/$mountainId/trails/$trailId'),
         headers: {
-          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+          if (token != null && token.isNotEmpty)
+            'Authorization': 'Bearer $token',
         },
       );
       print('Headers: ${response.headers}');

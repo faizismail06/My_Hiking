@@ -412,11 +412,17 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
             title: Text("Terjadi Kesalahan"),
             content: Text("Gagal menyimpan data. Pesan error: $e"),
             actions: [
-              TextButton(
+              ElevatedButton(
                 child: Text("OK"),
                 onPressed: () {
                   Navigator.of(context).pop();
                 },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: Colors.white,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
               ),
             ],
           );
@@ -425,92 +431,118 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
     }
   }
 
-  void onTapTxtIdCounter(BuildContext context) {
+  Future<void> onTapTxtIdCounter(BuildContext context) async {
     final oldPasswordController = TextEditingController();
     final newPasswordController = TextEditingController();
     final confirmPasswordController = TextEditingController();
+    bool? isUpdated;
 
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12.0),
-          ),
-          title: Text("Ubah Password"),
-          content: SizedBox(
-            height: 210, // Tinggi disesuaikan untuk menghindari overflow
-            child: Column(
-              children: [
-                _buildPasswordField("Password Lama", oldPasswordController),
-                _buildPasswordField("Password Baru", newPasswordController),
-                _buildPasswordField(
-                    "Konfirmasi Password", confirmPasswordController),
-              ],
+    try {
+      isUpdated = await showDialog<bool>(
+        context: context,
+        builder: (BuildContext dialogContext) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12.0),
             ),
-          ),
-          actions: <Widget>[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                TextButton(
-                  child: Text("Batal"),
-                  onPressed: () {
-                    oldPasswordController.dispose();
-                    newPasswordController.dispose();
-                    confirmPasswordController.dispose();
-                    Navigator.of(context).pop();
-                  },
-                ),
-                TextButton(
-                  child: Text("Simpan Password Baru"),
-                  onPressed: () async {
-                    try {
-                      final response = await ApiService().updatePassword(
-                        userId: userId1,
-                        oldPassword: oldPasswordController.text,
-                        newPassword: newPasswordController.text,
-                        confirmPassword: confirmPasswordController.text,
-                      );
-                      print("$response");
-                      Navigator.of(context).pop();
+            title: Text("Ubah Password"),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildPasswordField("Password Lama", oldPasswordController),
+                  _buildPasswordField("Password Baru", newPasswordController),
+                  _buildPasswordField(
+                      "Konfirmasi Password", confirmPasswordController),
+                ],
+              ),
+            ),
+            actions: <Widget>[
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      child: Text("Batal"),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.grey[700],
+                      ),
+                      onPressed: () {
+                        Navigator.of(dialogContext).pop(false);
+                      },
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton(
+                      child: Text(
+                        "Simpan",
+                        textAlign: TextAlign.center,
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.colorScheme.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 12),
+                      ),
+                      onPressed: () async {
+                        try {
+                          final response = await ApiService().updatePassword(
+                            userId: userId1,
+                            oldPassword: oldPasswordController.text,
+                            newPassword: newPasswordController.text,
+                            confirmPassword: confirmPasswordController.text,
+                          );
+                          print("$response");
+                          Navigator.of(dialogContext).pop(true);
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content: Text(
+                                    'Gagal mengubah password: $e')),
+                          );
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          );
+        },
+      );
+    } finally {
+      oldPasswordController.dispose();
+      newPasswordController.dispose();
+      confirmPasswordController.dispose();
+    }
 
-                      // Tampilkan dialog sukses
-                      showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: Icon(Icons.check_circle,
-                              color: Colors.green, size: 60),
-                          content: Text(
-                            "Password Berhasil Diubah",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 18),
-                          ),
-                          actions: [
-                            TextButton(
-                              child: Text("OK"),
-                              onPressed: () => Navigator.of(context).pop(),
-                            ),
-                          ],
-                        ),
-                      );
-                    } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Gagal mengubah password: $e')),
-                      );
-                    } finally {
-                      oldPasswordController.dispose();
-                      newPasswordController.dispose();
-                      confirmPasswordController.dispose();
-                    }
-                  },
-                ),
-              ],
+    if (!mounted) return;
+
+    if (isUpdated == true) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Icon(Icons.check_circle, color: Colors.green, size: 60),
+          content: Text(
+            "Password Berhasil Diubah",
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 18),
+          ),
+          actions: [
+            ElevatedButton(
+              child: Text("OK"),
+              onPressed: () => Navigator.of(context).pop(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.colorScheme.primary,
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
             ),
           ],
-        );
-      },
-    );
+        ),
+      );
+    }
   }
 
   Widget _buildPasswordField(String label, TextEditingController controller) {
@@ -1278,6 +1310,9 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.grey[700],
+              ),
               child: const Text('Tutup'),
             ),
           ],

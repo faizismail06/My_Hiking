@@ -38,191 +38,193 @@ class HikingRecordCardWidget extends StatelessWidget {
     }
 
     final status = (model.status ?? '').trim().toLowerCase();
-    final isRefundStatus = status == 'cancel requested' || status == 'cancelled';
+    final isRefundStatus =
+        status == 'cancel requested' || status == 'cancelled';
 
     return GestureDetector(
-      onTap: onTap,
-      child: Container(
-      margin: EdgeInsets.only(bottom: 14.h),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Colors.white,
-            Colors.white,
-            const Color(0xFFF0FDF4).withOpacity(0.5),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(18.h),
-        border: Border.all(
-          color: const Color(0xFFE5E7EB).withOpacity(0.5),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 16.h,
-            offset: const Offset(0, 4),
+        onTap: onTap,
+        child: Container(
+          margin: EdgeInsets.only(bottom: 14.h),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white,
+                Colors.white,
+                const Color(0xFFF0FDF4).withOpacity(0.5),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(18.h),
+            border: Border.all(
+              color: const Color(0xFFE5E7EB).withOpacity(0.5),
+              width: 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 16.h,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(18.h),
-        child: Stack(
-          children: [
-            // Decorative accent
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: Container(
-                height: 4.h,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      const Color(0xFF059669),
-                      const Color(0xFF34D399),
-                      const Color(0xFF6EE7B7),
-                    ],
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(18.h),
+            child: Stack(
+              children: [
+                // Decorative accent
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: Container(
+                    height: 4.h,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFF059669),
+                          const Color(0xFF34D399),
+                          const Color(0xFF6EE7B7),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(16.h, 18.h, 16.h, 16.h),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header: Mountain name + number
-                  Row(
+                Padding(
+                  padding: EdgeInsets.fromLTRB(16.h, 18.h, 16.h, 16.h),
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Mountain icon
-                      Container(
-                        width: 44.h,
-                        height: 44.h,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              Color(0xFF059669),
-                              Color(0xFF10B981),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(12.h),
-                        ),
-                        child: Center(
-                          child: Icon(
-                            Icons.landscape_rounded,
-                            color: Colors.white,
-                            size: 24.h,
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 12.h),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              model.gunung ?? 'Gunung',
-                              style: TextStyle(
-                                fontSize: 16.fSize,
-                                fontWeight: FontWeight.w700,
-                                color: const Color(0xFF1A1A2E),
-                                letterSpacing: 0.1,
+                      // Header: Mountain name + number
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Mountain icon
+                          Container(
+                            width: 44.h,
+                            height: 44.h,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  Color(0xFF059669),
+                                  Color(0xFF10B981),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(12.h),
+                            ),
+                            child: Center(
+                              child: Icon(
+                                Icons.landscape_rounded,
+                                color: Colors.white,
+                                size: 24.h,
                               ),
                             ),
-                            if (model.jalur != null &&
-                                model.jalur!.isNotEmpty) ...[
-                              SizedBox(height: 2.h),
-                              Text(
-                                'Via ${model.jalur}',
-                                style: TextStyle(
-                                  fontSize: 12.fSize,
-                                  color: const Color(0xFF6B7280),
-                                  fontWeight: FontWeight.w500,
+                          ),
+                          SizedBox(width: 12.h),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  model.gunung ?? 'Gunung',
+                                  style: TextStyle(
+                                    fontSize: 16.fSize,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF1A1A2E),
+                                    letterSpacing: 0.1,
+                                  ),
                                 ),
+                                if (model.jalur != null &&
+                                    model.jalur!.isNotEmpty) ...[
+                                  SizedBox(height: 2.h),
+                                  Text(
+                                    'Via ${model.jalur}',
+                                    style: TextStyle(
+                                      fontSize: 12.fSize,
+                                      color: const Color(0xFF6B7280),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          // Completed badge
+                          _buildStatusBadge(),
+                        ],
+                      ),
+                      SizedBox(height: 14.h),
+                      // Info row
+                      Container(
+                        padding: EdgeInsets.all(12.h),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF9FAFB),
+                          borderRadius: BorderRadius.circular(12.h),
+                        ),
+                        child: Row(
+                          children: [
+                            _buildInfoChip(
+                              Icons.calendar_today_rounded,
+                              tanggalNaik != null
+                                  ? DateFormat('dd MMM yyyy', 'id_ID')
+                                      .format(tanggalNaik)
+                                  : '-',
+                              'Tanggal',
+                            ),
+                            Container(
+                              width: 1,
+                              height: 32.h,
+                              color: const Color(0xFFE5E7EB),
+                            ),
+                            if (durationText.isNotEmpty) ...[
+                              _buildInfoChip(
+                                Icons.timer_outlined,
+                                durationText,
+                                'Durasi',
+                              ),
+                              Container(
+                                width: 1,
+                                height: 32.h,
+                                color: const Color(0xFFE5E7EB),
                               ),
                             ],
+                            _buildInfoChip(
+                              Icons.receipt_long_rounded,
+                              '#${model.id ?? '-'}',
+                              'ID Pesanan',
+                            ),
                           ],
                         ),
                       ),
-                      // Completed badge
-                      _buildStatusBadge(),
+                      if (isRefundStatus) ...[
+                        SizedBox(height: 10.h),
+                        Row(
+                          children: [
+                            Icon(Icons.info_outline,
+                                size: 14.h, color: const Color(0xFF1D4ED8)),
+                            SizedBox(width: 6.h),
+                            Expanded(
+                              child: Text(
+                                'Tap kartu untuk melihat status proses refund',
+                                style: TextStyle(
+                                  fontSize: 11.fSize,
+                                  color: const Color(0xFF1E3A8A),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
-                  SizedBox(height: 14.h),
-                  // Info row
-                  Container(
-                    padding: EdgeInsets.all(12.h),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF9FAFB),
-                      borderRadius: BorderRadius.circular(12.h),
-                    ),
-                    child: Row(
-                      children: [
-                        _buildInfoChip(
-                          Icons.calendar_today_rounded,
-                          tanggalNaik != null
-                              ? DateFormat('dd MMM yyyy', 'id_ID')
-                                  .format(tanggalNaik)
-                              : '-',
-                          'Tanggal',
-                        ),
-                        Container(
-                          width: 1,
-                          height: 32.h,
-                          color: const Color(0xFFE5E7EB),
-                        ),
-                        if (durationText.isNotEmpty) ...[
-                          _buildInfoChip(
-                            Icons.timer_outlined,
-                            durationText,
-                            'Durasi',
-                          ),
-                          Container(
-                            width: 1,
-                            height: 32.h,
-                            color: const Color(0xFFE5E7EB),
-                          ),
-                        ],
-                        _buildInfoChip(
-                          Icons.receipt_long_rounded,
-                          '#${model.id ?? '-'}',
-                          'ID Pesanan',
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (isRefundStatus) ...[
-                    SizedBox(height: 10.h),
-                    Row(
-                      children: [
-                        Icon(Icons.info_outline, size: 14.h, color: const Color(0xFF1D4ED8)),
-                        SizedBox(width: 6.h),
-                        Expanded(
-                          child: Text(
-                            'Tap kartu untuk melihat status proses refund',
-                            style: TextStyle(
-                              fontSize: 11.fSize,
-                              color: const Color(0xFF1E3A8A),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
-    ));
+          ),
+        ));
   }
 
   Widget _buildStatusBadge() {

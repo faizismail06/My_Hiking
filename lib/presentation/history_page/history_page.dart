@@ -212,7 +212,8 @@ class _HistoryPageState extends State<HistoryPage> {
     }
 
     final normalizedStatus = status.toLowerCase();
-    if (normalizedStatus == 'cancel requested' || normalizedStatus == 'cancelled') {
+    if (normalizedStatus == 'cancel requested' ||
+        normalizedStatus == 'cancelled') {
       Navigator.of(context, rootNavigator: true).pushNamed(
         AppRoutes.refundRequestResultPage,
         arguments: {

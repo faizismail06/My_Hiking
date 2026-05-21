@@ -18,7 +18,8 @@ class RuleModel extends Equatable {
     print('Parsing JSON: $json'); // Debug print
     return RuleModel(
       id: json['id'] ?? 0,
-      trailId: json['jalur_id'] ?? 0,  // Keep 'jalur_id' as it's the API response field name
+      trailId: json['jalur_id'] ??
+          0, // Keep 'jalur_id' as it's the API response field name
       description: json['description'] ?? '',
     );
   }

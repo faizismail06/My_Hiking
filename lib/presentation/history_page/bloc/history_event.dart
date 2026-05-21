@@ -26,7 +26,6 @@ class HistoryUserIdEvent extends HistoryEvent {
 }
 
 class ChangeStatusEvent extends HistoryEvent {
-  
   final String historyId;
 
   ChangeStatusEvent(this.historyId);

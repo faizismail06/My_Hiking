@@ -48,7 +48,8 @@ class ExperienceOnboardingCubit extends Cubit<ExperienceOnboardingState> {
     var total = 0;
     for (final question in kExperienceQuestions) {
       final score = state.answers[question.id] ?? 0;
-      total += calculateQuestionWeightedScore(score: score, weight: question.weight);
+      total +=
+          calculateQuestionWeightedScore(score: score, weight: question.weight);
     }
     return total;
   }

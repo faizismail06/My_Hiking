@@ -1202,6 +1202,9 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.grey[700],
+              ),
               child: const Text('Nanti'),
             ),
             ElevatedButton(

@@ -26,7 +26,7 @@ class FriendBloc extends Bloc<FriendEvent, FriendState> {
     Emitter<FriendState> emit,
   ) async {
     emit(state.copyWith(isLoading: true));
-    
+
     // Load friends and pending requests
     final friendsResponse = await apiService.getFriends(event.userId);
     final pendingResponse = await apiService.getPendingRequests(event.userId);
@@ -58,7 +58,7 @@ class FriendBloc extends Bloc<FriendEvent, FriendState> {
     Emitter<FriendState> emit,
   ) async {
     emit(state.copyWith(isLoading: true));
-    
+
     final response = await apiService.getFriends(event.userId);
 
     if (response['success'] == true) {
@@ -79,7 +79,7 @@ class FriendBloc extends Bloc<FriendEvent, FriendState> {
     Emitter<FriendState> emit,
   ) async {
     emit(state.copyWith(isLoading: true));
-    
+
     final response = await apiService.getPendingRequests(event.userId);
 
     if (response['success'] == true) {
@@ -105,8 +105,9 @@ class FriendBloc extends Bloc<FriendEvent, FriendState> {
     }
 
     emit(state.copyWith(isSearching: true));
-    
-    final response = await apiService.searchUsers(event.query, event.currentUserId);
+
+    final response =
+        await apiService.searchUsers(event.query, event.currentUserId);
 
     if (response['success'] == true) {
       final searchResults = (response['data'] as List)
@@ -140,7 +141,8 @@ class FriendBloc extends Bloc<FriendEvent, FriendState> {
     AcceptFriendEvent event,
     Emitter<FriendState> emit,
   ) async {
-    final response = await apiService.acceptFriend(event.friendshipId, event.userId);
+    final response =
+        await apiService.acceptFriend(event.friendshipId, event.userId);
 
     if (response['success'] == true) {
       emit(state.copyWith(successMessage: 'Permintaan teman diterima!'));
@@ -155,7 +157,8 @@ class FriendBloc extends Bloc<FriendEvent, FriendState> {
     RejectFriendEvent event,
     Emitter<FriendState> emit,
   ) async {
-    final response = await apiService.rejectFriend(event.friendshipId, event.userId);
+    final response =
+        await apiService.rejectFriend(event.friendshipId, event.userId);
 
     if (response['success'] == true) {
       emit(state.copyWith(successMessage: 'Permintaan teman ditolak'));
@@ -170,7 +173,8 @@ class FriendBloc extends Bloc<FriendEvent, FriendState> {
     RemoveFriendEvent event,
     Emitter<FriendState> emit,
   ) async {
-    final response = await apiService.removeFriend(event.friendshipId, event.userId);
+    final response =
+        await apiService.removeFriend(event.friendshipId, event.userId);
 
     if (response['success'] == true) {
       emit(state.copyWith(successMessage: 'Teman dihapus'));

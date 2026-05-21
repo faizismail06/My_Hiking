@@ -97,23 +97,24 @@ class RecentclimbinglistItemWidget extends StatelessWidget {
         return SizedBox(); // Return an empty widget if no match
     }
   }
-    Widget _buildStatusChip(String label, Color color) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(20),
+
+  Widget _buildStatusChip(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w600,
+          fontSize: 12,
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: color,
-            fontWeight: FontWeight.w600,
-            fontSize: 12,
-          ),
-        ),
-      );
-    }
+      ),
+    );
+  }
 
   // Button for unpaid order
   Widget _buildBayarButton(BuildContext context) {

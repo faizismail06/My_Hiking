@@ -9,8 +9,7 @@ import '../models/payment_method_model.dart';
 part 'payment_method_event.dart';
 part 'payment_method_state.dart';
 
-class PaymentMethodBloc
-    extends Bloc<PaymentMethodEvent, PaymentMethodState> {
+class PaymentMethodBloc extends Bloc<PaymentMethodEvent, PaymentMethodState> {
   final String apiUrl = "$baseUrl/payments";
 
   PaymentMethodBloc()

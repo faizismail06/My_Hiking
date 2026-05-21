@@ -9,13 +9,13 @@ import 'bloc/friend_bloc.dart';
 
 class FriendScreen extends StatefulWidget {
   final int userId;
-  
+
   const FriendScreen({super.key, required this.userId});
 
   static Widget builder(BuildContext context, int userId) {
     return BlocProvider(
-      create: (context) => FriendBloc(apiService: ApiService())
-        ..add(FriendInitialEvent(userId)),
+      create: (context) =>
+          FriendBloc(apiService: ApiService())..add(FriendInitialEvent(userId)),
       child: FriendScreen(userId: userId),
     );
   }
@@ -24,7 +24,8 @@ class FriendScreen extends StatefulWidget {
   State<FriendScreen> createState() => _FriendScreenState();
 }
 
-class _FriendScreenState extends State<FriendScreen> with SingleTickerProviderStateMixin {
+class _FriendScreenState extends State<FriendScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
 
@@ -151,7 +152,8 @@ class _FriendScreenState extends State<FriendScreen> with SingleTickerProviderSt
           return _buildEmptyState(
             icon: Icons.people_outline_rounded,
             title: 'Belum Ada Teman',
-            subtitle: 'Mulai cari dan tambahkan teman\nuntuk memulai perjalanan bersama!',
+            subtitle:
+                'Mulai cari dan tambahkan teman\nuntuk memulai perjalanan bersama!',
           );
         }
 
@@ -378,7 +380,8 @@ class _FriendScreenState extends State<FriendScreen> with SingleTickerProviderSt
     );
   }
 
-  Widget _buildPendingRequestCard(PendingRequestModel request, BuildContext context) {
+  Widget _buildPendingRequestCard(
+      PendingRequestModel request, BuildContext context) {
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
       decoration: BoxDecoration(
@@ -446,8 +449,9 @@ class _FriendScreenState extends State<FriendScreen> with SingleTickerProviderSt
                   child: OutlinedButton.icon(
                     onPressed: () {
                       context.read<FriendBloc>().add(
-                        RejectFriendEvent(request.friendshipId, widget.userId),
-                      );
+                            RejectFriendEvent(
+                                request.friendshipId, widget.userId),
+                          );
                     },
                     icon: Icon(Icons.close, size: 18.h),
                     label: const Text('Tolak'),
@@ -466,8 +470,9 @@ class _FriendScreenState extends State<FriendScreen> with SingleTickerProviderSt
                   child: ElevatedButton.icon(
                     onPressed: () {
                       context.read<FriendBloc>().add(
-                        AcceptFriendEvent(request.friendshipId, widget.userId),
-                      );
+                            AcceptFriendEvent(
+                                request.friendshipId, widget.userId),
+                          );
                     },
                     icon: Icon(Icons.check, size: 18.h),
                     label: const Text('Terima'),
@@ -560,7 +565,9 @@ class _FriendScreenState extends State<FriendScreen> with SingleTickerProviderSt
                             ),
                             onPressed: () {
                               _searchController.clear();
-                              context.read<FriendBloc>().add(ClearSearchEvent());
+                              context
+                                  .read<FriendBloc>()
+                                  .add(ClearSearchEvent());
                               setState(() {});
                             },
                           )
@@ -579,8 +586,8 @@ class _FriendScreenState extends State<FriendScreen> with SingleTickerProviderSt
                   onChanged: (value) {
                     setState(() {});
                     context.read<FriendBloc>().add(
-                      SearchUsersEvent(value, widget.userId),
-                    );
+                          SearchUsersEvent(value, widget.userId),
+                        );
                   },
                 ),
               ),
@@ -593,12 +600,14 @@ class _FriendScreenState extends State<FriendScreen> with SingleTickerProviderSt
                   ),
                 ),
               )
-            else if (state.searchResults.isEmpty && _searchController.text.isNotEmpty)
+            else if (state.searchResults.isEmpty &&
+                _searchController.text.isNotEmpty)
               Expanded(
                 child: _buildEmptyState(
                   icon: Icons.search_off_rounded,
                   title: 'Tidak Ditemukan',
-                  subtitle: 'Pengguna dengan kata kunci\n"${_searchController.text}" tidak ditemukan.',
+                  subtitle:
+                      'Pengguna dengan kata kunci\n"${_searchController.text}" tidak ditemukan.',
                 ),
               )
             else if (state.searchResults.isEmpty)
@@ -606,7 +615,8 @@ class _FriendScreenState extends State<FriendScreen> with SingleTickerProviderSt
                 child: _buildEmptyState(
                   icon: Icons.person_search_rounded,
                   title: 'Cari Teman Baru',
-                  subtitle: 'Masukkan ID, Nama, atau Email\nuntuk mencari pengguna.',
+                  subtitle:
+                      'Masukkan ID, Nama, atau Email\nuntuk mencari pengguna.',
                 ),
               )
             else
@@ -728,8 +738,8 @@ class _FriendScreenState extends State<FriendScreen> with SingleTickerProviderSt
                   ? null
                   : () {
                       context.read<FriendBloc>().add(
-                        AddFriendEvent(widget.userId, user.id),
-                      );
+                            AddFriendEvent(widget.userId, user.id),
+                          );
                     },
               icon: Icon(buttonIcon, size: 18.h),
               label: Text(
@@ -808,8 +818,8 @@ class _FriendScreenState extends State<FriendScreen> with SingleTickerProviderSt
             onPressed: () {
               Navigator.pop(dialogContext);
               context.read<FriendBloc>().add(
-                RemoveFriendEvent(friend.friendshipId!, widget.userId),
-              );
+                    RemoveFriendEvent(friend.friendshipId!, widget.userId),
+                  );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: appTheme.red600,

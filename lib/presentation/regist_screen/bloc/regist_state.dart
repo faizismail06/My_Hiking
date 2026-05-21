@@ -31,10 +31,13 @@ class RegistState extends Equatable {
     RegistModel? registModelObj,
   }) {
     return RegistState(
-      edittextoneController: edittextoneController ?? this.edittextoneController,
+      edittextoneController:
+          edittextoneController ?? this.edittextoneController,
       emailtwoController: emailtwoController ?? this.emailtwoController,
-      passwordtwoController: passwordtwoController ?? this.passwordtwoController,
-      passwordthreeController: passwordthreeController ?? this.passwordthreeController,
+      passwordtwoController:
+          passwordtwoController ?? this.passwordtwoController,
+      passwordthreeController:
+          passwordthreeController ?? this.passwordthreeController,
       isPassword2Visible: isPassword2Visible ?? this.isPassword2Visible,
       isPassword3Visible: isPassword3Visible ?? this.isPassword3Visible,
       registModelObj: registModelObj ?? this.registModelObj,

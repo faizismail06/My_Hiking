@@ -415,7 +415,8 @@ class LoginScreen extends StatelessWidget {
           // Fetch and cache DSS preferences from backend
           // Pass token langsung agar tidak tergantung SharedPreferences flush
           try {
-            final dssPrefs = await _apiService.getDssPreferences(tokenOverride: newToken);
+            final dssPrefs =
+                await _apiService.getDssPreferences(tokenOverride: newToken);
             for (final entry in dssPrefs.entries) {
               await prefs.setDouble('dss_pref_${entry.key}', entry.value);
             }
@@ -461,10 +462,16 @@ class LoginScreen extends StatelessWidget {
           title: Text("Login Gagal"),
           content: Text(message),
           actions: <Widget>[
-            TextButton(
+            ElevatedButton(
               onPressed: () {
                 Navigator.of(context).pop();
               },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.colorScheme.primary,
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
               child: Text("OK"),
             ),
           ],
@@ -485,7 +492,7 @@ class LoginScreen extends StatelessWidget {
     // Validasi: pastikan client ID untuk platform yang aktif sudah diisi
     final clientIdToUse = kIsWeb ? _googleWebClientId : _googleServerClientId;
     final platformName = kIsWeb ? 'Web' : 'Android';
-    
+
     if (clientIdToUse.isEmpty) {
       _showErrorDialog(
         context,
@@ -511,7 +518,7 @@ class LoginScreen extends StatelessWidget {
 
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
-      
+
       // Android: gunakan idToken
       // Web: gunakan accessToken jika idToken tidak ada
       final String? googleToken = googleAuth.idToken ?? googleAuth.accessToken;
@@ -538,7 +545,8 @@ class LoginScreen extends StatelessWidget {
       // Fetch and cache DSS preferences from backend
       // Pass token langsung agar tidak tergantung SharedPreferences flush
       try {
-        final dssPrefs = await _apiService.getDssPreferences(tokenOverride: token);
+        final dssPrefs =
+            await _apiService.getDssPreferences(tokenOverride: token);
         for (final entry in dssPrefs.entries) {
           await prefs.setDouble('dss_pref_${entry.key}', entry.value);
         }

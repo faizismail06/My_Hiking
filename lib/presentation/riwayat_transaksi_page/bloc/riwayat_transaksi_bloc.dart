@@ -49,15 +49,13 @@ class RiwayatTransaksiBloc
     if (response.statusCode == 200) {
       final data = json.decode(response.body)['data'] as List;
 
-      final filteredData = data
-          .where((item) {
-            final status = (item['status'] ?? '').toString().trim().toLowerCase();
-            return status == 'selesai' ||
-                status == 'expired' ||
-                status == 'cancel requested' ||
-                status == 'cancelled';
-          })
-          .toList()
+      final filteredData = data.where((item) {
+        final status = (item['status'] ?? '').toString().trim().toLowerCase();
+        return status == 'selesai' ||
+            status == 'expired' ||
+            status == 'cancel requested' ||
+            status == 'cancelled';
+      }).toList()
         ..sort((a, b) {
           final aId = int.tryParse(a['id'].toString()) ?? 0;
           final bId = int.tryParse(b['id'].toString()) ?? 0;

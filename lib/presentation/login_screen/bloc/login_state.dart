@@ -31,7 +31,8 @@ class LoginState extends Equatable {
   }) {
     return LoginState(
       lockoneController: lockoneController ?? this.lockoneController,
-      locationoneController: locationoneController ?? this.locationoneController,
+      locationoneController:
+          locationoneController ?? this.locationoneController,
       isShowPassword: isShowPassword ?? this.isShowPassword,
       loginModelObj: loginModelObj ?? this.loginModelObj,
     );

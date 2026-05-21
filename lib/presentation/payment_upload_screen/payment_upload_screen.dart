@@ -29,12 +29,10 @@ class PaymentUploadScreen extends StatefulWidget {
   });
 
   @override
-  _PaymentUploadScreenState createState() =>
-      _PaymentUploadScreenState();
+  _PaymentUploadScreenState createState() => _PaymentUploadScreenState();
 }
 
-class _PaymentUploadScreenState
-    extends State<PaymentUploadScreen> {
+class _PaymentUploadScreenState extends State<PaymentUploadScreen> {
   String? _fileName;
   String? _filePath;
   PaymentUploadModel? paymentUpload;
@@ -117,8 +115,7 @@ class _PaymentUploadScreenState
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<PaymentUploadBloc,
-        PaymentUploadState>(
+    return BlocBuilder<PaymentUploadBloc, PaymentUploadState>(
       builder: (context, state) {
         if (state.isLoading) {
           return Container(
@@ -473,8 +470,8 @@ class _PaymentUploadScreenState
                               borderRadius: BorderRadiusStyle.roundedBorder6,
                             ),
                             child: CustomImageView(
-                              imagePath: state.paymentUploadModelObj
-                                      ?.payment.imagePath ??
+                              imagePath: state.paymentUploadModelObj?.payment
+                                      .imagePath ??
                                   '',
                               height: 36.h,
                               width: 38.h,

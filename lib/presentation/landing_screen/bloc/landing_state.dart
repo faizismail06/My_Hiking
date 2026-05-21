@@ -16,5 +16,3 @@ class LandingState extends Equatable {
     );
   }
 }
-
-

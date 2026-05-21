@@ -23,7 +23,8 @@ class TransactionBloc extends Bloc<TransactionEvent, TransactionState> {
       String userId = event.userId;
       print("Received userId in _onUserIdReceived: $userId");
 
-      List<TransactionItemModel> transactions = await fetchTransactionList(userId);
+      List<TransactionItemModel> transactions =
+          await fetchTransactionList(userId);
 
       emit(state.copyWith(
         userId: userId,

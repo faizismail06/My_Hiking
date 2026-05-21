@@ -158,7 +158,7 @@ class _MidtransPaymentScreenState extends State<MidtransPaymentScreen> {
           },
         ),
       )
-        ..loadRequest(Uri.parse(_state.paymentUrl!));
+      ..loadRequest(Uri.parse(_state.paymentUrl!));
   }
 
   bool _isFinishCallbackUrl(String url) {
@@ -191,7 +191,8 @@ class _MidtransPaymentScreenState extends State<MidtransPaymentScreen> {
         widget.transactionId.toString();
     final snapshot = await ApiService().getPaymentStatus(fallbackRef);
 
-    if (snapshot['success'] == true && snapshot['data'] is Map<String, dynamic>) {
+    if (snapshot['success'] == true &&
+        snapshot['data'] is Map<String, dynamic>) {
       final data = snapshot['data'] as Map<String, dynamic>;
 
       final incomingOrderId = data['order_id']?.toString();
@@ -310,6 +311,9 @@ class _MidtransPaymentScreenState extends State<MidtransPaymentScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.grey[700],
+              ),
               child: Text('Tidak'),
             ),
             ElevatedButton(

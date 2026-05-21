@@ -171,11 +171,17 @@ class _QuickSosScreenState extends State<QuickSosScreen> {
                 'Tim SAR telah menerima permintaan Anda. Tetap tenang dan tunggu bantuan.',
               ),
               actions: [
-                TextButton(
+                ElevatedButton(
                   onPressed: () {
                     Navigator.of(context).pop();
                     Navigator.of(this.context).pop();
                   },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1B734A),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
+                  ),
                   child: const Text('OK'),
                 ),
               ],

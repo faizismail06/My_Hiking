@@ -32,13 +32,15 @@ class RegistBloc extends Bloc<RegistEvent, RegistState> {
     TogglePassword2Visibility event,
     Emitter<RegistState> emit,
   ) {
-    emit(state.copyWith(isPassword2Visible: !(state.isPassword2Visible ?? false)));
+    emit(state.copyWith(
+        isPassword2Visible: !(state.isPassword2Visible ?? false)));
   }
 
   void _onTogglePassword3Visibility(
     TogglePassword3Visibility event,
     Emitter<RegistState> emit,
   ) {
-    emit(state.copyWith(isPassword3Visible: !(state.isPassword3Visible ?? false)));
+    emit(state.copyWith(
+        isPassword3Visible: !(state.isPassword3Visible ?? false)));
   }
 }

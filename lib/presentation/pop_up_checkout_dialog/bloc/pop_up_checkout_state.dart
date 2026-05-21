@@ -13,7 +13,8 @@ class PopUpCheckoutState extends Equatable {
 
   PopUpCheckoutState copywith({PopUpCheckoutModel? popUpCheckoutModelobj}) {
     return PopUpCheckoutState(
-      popUpCheckoutModelobj: popUpCheckoutModelobj ?? this.popUpCheckoutModelobj,
+      popUpCheckoutModelobj:
+          popUpCheckoutModelobj ?? this.popUpCheckoutModelobj,
     );
   }
 }

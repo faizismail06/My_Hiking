@@ -68,8 +68,7 @@ class RulesBloc extends Bloc<RulesEvent, RulesState> {
         print('Data List: $dataList');
 
         // Mengonversi setiap item dalam List<dynamic> menjadi RuleModel
-        final rules =
-            dataList.map((item) => RuleModel.fromJson(item)).toList();
+        final rules = dataList.map((item) => RuleModel.fromJson(item)).toList();
 
         // Debug print
         print('Converted Rules: ${rules.length}');

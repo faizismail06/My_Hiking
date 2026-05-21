@@ -332,6 +332,9 @@ class _TicketActionScreenState extends State<TicketActionScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.grey[700],
+            ),
             child: const Text('Tidak'),
           ),
           ElevatedButton(
@@ -585,6 +588,8 @@ class _TicketActionScreenState extends State<TicketActionScreen> {
                         },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -716,6 +721,8 @@ class _TicketActionScreenState extends State<TicketActionScreen> {
               onPressed: () => Navigator.pop(context),
               style: ElevatedButton.styleFrom(
                 backgroundColor: theme.colorScheme.primary,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),

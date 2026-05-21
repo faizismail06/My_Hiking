@@ -10,8 +10,7 @@ part 'payment_upload_state.dart';
 
 /// A bloc that manages the state of PaymentUpload according to
 /// the event that is dispatched to it.
-class PaymentUploadBloc
-    extends Bloc<PaymentUploadEvent, PaymentUploadState> {
+class PaymentUploadBloc extends Bloc<PaymentUploadEvent, PaymentUploadState> {
   final ApiService apiService;
 
   // Constructor accepting the apiService as a parameter

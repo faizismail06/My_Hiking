@@ -53,71 +53,70 @@ class _TransactionPageState extends State<TransactionPage> {
 
   @override
   Widget build(BuildContext context) {
-        return BlocBuilder<TransactionBloc,
-        TransactionState>(
-      builder: (context, state) {
-    if (state.isLoading) {
-      return Container(
-        color: Colors.white, // Mengatur latar belakang menjadi putih
-        child: Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(
-                Colors.green.shade900), // Warna hijau untuk indikator loading
+    return BlocBuilder<TransactionBloc, TransactionState>(
+        builder: (context, state) {
+      if (state.isLoading) {
+        return Container(
+          color: Colors.white, // Mengatur latar belakang menjadi putih
+          child: Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(
+                  Colors.green.shade900), // Warna hijau untuk indikator loading
+            ),
           ),
-        ),
-      );
-    }
-    return SafeArea(
-      child: Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back),
-            onPressed: () {
-              Navigator.pop(context);
-            },
+        );
+      }
+      return SafeArea(
+        child: Scaffold(
+          appBar: AppBar(
+            leading: IconButton(
+              icon: Icon(Icons.arrow_back),
+              onPressed: () {
+                Navigator.pop(context);
+              },
+            ),
+            title: Container(),
           ),
-          title: Container(),
-        ),
-        backgroundColor: appTheme.gray50,
-        body: Container(
-          width: double.maxFinite,
-          decoration: BoxDecoration(
-            color: appTheme.gray50,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.max,
-            children: [
-              SizedBox(height: 20.h),
-              _buildWomanReceiveSection(context),
-              Expanded(
-                child: SizedBox(
-                  width: double.maxFinite,
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 22.h),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.max,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "lbl_transaksi".tr,
-                            style: CustomTextStyles.titleMediumBlack900,
-                          ),
-                          SizedBox(height: 10.h),
-                          _buildTransactionList(context),
-                        ],
+          backgroundColor: appTheme.gray50,
+          body: Container(
+            width: double.maxFinite,
+            decoration: BoxDecoration(
+              color: appTheme.gray50,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.max,
+              children: [
+                SizedBox(height: 20.h),
+                _buildWomanReceiveSection(context),
+                Expanded(
+                  child: SizedBox(
+                    width: double.maxFinite,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 22.h),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.max,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "lbl_transaksi".tr,
+                              style: CustomTextStyles.titleMediumBlack900,
+                            ),
+                            SizedBox(height: 10.h),
+                            _buildTransactionList(context),
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
-    );
-  });
+      );
+    });
   }
 
   Widget _buildWomanReceiveSection(BuildContext context) {
@@ -198,7 +197,7 @@ class _TransactionPageState extends State<TransactionPage> {
   void _handleTapRecentClimbing(
       BuildContext context, String? status, int? orderId) {
     if (orderId == null) return;
-    
+
     switch (status?.toLowerCase()) {
       case "incomplete":
         Navigator.push(

@@ -62,11 +62,11 @@ class DssPreferenceScreen extends StatefulWidget {
 
 /// Definition of a single preference slider item.
 class _PrefItem {
-  final String weightKey;      // backend query param key
-  final String question;       // shown above the slider
-  final List<String> labels;   // labels for values 1, 2, 3, 4, 5
+  final String weightKey; // backend query param key
+  final String question; // shown above the slider
+  final List<String> labels; // labels for values 1, 2, 3, 4, 5
   final IconData icon;
-  final CriteriaType type;     // 'cost' or 'benefit'
+  final CriteriaType type; // 'cost' or 'benefit'
 
   const _PrefItem({
     required this.weightKey,
@@ -79,8 +79,8 @@ class _PrefItem {
 
 /// Enum untuk tipe kriteria
 enum CriteriaType {
-  cost,      // semakin rendah semakin baik (biaya, jarak, durasi, dll)
-  benefit,   // semakin tinggi semakin baik (panorama, fasilitas, keamanan, dll)
+  cost, // semakin rendah semakin baik (biaya, jarak, durasi, dll)
+  benefit, // semakin tinggi semakin baik (panorama, fasilitas, keamanan, dll)
 }
 
 class _DssPreferenceScreenState extends State<DssPreferenceScreen>
@@ -91,35 +91,40 @@ class _DssPreferenceScreenState extends State<DssPreferenceScreen>
     // ─── COST CRITERIA (semakin rendah semakin baik) ─────────────────────
     _PrefItem(
       weightKey: 'priority_cost',
-      question: 'Jika saya ingin melakukan pendakian, saya akan mengeluarkan biaya yang .....',
+      question:
+          'Jika saya ingin melakukan pendakian, saya akan mengeluarkan biaya yang .....',
       labels: ['Sangat mahal', 'Mahal', 'Standar', 'Murah', 'Sangat murah'],
       icon: Icons.payments_outlined,
       type: CriteriaType.cost,
     ),
     _PrefItem(
       weightKey: 'priority_distance',
-      question: 'Jika saya ingin melakukan pendakian, saya sanggup menempuh jarak sejauh .....',
+      question:
+          'Jika saya ingin melakukan pendakian, saya sanggup menempuh jarak sejauh .....',
       labels: ['Sangat jauh', 'Jauh', 'Sedang', 'Dekat', 'Sangat dekat'],
       icon: Icons.straighten_outlined,
       type: CriteriaType.cost,
     ),
     _PrefItem(
       weightKey: 'priority_duration',
-      question: 'Jika saya ingin melakukan pendakian, saya memiliki waktu luang selama .....',
+      question:
+          'Jika saya ingin melakukan pendakian, saya memiliki waktu luang selama .....',
       labels: ['Sangat lama', 'Lama', 'Cukup', 'Singkat', 'Sangat singkat'],
       icon: Icons.timer_outlined,
       type: CriteriaType.cost,
     ),
     _PrefItem(
       weightKey: 'priority_difficulty',
-      question: 'Jika saya ingin melakukan pendakian, saya mampu melewati jalur dengan medan yang .....',
+      question:
+          'Jika saya ingin melakukan pendakian, saya mampu melewati jalur dengan medan yang .....',
       labels: ['Sangat sulit', 'Sulit', 'Menengah', 'Mudah', 'Sangat mudah'],
       icon: Icons.terrain_outlined,
       type: CriteriaType.cost,
     ),
     _PrefItem(
       weightKey: 'priority_elevation',
-      question: 'Jika saya ingin melakukan pendakian, saya sanggup mencapai ketinggian gunung yang .....',
+      question:
+          'Jika saya ingin melakukan pendakian, saya sanggup mencapai ketinggian gunung yang .....',
       labels: ['Sangat tinggi', 'Tinggi', 'Sedang', 'Rendah', 'Sangat rendah'],
       icon: Icons.height_outlined,
       type: CriteriaType.cost,
@@ -127,36 +132,59 @@ class _DssPreferenceScreenState extends State<DssPreferenceScreen>
     // ─── BENEFIT CRITERIA (semakin tinggi semakin baik) ─────────────────
     _PrefItem(
       weightKey: 'priority_panorama',
-      question: 'Jika saya ingin melakukan pendakian, saya mengharapkan pemandangan alam yang .....',
-      labels: ['Biasa saja', 'Cukup bagus', 'Bagus', 'Sangat bagus', 'Luar biasa'],
+      question:
+          'Jika saya ingin melakukan pendakian, saya mengharapkan pemandangan alam yang .....',
+      labels: [
+        'Biasa saja',
+        'Cukup bagus',
+        'Bagus',
+        'Sangat bagus',
+        'Luar biasa'
+      ],
       icon: Icons.landscape_outlined,
       type: CriteriaType.benefit,
     ),
     _PrefItem(
       weightKey: 'priority_fasilitas',
-      question: 'Jika saya ingin melakukan pendakian, saya membutuhkan fasilitas di jalur yang .....',
+      question:
+          'Jika saya ingin melakukan pendakian, saya membutuhkan fasilitas di jalur yang .....',
       labels: ['Sangat minim', 'Minim', 'Cukup', 'Lengkap', 'Sangat lengkap'],
       icon: Icons.cabin_outlined,
       type: CriteriaType.benefit,
     ),
     _PrefItem(
       weightKey: 'priority_crowd_level',
-      question: 'Jika saya ingin melakukan pendakian, saya lebih suka mendaki di jalur yang .....',
+      question:
+          'Jika saya ingin melakukan pendakian, saya lebih suka mendaki di jalur yang .....',
       labels: ['Sangat ramai', 'Ramai', 'Sedang', 'Sepi', 'Sangat sepi'],
       icon: Icons.people_outline,
       type: CriteriaType.benefit,
     ),
     _PrefItem(
       weightKey: 'priority_popularity',
-      question: 'Jika saya ingin melakukan pendakian, saya ingin mendaki di gunung yang popularitasnya .....',
-      labels: ['Sangat tidak populer', 'Kurang populer', 'Cukup populer', 'Populer', 'Sangat populer'],
+      question:
+          'Jika saya ingin melakukan pendakian, saya ingin mendaki di gunung yang popularitasnya .....',
+      labels: [
+        'Sangat tidak populer',
+        'Kurang populer',
+        'Cukup populer',
+        'Populer',
+        'Sangat populer'
+      ],
       icon: Icons.trending_up_outlined,
       type: CriteriaType.benefit,
     ),
     _PrefItem(
       weightKey: 'priority_safety',
-      question: 'Jika saya ingin melakukan pendakian, saya mengharapkan tingkat keamanan jalur yang .....',
-      labels: ['Sangat berisiko', 'Berisiko', 'Cukup aman', 'Aman', 'Sangat aman'],
+      question:
+          'Jika saya ingin melakukan pendakian, saya mengharapkan tingkat keamanan jalur yang .....',
+      labels: [
+        'Sangat berisiko',
+        'Berisiko',
+        'Cukup aman',
+        'Aman',
+        'Sangat aman'
+      ],
       icon: Icons.shield_outlined,
       type: CriteriaType.benefit,
     ),
@@ -235,8 +263,7 @@ class _DssPreferenceScreenState extends State<DssPreferenceScreen>
 
   /// Returns true only if all sliders are still at the default value,
   /// so we know whether the user actually customised anything.
-  bool get _isAllDefault =>
-      _values.values.every((v) => v == _defaultValue);
+  bool get _isAllDefault => _values.values.every((v) => v == _defaultValue);
 
   Future<void> _reset() async {
     setState(() {
@@ -448,7 +475,8 @@ class _DssPreferenceScreenState extends State<DssPreferenceScreen>
           SizedBox(width: 8),
           Text(
             'Kriteria Efisiensi',
-            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700),
+            style:
+                TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700),
           ),
         ],
       ),
@@ -524,7 +552,8 @@ class _DssPreferenceScreenState extends State<DssPreferenceScreen>
           SizedBox(width: 8),
           Text(
             'Kriteria Kualitas',
-            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700),
+            style:
+                TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700),
           ),
         ],
       ),
@@ -829,10 +858,8 @@ class _DssPreferenceScreenState extends State<DssPreferenceScreen>
                 thumbColor: _primary,
                 overlayColor: _primary.withOpacity(0.12),
                 trackHeight: 4,
-                thumbShape:
-                    const RoundSliderThumbShape(enabledThumbRadius: 8),
-                overlayShape:
-                    const RoundSliderOverlayShape(overlayRadius: 18),
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+                overlayShape: const RoundSliderOverlayShape(overlayRadius: 18),
                 showValueIndicator: ShowValueIndicator.never,
               ),
               child: Slider(
@@ -871,9 +898,8 @@ class _DssPreferenceScreenState extends State<DssPreferenceScreen>
                         height: filled ? 7 : 5,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: filled
-                              ? _primary
-                              : Colors.grey.withOpacity(0.3),
+                          color:
+                              filled ? _primary : Colors.grey.withOpacity(0.3),
                         ),
                       );
                     }),

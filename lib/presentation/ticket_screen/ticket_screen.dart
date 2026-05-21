@@ -112,274 +112,277 @@ class _TicketScreenState extends State<TicketScreen> {
                     // Latar belakang tetap
                     _buildIconArrowColumn(context),
 
-                  // Konten yang bisa digulir
-                  SingleChildScrollView(
-                    child: RepaintBoundary(
-                      key: _globalKey,
-                      child: Container(
-                        // Menghapus Card dan menggunakan Container langsung
-                        child: Column(
-                          children: [
-                            SizedBox(height: 100.h),
-                            // Memberi jarak untuk konten
-                            Container(
-                              width: double.maxFinite,
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 20.h,
-                                vertical: 20.h,
-                              ),
-                              decoration: BoxDecoration(
-                                color: theme.colorScheme.primary,
-                                borderRadius: BorderRadiusStyle.roundedBorder20,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: appTheme.gray40019,
-                                    spreadRadius: 2.h,
-                                    blurRadius: 2.h,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  SizedBox(height: 4.h),
-                                  Container(
-                                    width: double.maxFinite,
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: 18.h,
-                                      vertical: 20.h,
+                    // Konten yang bisa digulir
+                    SingleChildScrollView(
+                      child: RepaintBoundary(
+                        key: _globalKey,
+                        child: Container(
+                          // Menghapus Card dan menggunakan Container langsung
+                          child: Column(
+                            children: [
+                              SizedBox(height: 100.h),
+                              // Memberi jarak untuk konten
+                              Container(
+                                width: double.maxFinite,
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 20.h,
+                                  vertical: 20.h,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.primary,
+                                  borderRadius:
+                                      BorderRadiusStyle.roundedBorder20,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: appTheme.gray40019,
+                                      spreadRadius: 2.h,
+                                      blurRadius: 2.h,
+                                      offset: const Offset(0, 4),
                                     ),
-                                    decoration: BoxDecoration(
-                                      image: DecorationImage(
-                                        image: fs.Svg(
-                                          ImageConstant.imgETickets,
-                                        ),
-                                        fit: BoxFit.fill,
+                                  ],
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    SizedBox(height: 4.h),
+                                    Container(
+                                      width: double.maxFinite,
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 18.h,
+                                        vertical: 20.h,
                                       ),
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Align(
-                                          alignment: Alignment.center,
-                                          child: Container(
-                                            padding: EdgeInsets.all(16.h),
-                                            decoration: BoxDecoration(
-                                              color: Colors.white,
-                                              borderRadius:
-                                                  BorderRadius.circular(20.h),
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: Colors.grey
-                                                      .withOpacity(0.4),
-                                                  spreadRadius: 4,
-                                                  blurRadius: 10,
-                                                  offset: Offset(0, 4),
-                                                ),
-                                              ],
-                                            ),
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize
-                                                  .min, // Agar row mengambil ukuran minimal
-                                              children: [
-                                                // Logo
-                                                Image.asset(
-                                                  'assets/images/myhikinglogo.png', // Sesuaikan dengan path logo Anda
-                                                  height: 70
-                                                      .h, // Sesuaikan ukuran logo
-                                                  width: 70.h,
-                                                ),
-                                                SizedBox(
-                                                    width: 10
-                                                        .h), // Jarak antara logo dan QR code
-                                                // QR Code
-                                                QrImageView(
-                                                  data: '${widget.orderId}',
-                                                  size: 150.h,
-                                                ),
-                                              ],
-                                            ),
+                                      decoration: BoxDecoration(
+                                        image: DecorationImage(
+                                          image: fs.Svg(
+                                            ImageConstant.imgETickets,
                                           ),
+                                          fit: BoxFit.fill,
                                         ),
-                                        SizedBox(height: 14.h),
-                                        const SizedBox(
-                                          width: double.maxFinite,
-                                          child: DottedLine(
-                                            direction: Axis.horizontal,
-                                            lineLength: double.infinity,
-                                            lineThickness: 1.0,
-                                            dashLength: 4.0,
-                                            dashColor: Colors.grey,
-                                            dashRadius: 0.0,
-                                            dashGapLength: 4.0,
-                                          ),
-                                        ),
-                                        SizedBox(height: 12.h),
-                                        Text(
-                                          "ID Pemesanan",
-                                          style: theme.textTheme.bodyLarge,
-                                        ),
-                                        SizedBox(height: 4.h),
-                                        Text('${ticket.id}'.tr,
-                                            maxLines: 4,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: CustomTextStyles
-                                                .titleMediumBlack900),
-                                        SizedBox(height: 14.h),
-                                        Text(
-                                          "lbl_nama_ketua".tr,
-                                          style: theme.textTheme.bodyLarge,
-                                        ),
-                                        SizedBox(height: 4.h),
-                                        Text('${ticket.pemesanName}'.tr,
-                                            maxLines: 4,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: CustomTextStyles
-                                                .titleMediumBlack900),
-                                        SizedBox(height: 14.h),
-                                        Text("lbl_booking2".tr,
-                                            style: theme.textTheme.bodyLarge),
-                                        SizedBox(height: 4.h),
-                                        Text(
-                                            '${ticket.gunungName} via ${ticket.jalurName}'
-                                                .tr,
-                                            maxLines: 4,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: CustomTextStyles
-                                                .titleMediumBlack900),
-                                        SizedBox(height: 12.h),
-                                        Text(
-                                          "Tanggal Naik",
-                                          style: theme.textTheme.bodyLarge,
-                                        ),
-                                        SizedBox(height: 4.h),
-                                        Text('${ticket.tanggalNaik}'.tr,
-                                            maxLines: 4,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: CustomTextStyles
-                                                .titleMediumBlack900),
-                                        SizedBox(height: 12.h),
-                                        Text(
-                                          "Tanggal Turun",
-                                          style: theme.textTheme.bodyLarge,
-                                        ),
-                                        SizedBox(height: 4.h),
-                                        Text('${ticket.tanggalTurun}'.tr,
-                                            maxLines: 4,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: CustomTextStyles
-                                                .titleMediumBlack900),
-                                        SizedBox(height: 12.h),
-                                        Text(
-                                          "lbl_anggota".tr,
-                                          style: theme.textTheme.bodyLarge,
-                                        ),
-                                        SizedBox(height: 2.h),
-                                        for (var anggota in ticket.anggota)
-                                          Text(
-                                            '- ${anggota.name}'.tr,
-                                            maxLines: 4,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: CustomTextStyles
-                                                .titleSmallBlack900_1
-                                                .copyWith(
-                                              height: 1.71,
-                                            ),
-                                          ),
-                                        SizedBox(height: 12.h),
-                                        Text(
-                                          "msg_ticket_yang_sudah".tr,
-                                          style: theme.textTheme.bodySmall,
-                                        ),
-                                        SizedBox(height: 6.h),
-                                        const SizedBox(
-                                          width: double.maxFinite,
-                                          child: Divider(),
-                                        ),
-                                        SizedBox(height: 12.h),
-                                        ElevatedButton(
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.black,
-                                            minimumSize:
-                                                Size(double.infinity, 50.h),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                            ),
-                                          ),
-                                          onPressed: () async {
-                                            if (!ticket.canPrintTicket) {
-                                              ScaffoldMessenger.of(context)
-                                                  .showSnackBar(
-                                                const SnackBar(
-                                                  content: Text(
-                                                    'Tiket belum bisa dicetak. Silakan lunasi pembayaran terlebih dahulu.',
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Align(
+                                            alignment: Alignment.center,
+                                            child: Container(
+                                              padding: EdgeInsets.all(16.h),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius:
+                                                    BorderRadius.circular(20.h),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.grey
+                                                        .withOpacity(0.4),
+                                                    spreadRadius: 4,
+                                                    blurRadius: 10,
+                                                    offset: Offset(0, 4),
                                                   ),
-                                                  backgroundColor: Colors.red,
-                                                ),
-                                              );
-                                              return;
-                                            }
-
-                                            WidgetsBinding.instance
-                                                .addPostFrameCallback(
-                                                    (_) async {
-                                              try {
-                                                final success =
-                                                    await downloadTicket(
-                                                        state.ticketModel);
-                                                if (success) {
-                                                  ScaffoldMessenger.of(context)
-                                                      .showSnackBar(
-                                                    const SnackBar(
-                                                        content: Text(
-                                                            'Tiket berhasil diunduh')),
-                                                  );
-                                                } else {
-                                                  ScaffoldMessenger.of(context)
-                                                      .showSnackBar(
-                                                    const SnackBar(
-                                                        content: Text(
-                                                            'Gagal mengunduh tiket')),
-                                                  );
-                                                }
-                                              } catch (e) {
-                                                print('Error: $e');
+                                                ],
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize
+                                                    .min, // Agar row mengambil ukuran minimal
+                                                children: [
+                                                  // Logo
+                                                  Image.asset(
+                                                    'assets/images/myhikinglogo.png', // Sesuaikan dengan path logo Anda
+                                                    height: 70
+                                                        .h, // Sesuaikan ukuran logo
+                                                    width: 70.h,
+                                                  ),
+                                                  SizedBox(
+                                                      width: 10
+                                                          .h), // Jarak antara logo dan QR code
+                                                  // QR Code
+                                                  QrImageView(
+                                                    data: '${widget.orderId}',
+                                                    size: 150.h,
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                          SizedBox(height: 14.h),
+                                          const SizedBox(
+                                            width: double.maxFinite,
+                                            child: DottedLine(
+                                              direction: Axis.horizontal,
+                                              lineLength: double.infinity,
+                                              lineThickness: 1.0,
+                                              dashLength: 4.0,
+                                              dashColor: Colors.grey,
+                                              dashRadius: 0.0,
+                                              dashGapLength: 4.0,
+                                            ),
+                                          ),
+                                          SizedBox(height: 12.h),
+                                          Text(
+                                            "ID Pemesanan",
+                                            style: theme.textTheme.bodyLarge,
+                                          ),
+                                          SizedBox(height: 4.h),
+                                          Text('${ticket.id}'.tr,
+                                              maxLines: 4,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: CustomTextStyles
+                                                  .titleMediumBlack900),
+                                          SizedBox(height: 14.h),
+                                          Text(
+                                            "lbl_nama_ketua".tr,
+                                            style: theme.textTheme.bodyLarge,
+                                          ),
+                                          SizedBox(height: 4.h),
+                                          Text('${ticket.pemesanName}'.tr,
+                                              maxLines: 4,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: CustomTextStyles
+                                                  .titleMediumBlack900),
+                                          SizedBox(height: 14.h),
+                                          Text("lbl_booking2".tr,
+                                              style: theme.textTheme.bodyLarge),
+                                          SizedBox(height: 4.h),
+                                          Text(
+                                              '${ticket.gunungName} via ${ticket.jalurName}'
+                                                  .tr,
+                                              maxLines: 4,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: CustomTextStyles
+                                                  .titleMediumBlack900),
+                                          SizedBox(height: 12.h),
+                                          Text(
+                                            "Tanggal Naik",
+                                            style: theme.textTheme.bodyLarge,
+                                          ),
+                                          SizedBox(height: 4.h),
+                                          Text('${ticket.tanggalNaik}'.tr,
+                                              maxLines: 4,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: CustomTextStyles
+                                                  .titleMediumBlack900),
+                                          SizedBox(height: 12.h),
+                                          Text(
+                                            "Tanggal Turun",
+                                            style: theme.textTheme.bodyLarge,
+                                          ),
+                                          SizedBox(height: 4.h),
+                                          Text('${ticket.tanggalTurun}'.tr,
+                                              maxLines: 4,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: CustomTextStyles
+                                                  .titleMediumBlack900),
+                                          SizedBox(height: 12.h),
+                                          Text(
+                                            "lbl_anggota".tr,
+                                            style: theme.textTheme.bodyLarge,
+                                          ),
+                                          SizedBox(height: 2.h),
+                                          for (var anggota in ticket.anggota)
+                                            Text(
+                                              '- ${anggota.name}'.tr,
+                                              maxLines: 4,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: CustomTextStyles
+                                                  .titleSmallBlack900_1
+                                                  .copyWith(
+                                                height: 1.71,
+                                              ),
+                                            ),
+                                          SizedBox(height: 12.h),
+                                          Text(
+                                            "msg_ticket_yang_sudah".tr,
+                                            style: theme.textTheme.bodySmall,
+                                          ),
+                                          SizedBox(height: 6.h),
+                                          const SizedBox(
+                                            width: double.maxFinite,
+                                            child: Divider(),
+                                          ),
+                                          SizedBox(height: 12.h),
+                                          ElevatedButton(
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: Colors.black,
+                                              minimumSize:
+                                                  Size(double.infinity, 50.h),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                              ),
+                                            ),
+                                            onPressed: () async {
+                                              if (!ticket.canPrintTicket) {
                                                 ScaffoldMessenger.of(context)
                                                     .showSnackBar(
-                                                  SnackBar(
-                                                      content:
-                                                          Text('Error: $e')),
+                                                  const SnackBar(
+                                                    content: Text(
+                                                      'Tiket belum bisa dicetak. Silakan lunasi pembayaran terlebih dahulu.',
+                                                    ),
+                                                    backgroundColor: Colors.red,
+                                                  ),
                                                 );
+                                                return;
                                               }
-                                            });
-                                          },
-                                          child: Text(
-                                            ticket.canPrintTicket
-                                                ? "Download Tiket".tr
-                                                : "Bayar Dulu",
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                              fontFamily: 'Manrope',
+
+                                              WidgetsBinding.instance
+                                                  .addPostFrameCallback(
+                                                      (_) async {
+                                                try {
+                                                  final success =
+                                                      await downloadTicket(
+                                                          state.ticketModel);
+                                                  if (success) {
+                                                    ScaffoldMessenger.of(
+                                                            context)
+                                                        .showSnackBar(
+                                                      const SnackBar(
+                                                          content: Text(
+                                                              'Tiket berhasil diunduh')),
+                                                    );
+                                                  } else {
+                                                    ScaffoldMessenger.of(
+                                                            context)
+                                                        .showSnackBar(
+                                                      const SnackBar(
+                                                          content: Text(
+                                                              'Gagal mengunduh tiket')),
+                                                    );
+                                                  }
+                                                } catch (e) {
+                                                  print('Error: $e');
+                                                  ScaffoldMessenger.of(context)
+                                                      .showSnackBar(
+                                                    SnackBar(
+                                                        content:
+                                                            Text('Error: $e')),
+                                                  );
+                                                }
+                                              });
+                                            },
+                                            child: Text(
+                                              ticket.canPrintTicket
+                                                  ? "Download Tiket".tr
+                                                  : "Bayar Dulu",
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.bold,
+                                                fontFamily: 'Manrope',
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                        SizedBox(height: 6.h),
-                                      ],
+                                          SizedBox(height: 6.h),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
                     Positioned(
                       top: 35.h,
                       left: 16.h,

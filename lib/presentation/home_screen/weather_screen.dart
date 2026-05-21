@@ -27,12 +27,14 @@ class _WeatherScreenState extends State<WeatherScreen> {
       final payload = await _apiService.fetchHomeFeedFromServer();
       final List<dynamic> mountainsData = payload['mountains'] ?? [];
       final List<HomelistItemModel> parsedMountains = mountainsData
-          .map((data) => HomelistItemModel.fromJson(data as Map<String, dynamic>))
+          .map((data) =>
+              HomelistItemModel.fromJson(data as Map<String, dynamic>))
           .toList();
 
       final recommendedData = payload['recommended'];
       if (recommendedData != null && recommendedData['mountain'] != null) {
-        final recommended = HomelistItemModel.fromJson(recommendedData['mountain'] as Map<String, dynamic>);
+        final recommended = HomelistItemModel.fromJson(
+            recommendedData['mountain'] as Map<String, dynamic>);
         parsedMountains.insert(0, recommended);
       }
 
@@ -61,52 +63,57 @@ class _WeatherScreenState extends State<WeatherScreen> {
         ),
       ),
       child: Scaffold(
-        backgroundColor: Colors.transparent, // Dark theme base replaced by image
+        backgroundColor:
+            Colors.transparent, // Dark theme base replaced by image
         body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF81B59C)),
-              ),
-            )
-          : CustomScrollView(
-              slivers: [
-                _buildAppBar(context),
-                _mountains.isEmpty
-                    ? SliverFillRemaining(
-                        child: const Center(
-                          child: Text('Tidak ada data gunung.', style: TextStyle(color: Colors.white)),
-                        ),
-                      )
-                    : SliverPadding(
-                        padding: EdgeInsets.symmetric(horizontal: 16.h, vertical: 16.h),
-                        sliver: SliverList(
-                          delegate: SliverChildBuilderDelegate(
-                            (context, index) {
-                              final item = _mountains[index];
-                              return Padding(
-                                padding: EdgeInsets.only(bottom: 16.h),
-                                child: WeatherItemWidget(mountain: item),
-                              );
-                            },
-                            childCount: _mountains.length,
+            ? const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF81B59C)),
+                ),
+              )
+            : CustomScrollView(
+                slivers: [
+                  _buildAppBar(context),
+                  _mountains.isEmpty
+                      ? SliverFillRemaining(
+                          child: const Center(
+                            child: Text('Tidak ada data gunung.',
+                                style: TextStyle(color: Colors.white)),
+                          ),
+                        )
+                      : SliverPadding(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 16.h, vertical: 16.h),
+                          sliver: SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) {
+                                final item = _mountains[index];
+                                return Padding(
+                                  padding: EdgeInsets.only(bottom: 16.h),
+                                  child: WeatherItemWidget(mountain: item),
+                                );
+                              },
+                              childCount: _mountains.length,
+                            ),
                           ),
                         ),
-                      ),
-              ],
-            ),
+                ],
+              ),
       ),
     );
   }
 
   Widget _buildAppBar(BuildContext context) {
     return SliverAppBar(
-      backgroundColor: Colors.transparent, // Greenish appbar replaced by transparent
+      backgroundColor:
+          Colors.transparent, // Greenish appbar replaced by transparent
       pinned: true,
       elevation: 0,
       expandedHeight: 65.h,
       flexibleSpace: FlexibleSpaceBar(
         background: ClipRRect(
-          borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
+          borderRadius:
+              const BorderRadius.vertical(bottom: Radius.circular(20)),
           child: Container(
             decoration: const BoxDecoration(
               image: DecorationImage(
@@ -157,7 +164,8 @@ class _WeatherScreenState extends State<WeatherScreen> {
           },
         ),
         IconButton(
-          icon: Icon(Icons.filter_alt_outlined, color: Colors.white, size: 22.h),
+          icon:
+              Icon(Icons.filter_alt_outlined, color: Colors.white, size: 22.h),
           onPressed: () {},
         ),
       ],
@@ -170,7 +178,8 @@ class _WeatherScreenState extends State<WeatherScreen> {
   }
 }
 
-class _MountainWeatherSearchDelegate extends SearchDelegate<HomelistItemModel?> {
+class _MountainWeatherSearchDelegate
+    extends SearchDelegate<HomelistItemModel?> {
   _MountainWeatherSearchDelegate(this._mountains);
 
   final List<HomelistItemModel> _mountains;
@@ -252,7 +261,8 @@ class _MountainWeatherSearchDelegate extends SearchDelegate<HomelistItemModel?> 
   Widget _buildResultsList(List<HomelistItemModel> results) {
     if (results.isEmpty) {
       return const Center(
-        child: Text('Tidak ada hasil.', style: TextStyle(color: Colors.black54)),
+        child:
+            Text('Tidak ada hasil.', style: TextStyle(color: Colors.black54)),
       );
     }
 

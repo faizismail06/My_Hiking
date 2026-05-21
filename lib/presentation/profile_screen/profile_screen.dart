@@ -497,6 +497,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onPressed: () {
                 Navigator.of(dialogContext).pop(); // Tutup pop-up tanpa keluar
               },
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.grey[700],
+              ),
               child: Text("Batalkan"),
             ),
             TextButton(
@@ -519,9 +522,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                 Navigator.of(context, rootNavigator: true)
                     .pushNamedAndRemoveUntil(
-                    AppRoutes.loginScreen,
-                    (route) =>
-                        false); // Menuju ke halaman login dan menghapus stack
+                        AppRoutes.loginScreen,
+                        (route) =>
+                            false); // Menuju ke halaman login dan menghapus stack
               },
               child: Text(
                 "Keluar",

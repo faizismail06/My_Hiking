@@ -62,11 +62,12 @@ class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
     if (response.statusCode == 200) {
       final data = json.decode(response.body)['data'] as List;
 
-      final filteredData = List.of(data)..sort((a, b) {
-        final aId = int.tryParse(a['id'].toString()) ?? 0;
-        final bId = int.tryParse(b['id'].toString()) ?? 0;
-        return aId.compareTo(bId);
-      });
+      final filteredData = List.of(data)
+        ..sort((a, b) {
+          final aId = int.tryParse(a['id'].toString()) ?? 0;
+          final bId = int.tryParse(b['id'].toString()) ?? 0;
+          return aId.compareTo(bId);
+        });
 
       return filteredData
           .map((item) => RecentclimbinglistItemModel.fromJson(item))

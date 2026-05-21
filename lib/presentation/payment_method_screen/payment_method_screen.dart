@@ -651,6 +651,9 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.grey[700],
+              ),
               child: Text('Kembali'),
             ),
             ElevatedButton(

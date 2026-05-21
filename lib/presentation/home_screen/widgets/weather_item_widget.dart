@@ -70,7 +70,8 @@ class _WeatherItemWidgetState extends State<WeatherItemWidget> {
   }
 
   void _openForecast() {
-    if (widget.mountain.latitude == null || widget.mountain.longitude == null) return;
+    if (widget.mountain.latitude == null || widget.mountain.longitude == null)
+      return;
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -120,8 +121,10 @@ class _WeatherItemWidgetState extends State<WeatherItemWidget> {
               CachedNetworkImage(
                 imageUrl: widget.mountain.gambar ?? '',
                 fit: BoxFit.cover,
-                placeholder: (context, url) => Container(color: const Color(0xFF2E3D36)),
-                errorWidget: (context, url, error) => Container(color: const Color(0xFF2E3D36)),
+                placeholder: (context, url) =>
+                    Container(color: const Color(0xFF2E3D36)),
+                errorWidget: (context, url, error) =>
+                    Container(color: const Color(0xFF2E3D36)),
               ),
               Container(
                 decoration: BoxDecoration(
@@ -145,15 +148,17 @@ class _WeatherItemWidgetState extends State<WeatherItemWidget> {
                     Text(
                       widget.mountain.namaGunung?.toUpperCase() ?? '-',
                       style: TextStyle(
-                        fontFamily: 'Serif',
-                        color: Colors.white,
-                        fontSize: 20.fSize,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
-                        shadows: [
-                          Shadow(color: Colors.black.withOpacity(0.6), blurRadius: 6, offset: const Offset(1, 2))
-                        ]
-                      ),
+                          fontFamily: 'Serif',
+                          color: Colors.white,
+                          fontSize: 20.fSize,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                          shadows: [
+                            Shadow(
+                                color: Colors.black.withOpacity(0.6),
+                                blurRadius: 6,
+                                offset: const Offset(1, 2))
+                          ]),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -161,13 +166,15 @@ class _WeatherItemWidgetState extends State<WeatherItemWidget> {
                     Text(
                       widget.mountain.province?.name ?? '-',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
-                        fontSize: 13.fSize,
-                        fontWeight: FontWeight.w600,
-                        shadows: [
-                          Shadow(color: Colors.black.withOpacity(0.6), blurRadius: 4, offset: const Offset(1, 1))
-                        ]
-                      ),
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 13.fSize,
+                          fontWeight: FontWeight.w600,
+                          shadows: [
+                            Shadow(
+                                color: Colors.black.withOpacity(0.6),
+                                blurRadius: 4,
+                                offset: const Offset(1, 1))
+                          ]),
                     ),
                   ],
                 ),
@@ -181,15 +188,15 @@ class _WeatherItemWidgetState extends State<WeatherItemWidget> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       _buildGlassBox(
-                         width: 120.h,
-                         height: 50.h,
-                         child: _buildKetinggianContent(ketinggianText),
+                        width: 120.h,
+                        height: 50.h,
+                        child: _buildKetinggianContent(ketinggianText),
                       ),
                       SizedBox(height: 12.h),
                       _buildGlassBox(
-                         width: 120.h,
-                         height: 80.h,
-                         child: _buildWeatherGlassBox(),
+                        width: 120.h,
+                        height: 80.h,
+                        child: _buildWeatherGlassBox(),
                       ),
                     ],
                   ),
@@ -202,7 +209,8 @@ class _WeatherItemWidgetState extends State<WeatherItemWidget> {
     );
   }
 
-  Widget _buildGlassBox({required Widget child, required double width, required double height}) {
+  Widget _buildGlassBox(
+      {required Widget child, required double width, required double height}) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(16.h),
       child: BackdropFilter(
@@ -233,19 +241,17 @@ class _WeatherItemWidgetState extends State<WeatherItemWidget> {
         Text(
           "Ketinggian:",
           style: TextStyle(
-            color: Colors.white.withOpacity(0.9), 
-            fontSize: 10.fSize, 
-            fontWeight: FontWeight.w500
-          ),
+              color: Colors.white.withOpacity(0.9),
+              fontSize: 10.fSize,
+              fontWeight: FontWeight.w500),
         ),
         SizedBox(height: 2.h),
         Text(
           ketinggianText,
           style: TextStyle(
-            color: Colors.white, 
-            fontSize: 13.fSize, 
-            fontWeight: FontWeight.bold
-          ),
+              color: Colors.white,
+              fontSize: 13.fSize,
+              fontWeight: FontWeight.bold),
         ),
       ],
     );
@@ -257,14 +263,16 @@ class _WeatherItemWidgetState extends State<WeatherItemWidget> {
         child: SizedBox(
           width: 20.h,
           height: 20.h,
-          child: const CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+          child: const CircularProgressIndicator(
+              color: Colors.white, strokeWidth: 2),
         ),
       );
     }
 
     if (_error != null) {
       return Center(
-        child: Text(_error!, style: TextStyle(color: Colors.white, fontSize: 10.fSize)),
+        child: Text(_error!,
+            style: TextStyle(color: Colors.white, fontSize: 10.fSize)),
       );
     }
 
@@ -278,11 +286,15 @@ class _WeatherItemWidgetState extends State<WeatherItemWidget> {
               Text(
                 '${_weather!.temperature.toStringAsFixed(0)}°C',
                 style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 22.fSize,
-                  fontWeight: FontWeight.bold,
-                  shadows: [Shadow(color: Colors.black.withOpacity(0.4), blurRadius: 4, offset: const Offset(0, 2))]
-                ),
+                    color: Colors.white,
+                    fontSize: 22.fSize,
+                    fontWeight: FontWeight.bold,
+                    shadows: [
+                      Shadow(
+                          color: Colors.black.withOpacity(0.4),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2))
+                    ]),
               ),
               SizedBox(width: 8.h),
               Text(

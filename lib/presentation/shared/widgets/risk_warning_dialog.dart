@@ -217,8 +217,8 @@ class _DialogContent extends StatelessWidget {
                   children: [
                     // Badge
                     Container(
-                      padding: EdgeInsets.symmetric(
-                          horizontal: 8.h, vertical: 3.h),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 8.h, vertical: 3.h),
                       decoration: BoxDecoration(
                         color: config.badgeColor.withOpacity(0.12),
                         borderRadius: BorderRadius.circular(6.h),
@@ -261,8 +261,7 @@ class _DialogContent extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(Icons.route_rounded,
-                    size: 14.h, color: Colors.grey[600]),
+                Icon(Icons.route_rounded, size: 14.h, color: Colors.grey[600]),
                 SizedBox(width: 6.h),
                 Expanded(
                   child: Text(
@@ -324,8 +323,8 @@ class _DialogContent extends StatelessWidget {
                   child: OutlinedButton(
                     onPressed: () => Navigator.of(context).pop('detail'),
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(
-                          color: config.iconColor.withOpacity(0.6)),
+                      side:
+                          BorderSide(color: config.iconColor.withOpacity(0.6)),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12.h)),
                       padding: EdgeInsets.symmetric(vertical: 12.h),

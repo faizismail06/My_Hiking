@@ -15,7 +15,12 @@ class RegistInitialEvent extends RegistEvent {
   List<Object?> get props => [];
 }
 
-class TogglePassword2Visibility extends RegistEvent {@override
-  List<Object?> get props => [];} 
-class TogglePassword3Visibility extends RegistEvent {@override
-  List<Object?> get props => [];}
+class TogglePassword2Visibility extends RegistEvent {
+  @override
+  List<Object?> get props => [];
+}
+
+class TogglePassword3Visibility extends RegistEvent {
+  @override
+  List<Object?> get props => [];
+}

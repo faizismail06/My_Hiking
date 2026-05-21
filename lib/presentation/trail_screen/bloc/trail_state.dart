@@ -38,5 +38,6 @@ class TrailState extends Equatable {
   }
 
   @override
-  List<Object?> get props => [error, isLoading, jalur, gunung, errorMessage, dss];
+  List<Object?> get props =>
+      [error, isLoading, jalur, gunung, errorMessage, dss];
 }

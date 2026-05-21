@@ -17,7 +17,7 @@ class LoginInitialEvent extends LoginEvent {
 // ignore_for_file: must_be_immutable
 class ChangePasswordVisibilityEvent extends LoginEvent {
   ChangePasswordVisibilityEvent({required this.value});
-  
+
   final bool value;
 
   @override

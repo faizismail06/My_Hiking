@@ -32,16 +32,14 @@ class TiketSayaBloc extends Bloc<TiketSayaEvent, TiketSayaState> {
       final transactions = results[1] as List<TransaksiItemModel>;
 
       // Split orders into active and completed
-      final activeTickets = allOrders
-          .where((o) {
-            final status = (o.status ?? '').trim().toLowerCase();
-            return status != 'selesai' &&
-                status != 'dibatalkan' &&
-                status != 'cancel requested' &&
-                status != 'cancelled' &&
-                status != 'expired';
-          })
-          .toList();
+      final activeTickets = allOrders.where((o) {
+        final status = (o.status ?? '').trim().toLowerCase();
+        return status != 'selesai' &&
+            status != 'dibatalkan' &&
+            status != 'cancel requested' &&
+            status != 'cancelled' &&
+            status != 'expired';
+      }).toList();
 
       final completedHikes =
           allOrders.where((o) => o.status == 'Selesai').toList();
@@ -80,11 +78,12 @@ class TiketSayaBloc extends Bloc<TiketSayaEvent, TiketSayaState> {
     if (response.statusCode == 200) {
       final data = json.decode(response.body)['data'] as List;
 
-      final filteredData = List.of(data)..sort((a, b) {
-        final aId = int.tryParse(a['id'].toString()) ?? 0;
-        final bId = int.tryParse(b['id'].toString()) ?? 0;
-        return bId.compareTo(aId); // newest first
-      });
+      final filteredData = List.of(data)
+        ..sort((a, b) {
+          final aId = int.tryParse(a['id'].toString()) ?? 0;
+          final bId = int.tryParse(b['id'].toString()) ?? 0;
+          return bId.compareTo(aId); // newest first
+        });
 
       return filteredData.map((item) => TiketItemModel.fromJson(item)).toList();
     } else {
@@ -103,9 +102,7 @@ class TiketSayaBloc extends Bloc<TiketSayaEvent, TiketSayaState> {
 
         if (userId.isEmpty) return [];
 
-        return data
-            .map((item) => TransaksiItemModel.fromJson(item))
-            .toList();
+        return data.map((item) => TransaksiItemModel.fromJson(item)).toList();
       } else {
         throw Exception('Failed to load transactions');
       }

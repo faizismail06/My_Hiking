@@ -1,7 +1,7 @@
 part of 'reset_kirim_email_bloc.dart';
 
 /// Abstract class for all events that can be dispatched from the ResetKirimEmail widget.
-/// 
+///
 /// Events must be immutable and implement the [Equatable] interface.
 abstract class ResetKirimEmailEvent extends Equatable {
   @override

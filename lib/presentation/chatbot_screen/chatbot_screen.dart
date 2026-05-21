@@ -713,7 +713,8 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                             CircleAvatar(
                               radius: 32,
                               backgroundColor: Colors.teal.shade50,
-                              child: Icon(Icons.person, size: 40, color: theme.colorScheme.primary),
+                              child: Icon(Icons.person,
+                                  size: 40, color: theme.colorScheme.primary),
                             ),
                             const SizedBox(width: 16),
                             Expanded(
@@ -751,7 +752,8 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                         Text(
                           'Tambahkan $name sebagai\nanggota tim pendaki Anda?',
                           textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+                          style: const TextStyle(
+                              fontSize: 15, fontWeight: FontWeight.w500),
                         ),
                         const SizedBox(height: 28),
                         Row(
@@ -761,7 +763,8 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                               child: OutlinedButton(
                                 onPressed: () => Navigator.pop(ctx, false),
                                 style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 14),
                                   side: BorderSide(color: Colors.grey.shade400),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(20),
@@ -779,7 +782,8 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                               flex: 6,
                               child: ElevatedButton.icon(
                                 onPressed: () => Navigator.pop(ctx, true),
-                                icon: const Icon(Icons.person_add_alt_1, size: 20),
+                                icon: const Icon(Icons.person_add_alt_1,
+                                    size: 20),
                                 label: const Text(
                                   'Tambah Anggota',
                                   style: TextStyle(fontWeight: FontWeight.bold),
@@ -787,7 +791,8 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 style: ElevatedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 14, horizontal: 16),
                                   backgroundColor: theme.colorScheme.primary,
                                   foregroundColor: Colors.white,
                                   shape: RoundedRectangleBorder(
@@ -904,6 +909,8 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _rolePrimaryColor,
                           foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 12),
                         ),
                         child: const Text(
                           'Tambah ID',
@@ -948,6 +955,8 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                           style: TextStyle(color: Colors.white)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _rolePrimaryColor,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 12),
                       ),
                     ),
                   ),
@@ -1193,6 +1202,8 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _rolePrimaryColor,
                         foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 12),
                       ),
                       icon: const Icon(Icons.payment),
                       label: const Text('Gunakan Metode Ini'),
@@ -1656,7 +1667,8 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     onPressed: _startNewChat,
-                    icon: Icon(Icons.add, color: const Color(0xFF2E7D32), size: 18.h),
+                    icon: Icon(Icons.add,
+                        color: const Color(0xFF2E7D32), size: 18.h),
                     label: Text(
                       'Chat Baru',
                       style: TextStyle(
@@ -1821,7 +1833,8 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       context: context,
       builder: (ctx) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           child: Padding(
             padding: EdgeInsets.all(20.h),
             child: Column(
@@ -1833,7 +1846,8 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                   children: [
                     Text(
                       'Anggota Terpilih',
-                      style: TextStyle(fontSize: 18.fSize, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                          fontSize: 18.fSize, fontWeight: FontWeight.bold),
                     ),
                     IconButton(
                       icon: const Icon(Icons.close),
@@ -1995,13 +2009,17 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                         ],
                       ),
                       child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 4.h, vertical: 4.h),
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 4.h, vertical: 4.h),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             IconButton(
-                              icon: Icon(Icons.person_add_outlined, color: appTheme.gray500),
-                              onPressed: _isServerConnected ? _openMemberPickerModal : null,
+                              icon: Icon(Icons.person_add_outlined,
+                                  color: appTheme.gray500),
+                              onPressed: _isServerConnected
+                                  ? _openMemberPickerModal
+                                  : null,
                             ),
                             Expanded(
                               child: Column(
@@ -2010,36 +2028,58 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                                 children: [
                                   if (_selectedMemberIds.isNotEmpty)
                                     Padding(
-                                      padding: EdgeInsets.only(top: 8.h, bottom: 4.h),
+                                      padding: EdgeInsets.only(
+                                          top: 8.h, bottom: 4.h),
                                       child: Builder(builder: (context) {
-                                        final firstId = _selectedMemberIds.first;
-                                        final firstName = _selectedMemberNames[firstId] ?? 'ID $firstId';
-                                        final moreCount = _selectedMemberIds.length - 1;
+                                        final firstId =
+                                            _selectedMemberIds.first;
+                                        final firstName =
+                                            _selectedMemberNames[firstId] ??
+                                                'ID $firstId';
+                                        final moreCount =
+                                            _selectedMemberIds.length - 1;
 
                                         return Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
                                             Flexible(
                                               child: Container(
-                                                padding: EdgeInsets.symmetric(horizontal: 10.h, vertical: 6.h),
+                                                padding: EdgeInsets.symmetric(
+                                                    horizontal: 10.h,
+                                                    vertical: 6.h),
                                                 decoration: BoxDecoration(
                                                   color: appTheme.gray200,
-                                                  borderRadius: BorderRadius.circular(16.h),
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          16.h),
                                                 ),
                                                 child: Row(
-                                                  mainAxisSize: MainAxisSize.min,
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
                                                   children: [
                                                     Flexible(
                                                       child: Text(
                                                         '$firstName (#$firstId)',
-                                                        style: TextStyle(fontSize: 12.fSize, color: Colors.black87, fontWeight: FontWeight.w600),
-                                                        overflow: TextOverflow.ellipsis,
+                                                        style: TextStyle(
+                                                            fontSize: 12.fSize,
+                                                            color:
+                                                                Colors.black87,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .w600),
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
                                                       ),
                                                     ),
                                                     SizedBox(width: 8.h),
                                                     GestureDetector(
-                                                      onTap: () => _cubit.removeSelectedMember(firstId),
-                                                      child: Icon(Icons.close, size: 14.h, color: Colors.black54),
+                                                      onTap: () => _cubit
+                                                          .removeSelectedMember(
+                                                              firstId),
+                                                      child: Icon(Icons.close,
+                                                          size: 14.h,
+                                                          color:
+                                                              Colors.black54),
                                                     ),
                                                   ],
                                                 ),
@@ -2050,15 +2090,27 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                                               GestureDetector(
                                                 onTap: _showAllSelectedMembers,
                                                 child: Container(
-                                                  padding: EdgeInsets.symmetric(horizontal: 8.h, vertical: 6.h),
+                                                  padding: EdgeInsets.symmetric(
+                                                      horizontal: 8.h,
+                                                      vertical: 6.h),
                                                   decoration: BoxDecoration(
-                                                    color: _rolePrimaryColor.withOpacity(0.1),
-                                                    borderRadius: BorderRadius.circular(16.h),
-                                                    border: Border.all(color: _rolePrimaryColor.withOpacity(0.5)),
+                                                    color: _rolePrimaryColor
+                                                        .withOpacity(0.1),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            16.h),
+                                                    border: Border.all(
+                                                        color: _rolePrimaryColor
+                                                            .withOpacity(0.5)),
                                                   ),
                                                   child: Text(
                                                     '+$moreCount',
-                                                    style: TextStyle(fontSize: 12.fSize, color: _rolePrimaryColor, fontWeight: FontWeight.bold),
+                                                    style: TextStyle(
+                                                        fontSize: 12.fSize,
+                                                        color:
+                                                            _rolePrimaryColor,
+                                                        fontWeight:
+                                                            FontWeight.bold),
                                                   ),
                                                 ),
                                               ),
@@ -2070,17 +2122,24 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                                   TextField(
                                     controller: _messageController,
                                     enabled: _isServerConnected,
-                                    textCapitalization: TextCapitalization.sentences,
+                                    textCapitalization:
+                                        TextCapitalization.sentences,
                                     maxLines: 4,
                                     minLines: 1,
                                     style: TextStyle(fontSize: 14.fSize),
                                     decoration: InputDecoration(
-                                      hintText: _isServerConnected ? 'Ketik pertanyaan Anda...' : 'Server offline',
-                                      hintStyle: TextStyle(color: appTheme.gray500, fontSize: 13.fSize),
+                                      hintText: _isServerConnected
+                                          ? 'Ketik pertanyaan Anda...'
+                                          : 'Server offline',
+                                      hintStyle: TextStyle(
+                                          color: appTheme.gray500,
+                                          fontSize: 13.fSize),
                                       border: InputBorder.none,
                                       isDense: true,
                                       contentPadding: EdgeInsets.only(
-                                          top: _selectedMemberIds.isNotEmpty ? 4.h : 12.h,
+                                          top: _selectedMemberIds.isNotEmpty
+                                              ? 4.h
+                                              : 12.h,
                                           bottom: 12.h),
                                     ),
                                     onSubmitted: (_) => _sendMessage(),
@@ -2091,22 +2150,26 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                
                                 if (_isLoading)
                                   Padding(
                                     padding: EdgeInsets.all(8.h),
                                     child: SizedBox(
                                       height: 24.h,
                                       width: 24.h,
-                                      child: CircularProgressIndicator(strokeWidth: 2, color: _rolePrimaryColor),
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: _rolePrimaryColor),
                                     ),
                                   )
                                 else
                                   IconButton(
                                     constraints: const BoxConstraints(),
                                     padding: EdgeInsets.all(8.h),
-                                    icon: Icon(Icons.send, color: _rolePrimaryColor),
-                                    onPressed: _isServerConnected ? _sendMessage : null,
+                                    icon: Icon(Icons.send,
+                                        color: _rolePrimaryColor),
+                                    onPressed: _isServerConnected
+                                        ? _sendMessage
+                                        : null,
                                   ),
                                 SizedBox(width: 4.h),
                               ],

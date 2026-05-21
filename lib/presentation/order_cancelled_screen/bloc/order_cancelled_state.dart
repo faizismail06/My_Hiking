@@ -12,7 +12,8 @@ class OrderCancelledState extends Equatable {
 
   OrderCancelledState copyWith({OrderCancelledModel? orderCancelledModelObj}) {
     return OrderCancelledState(
-      orderCancelledModelObj: orderCancelledModelObj ?? this.orderCancelledModelObj,
+      orderCancelledModelObj:
+          orderCancelledModelObj ?? this.orderCancelledModelObj,
     );
   }
 }

@@ -5,11 +5,13 @@ class RecommendationModel {
   final String mountainName;
   final double score;
   final String risk;
+
   /// Raw risk_level string as returned by the API (e.g. "high_risk", "caution", "safe").
   final String rawRisk;
   final String explanation;
   final String keyFactor;
   final bool warning;
+
   /// Short human-readable risk reason from DSSService.
   final String shortReason;
 

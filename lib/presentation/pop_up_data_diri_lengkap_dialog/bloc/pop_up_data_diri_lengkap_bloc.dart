@@ -5,7 +5,8 @@ part 'pop_up_data_diri_lengkap_event.dart';
 part 'pop_up_data_diri_lengkap_state.dart';
 
 /// A bloc that manages the state of a PopUpDataDiriLengkap according to the event
-class PopUpDataDiriLengkapBloc extends Bloc<PopUpDataDiriLengkapEvent, PopUpDataDiriLengkapState> {
+class PopUpDataDiriLengkapBloc
+    extends Bloc<PopUpDataDiriLengkapEvent, PopUpDataDiriLengkapState> {
   PopUpDataDiriLengkapBloc(super.initialState) {
     on<PopUpDataDiriLengkapInitialEvent>(_onInitialize);
   }

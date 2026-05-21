@@ -100,6 +100,10 @@ flutter:
     - assets/images/siluetgunung.jpeg
     - assets/images/img_home.png
     - assets/images/img_image_156x316.png
+    - assets/images/logo_pendaki.jpeg
+    - assets/images/logo_pemula.png
+    - assets/images/logo_menengah.png
+    - assets/images/logo_mahir.png
 
   fonts:
     - family: Poppins

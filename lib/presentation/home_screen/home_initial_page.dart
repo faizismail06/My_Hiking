@@ -39,6 +39,7 @@ class HomeInitialPage extends StatefulWidget {
 class HomeInitialPageState extends State<HomeInitialPage> {
   String userName = '';
   int userId = 0;
+
   /// User tier as returned by the API (e.g. "pemula", "menengah", "mahir").
   /// Used to personalise the risk warning dialog message.
   String userTier = '';
@@ -566,14 +567,16 @@ class HomeInitialPageState extends State<HomeInitialPage> {
                             SizedBox(width: 12.h),
                         itemBuilder: (context, index) {
                           final recommendation = topThree[index];
-                          final HomelistItemModel safeMountain = _findMountainByRecommendation(
-                            recommendation,
-                            mountainPool,
-                          ) ?? HomelistItemModel(
-                            id: null,
-                            namaGunung: recommendation.mountainName,
-                            gambar: '',
-                          );
+                          final HomelistItemModel safeMountain =
+                              _findMountainByRecommendation(
+                                    recommendation,
+                                    mountainPool,
+                                  ) ??
+                                  HomelistItemModel(
+                                    id: null,
+                                    namaGunung: recommendation.mountainName,
+                                    gambar: '',
+                                  );
 
                           return SizedBox(
                             width: 280.h,
@@ -814,8 +817,7 @@ class HomeInitialPageState extends State<HomeInitialPage> {
           GestureDetector(
             onTap: () => _openPreferenceScreen(context),
             child: Container(
-              padding:
-                  EdgeInsets.symmetric(horizontal: 10.h, vertical: 6.h),
+              padding: EdgeInsets.symmetric(horizontal: 10.h, vertical: 6.h),
               decoration: BoxDecoration(
                 color: const Color(0xFF1B8A5A).withOpacity(0.08),
                 borderRadius: BorderRadius.circular(20.h),
@@ -853,7 +855,8 @@ class HomeInitialPageState extends State<HomeInitialPage> {
   /// Opens the DssPreferenceScreen, waits for the returned weights map,
   /// then dispatches HomeFetchWithWeightsEvent to refresh recommendations.
   Future<void> _openPreferenceScreen(BuildContext context) async {
-    final result = await Navigator.of(context, rootNavigator: true).push<Map<String, double>>(
+    final result = await Navigator.of(context, rootNavigator: true)
+        .push<Map<String, double>>(
       MaterialPageRoute(
         builder: (_) => const DssPreferenceScreen(),
       ),
@@ -867,8 +870,8 @@ class HomeInitialPageState extends State<HomeInitialPage> {
 
     // Dispatch to bloc — even empty weights is valid (= equal weight fetch).
     context.read<HomeBloc>().add(
-      HomeFetchWithWeightsEvent(weights: weights),
-    );
+          HomeFetchWithWeightsEvent(weights: weights),
+        );
   }
 
   Widget _buildSectionHeader(String title, IconData icon) {

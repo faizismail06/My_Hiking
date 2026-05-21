@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:myhiking/api/api_service.dart';
 import 'package:myhiking/presentation/experience_onboarding_screen/bloc/experience_onboarding_cubit.dart';
 import 'package:myhiking/presentation/experience_onboarding_screen/bloc/experience_onboarding_state.dart';
@@ -13,7 +14,8 @@ class ExperienceOnboardingScreen extends StatefulWidget {
       _ExperienceOnboardingScreenState();
 }
 
-class _ExperienceOnboardingScreenState extends State<ExperienceOnboardingScreen> {
+class _ExperienceOnboardingScreenState
+    extends State<ExperienceOnboardingScreen> {
   final ExperienceOnboardingCubit _cubit = ExperienceOnboardingCubit();
 
   @override
@@ -50,27 +52,20 @@ class _ExperienceOnboardingScreenState extends State<ExperienceOnboardingScreen>
       final weightedTier = data['weighted_tier']?.toString() ?? tier;
       final weightedScore = data['weighted_score']?.toString() ?? '$totalWeightedScore';
 
-      await showDialog<void>(
-        context: context,
-        builder: (context) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Row(
-            children: const [
-              Icon(Icons.verified_rounded, color: Colors.green, size: 28),
-              SizedBox(width: 10),
-              Expanded(child: Text('Onboarding Berhasil')),
-            ],
-          ),
-          content: Text(
-            'Data pengalaman tersimpan.\nTier Anda: $tier\nSkor survey: $weightedScore\nTier survey: $weightedTier',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('OK'),
-            ),
-          ],
-        ),
+      String badgeAsset;
+      if (weightedTier.toLowerCase() == 'mahir') {
+        badgeAsset = 'assets/images/logo_mahir.png';
+      } else if (weightedTier.toLowerCase() == 'menengah') {
+        badgeAsset = 'assets/images/logo_menengah.png';
+      } else {
+        badgeAsset = 'assets/images/logo_pemula.png';
+      }
+
+      await _showResultDialog(
+        dialogContext: context,
+        weightedTier: weightedTier,
+        weightedScore: weightedScore,
+        badgeAsset: badgeAsset,
       );
 
       if (!mounted) return;
@@ -86,6 +81,167 @@ class _ExperienceOnboardingScreenState extends State<ExperienceOnboardingScreen>
         _cubit.setSubmitting(false);
       }
     }
+  }
+
+  /// Reusable result dialog matching the reference design:
+  /// - logo_pendaki.jpeg circular at top center, overlapping card edge
+  /// - Italic title "Selamat! Ini Awal Baru Kamu!"
+  /// - RichText body with tier badge (logo_pemula/menengah/mahir) positioned
+  ///   at bottom-right, overlapping into the text area
+  /// - Green CTA button at the bottom
+  Future<void> _showResultDialog({
+    required BuildContext dialogContext,
+    required String weightedTier,
+    required String weightedScore,
+    required String badgeAsset,
+  }) async {
+    final tierLower = weightedTier.toLowerCase();
+    final Color tierColor;
+    if (tierLower == 'mahir') {
+      tierColor = const Color(0xFF8B4513);
+    } else if (tierLower == 'menengah') {
+      tierColor = const Color(0xFFD6A015);
+    } else {
+      tierColor = const Color(0xFF1B734A);
+    }
+
+    await showDialog<void>(
+      context: dialogContext,
+      barrierDismissible: false,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 28),
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.topCenter,
+          children: [
+            // ── Card body ──
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(top: 50),
+              padding: const EdgeInsets.fromLTRB(24, 70, 24, 24),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFCF9F0),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 12,
+                    offset: Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Title
+                  Text(
+                    'Selamat! Ini Awal\nBaru Kamu!',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF5D4037),
+                      height: 1.3,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // ── Text body ──
+                  RichText(
+                    text: TextSpan(
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.black87,
+                        height: 1.55,
+                      ),
+                      children: [
+                        const TextSpan(
+                          text:
+                              'Halo! Kuesioner kamu sudah tersimpan dengan baik. Berdasarkan jawabanmu, kami dengan bangga menempatkan kamu di Tier ',
+                        ),
+                        TextSpan(
+                          text: weightedTier,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: tierColor,
+                          ),
+                        ),
+                        const TextSpan(text: '.\nSkor fondasi kamu adalah '),
+                        TextSpan(
+                          text: weightedScore,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFD6A015),
+                          ),
+                        ),
+                        const TextSpan(
+                          text:
+                              ', yang merupakan titik awal yang luar biasa! Jangan khawatir, ini adalah langkah pertama yang sempurna untuk membangun kekuatan dan kebiasaan sehatmu.',
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 28),
+
+                  // CTA Button
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1B734A),
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(double.infinity, 48),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      elevation: 2,
+                    ),
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: const Text(
+                      'Ayo Mulai Perjalananmu!',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Top center Tier Badge (No border) ──
+            Positioned(
+              top: 0,
+              child: Image.asset(
+                badgeAsset,
+                width: 110,
+                height: 110,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => Container(
+                  width: 110,
+                  height: 110,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: tierColor.withOpacity(0.15),
+                    border: Border.all(
+                      color: tierColor.withOpacity(0.4),
+                      width: 2,
+                    ),
+                  ),
+                  child: Icon(
+                    Icons.emoji_events_rounded,
+                    color: tierColor,
+                    size: 50,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   int _mapFrequencyScoreToJumlahPendakian(int score) {
@@ -127,8 +283,8 @@ class _ExperienceOnboardingScreenState extends State<ExperienceOnboardingScreen>
         orElse: () => question.options.first,
       );
 
-      final weightedScore =
-          _cubit.calculateQuestionWeightedScore(score: selectedScore, weight: question.weight);
+      final weightedScore = _cubit.calculateQuestionWeightedScore(
+          score: selectedScore, weight: question.weight);
 
       return {
         'question_id': question.id,
@@ -162,6 +318,28 @@ class _ExperienceOnboardingScreenState extends State<ExperienceOnboardingScreen>
           return Scaffold(
             appBar: AppBar(
               title: const Text('Onboarding Experience'),
+              actions: [
+                if (kDebugMode)
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.bug_report, color: Colors.orange),
+                    tooltip: 'Simulasi Pop-up (Test)',
+                    onSelected: (tier) {
+                      final Map<String, List<String>> mockData = {
+                        'pemula':  ['assets/images/logo_pemula.png'],
+                        'menengah':['assets/images/logo_menengah.png'],
+                        'mahir':   ['assets/images/logo_mahir.png'],
+                      };
+                      final d = mockData[tier]!;
+                      _showResultDialog(
+                        dialogContext: context,
+                        weightedTier: d[0],
+                        weightedScore: d[1],
+                        badgeAsset: d[2],
+                      );
+                    },
+                     itemBuilder: (context) => [],
+                  ),
+              ],
             ),
             body: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
@@ -179,7 +357,8 @@ class _ExperienceOnboardingScreenState extends State<ExperienceOnboardingScreen>
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.insights_rounded, color: Colors.orange),
+                        const Icon(Icons.insights_rounded,
+                            color: Colors.orange),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
@@ -222,12 +401,16 @@ class _ExperienceOnboardingScreenState extends State<ExperienceOnboardingScreen>
                       padding: const EdgeInsets.only(bottom: 10),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(14),
-                        onTap: () => _cubit.selectAnswer(currentQuestion.id, option.score),
+                        onTap: () => _cubit.selectAnswer(
+                            currentQuestion.id, option.score),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 180),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 14),
                           decoration: BoxDecoration(
-                            color: isSelected ? const Color(0xFFEAF6F0) : Colors.white,
+                            color: isSelected
+                                ? const Color(0xFFEAF6F0)
+                                : Colors.white,
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(
                               color: isSelected
@@ -273,7 +456,8 @@ class _ExperienceOnboardingScreenState extends State<ExperienceOnboardingScreen>
                       if (state.currentStep > 0)
                         Expanded(
                           child: OutlinedButton(
-                            onPressed: state.isSubmitting ? null : _cubit.previousStep,
+                            onPressed:
+                                state.isSubmitting ? null : _cubit.previousStep,
                             style: OutlinedButton.styleFrom(
                               foregroundColor: const Color(0xFF1B734A),
                               side: const BorderSide(color: Color(0xFF1B734A)),
@@ -291,7 +475,8 @@ class _ExperienceOnboardingScreenState extends State<ExperienceOnboardingScreen>
                               ? null
                               : () {
                                   if (!_cubit.canProceedCurrentStep()) {
-                                    _showSnack('Pilih satu jawaban terlebih dahulu.');
+                                    _showSnack(
+                                        'Pilih satu jawaban terlebih dahulu.');
                                     return;
                                   }
 
@@ -317,7 +502,9 @@ class _ExperienceOnboardingScreenState extends State<ExperienceOnboardingScreen>
                                     color: Colors.white,
                                   ),
                                 )
-                              : Text(_cubit.isLastStep ? 'Simpan Onboarding' : 'Lanjut'),
+                              : Text(_cubit.isLastStep
+                                  ? 'Simpan Onboarding'
+                                  : 'Lanjut'),
                         ),
                       ),
                     ],

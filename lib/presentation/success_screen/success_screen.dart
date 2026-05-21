@@ -103,13 +103,14 @@ class SuccessScreen extends StatelessWidget {
                               text: "lbl_lihat_tiket".tr.toUpperCase(),
                               buttonStyle: CustomButtonStyles.fillPrimary,
                               buttonTextStyle: theme.textTheme.labelLarge!,
-                                onPressed: () {
-                                  Navigator.pushNamed(
-                                    context,
-                                    AppRoutes.ticketScreen,
-                                    arguments: 3, // Ganti 3 dengan ID pesanan yang benar
-                                  );
-                                },
+                              onPressed: () {
+                                Navigator.pushNamed(
+                                  context,
+                                  AppRoutes.ticketScreen,
+                                  arguments:
+                                      3, // Ganti 3 dengan ID pesanan yang benar
+                                );
+                              },
                             ),
                             SizedBox(height: 16.h),
                             CustomOutlinedButton(
@@ -260,7 +261,7 @@ void onTapArrowdownone(BuildContext context) {
 
 /// Navigates to the ticketScreen when the action is triggered.
 void onTapLihattiket(BuildContext context) {
-    Navigator.pushNamed(
+  Navigator.pushNamed(
     context,
     AppRoutes.ticketScreen,
     arguments: 3, // Ganti 3 dengan nilai ID pesanan yang sesuai

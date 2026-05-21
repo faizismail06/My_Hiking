@@ -398,6 +398,9 @@ class _PendingVerificationScreenState extends State<PendingVerificationScreen> {
               onPressed: () {
                 Navigator.of(dialogContext).pop(); // Tutup dialog
               },
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.grey[700],
+              ),
               child: const Text("TIDAK"),
             ),
             TextButton(

@@ -32,9 +32,15 @@ class HomelistItemModel {
       id: json['id'],
       namaGunung: json['nama'] ?? 'Nama Gunung Tidak Tersedia',
       gambar: json['gambar'] ?? 'URL Gambar Tidak Tersedia',
-      latitude: json['latitude'] is String ? double.tryParse(json['latitude']) : (json['latitude'] as num?)?.toDouble(),
-      longitude: json['longitude'] is String ? double.tryParse(json['longitude']) : (json['longitude'] as num?)?.toDouble(),
-      ketinggian: json['ketinggian'] is String ? int.tryParse(json['ketinggian']) : (json['ketinggian'] as num?)?.toInt(),
+      latitude: json['latitude'] is String
+          ? double.tryParse(json['latitude'])
+          : (json['latitude'] as num?)?.toDouble(),
+      longitude: json['longitude'] is String
+          ? double.tryParse(json['longitude'])
+          : (json['longitude'] as num?)?.toDouble(),
+      ketinggian: json['ketinggian'] is String
+          ? int.tryParse(json['ketinggian'])
+          : (json['ketinggian'] as num?)?.toInt(),
       // province: json['province_name'] ?? 'Provinsi Tidak Tersedia',
       province: rawProvince is Map<String, dynamic>
           ? Province.fromJson(rawProvince)
@@ -43,7 +49,7 @@ class HomelistItemModel {
               : rawProvince is String
                   ? Province(id: 0, name: rawProvince)
                   : null,
-        dss: json['dss'] is Map<String, dynamic>
+      dss: json['dss'] is Map<String, dynamic>
           ? DssEvaluation.fromJson(json['dss'])
           : null,
     );

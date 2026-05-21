@@ -26,7 +26,6 @@ class RiwayatUserIdEvent extends RiwayatEvent {
 }
 
 class ChangeStatusEvent extends RiwayatEvent {
-  
   final String riwayatId;
 
   ChangeStatusEvent(this.riwayatId);

@@ -935,6 +935,8 @@ class _BookingScreenState extends State<BookingScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1B8A5F),
                     foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
                   ),
                   onPressed: () {
                     // Update bloc with selected members
@@ -981,6 +983,8 @@ class _BookingScreenState extends State<BookingScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF1B8A5F),
                 foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
               onPressed: () async {
                 final idText = controller.text.trim();
@@ -1203,10 +1207,19 @@ class _BookingScreenState extends State<BookingScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.grey[700],
+                ),
                 child: const Text('Batal'),
               ),
-              TextButton(
+              ElevatedButton(
                 onPressed: () => Navigator.of(context).pop(true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange[700],
+                  foregroundColor: Colors.white,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
                 child: const Text('Lanjutkan'),
               ),
             ],

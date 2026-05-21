@@ -2,7 +2,9 @@ import 'package:equatable/equatable.dart';
 import 'transactionlist_item_model.dart';
 
 class TransactionModel extends Equatable {
-  TransactionModel({this.transactionlistItemList = const [],});
+  TransactionModel({
+    this.transactionlistItemList = const [],
+  });
 
   List<TransactionItemModel> transactionlistItemList;
 

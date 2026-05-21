@@ -116,7 +116,8 @@ class _RefundRequestPageState extends State<RefundRequestPage> {
     if (result['success'] == true) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Pesanan berhasil dibatalkan. Dana tidak dapat dikembalikan.'),
+          content: Text(
+              'Pesanan berhasil dibatalkan. Dana tidak dapat dikembalikan.'),
           backgroundColor: Colors.green,
         ),
       );
@@ -628,7 +629,6 @@ class _RefundRequestPageState extends State<RefundRequestPage> {
                     ),
                   ),
                   const SizedBox(height: 24),
-
                   if (!_isRefundDisabledByGuard) ...[
                     // Refund Method Header Container
                     Container(
@@ -650,7 +650,8 @@ class _RefundRequestPageState extends State<RefundRequestPage> {
                             left: 4,
                             child: Container(
                               color: const Color(0xFFFBFCFC),
-                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 4),
                               child: const Text('Refund method',
                                   style: TextStyle(color: Colors.black87)),
                             ),

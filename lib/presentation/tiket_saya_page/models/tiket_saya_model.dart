@@ -40,8 +40,16 @@ class TiketItemModel extends Equatable {
   }
 
   @override
-  List<Object?> get props =>
-      [id, tanggalNaik, tanggalTurun, gunung, jalur, status, totalHarga, updatedAt];
+  List<Object?> get props => [
+        id,
+        tanggalNaik,
+        tanggalTurun,
+        gunung,
+        jalur,
+        status,
+        totalHarga,
+        updatedAt
+      ];
 }
 
 /// Model for a transaction item
