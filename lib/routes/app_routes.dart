@@ -22,6 +22,7 @@ import '../presentation/reset_page_two_screen/reset_page_two_screen.dart';
 import '../presentation/payment_upload_screen/payment_upload_screen.dart';
 import '../presentation/trail_screen/trail_screen.dart';
 import '../presentation/experience_onboarding_screen/experience_onboarding_screen.dart';
+import '../presentation/experience_onboarding_screen/onboarding_result_test_page.dart';
 import '../presentation/success_screen/success_screen.dart';
 import '../presentation/rules_screen/rules_screen.dart';
 import '../presentation/ticket_screen/ticket_screen.dart';
@@ -65,6 +66,7 @@ class AppRoutes {
   static const String experienceOnboardingScreen = '/experience_onboarding_screen';
   static const String appNavigationScreen = '/app_navigation_screen';
   static const String dssPreferenceScreen = '/dss_preference_screen';
+  static const String testOnboardingPopup = '/test_onboarding_popup';
   static const String initialRoute = root;
 
   // Legacy route aliases for backward compatibility
@@ -195,5 +197,6 @@ class AppRoutes {
         },
         experienceOnboardingScreen: (context) => const ExperienceOnboardingScreen(),
         dssPreferenceScreen: (context) => const DssPreferenceScreen(),
+        testOnboardingPopup: (context) => const OnboardingResultTestPage(),
       };
 }

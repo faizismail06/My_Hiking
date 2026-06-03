@@ -254,7 +254,11 @@ class _TiketSayaPageState extends State<TiketSayaPage> {
           }
 
           final pendingTickets = <_PendingTicketViewData>[];
+          final overdueTickets = <_OverdueTicketViewData>[];
           final paidTickets = <TiketItemModel>[];
+
+          final now = DateTime.now();
+          final today = DateTime(now.year, now.month, now.day);
 
           for (final ticket in activeTickets) {
             final orderId = int.tryParse(ticket.id ?? '');
@@ -273,6 +277,24 @@ class _TiketSayaPageState extends State<TiketSayaPage> {
                 ),
               );
             } else {
+              // Check overdue: status 'Sedang Mendaki' + tanggal_turun sudah lewat
+              final status = (ticket.status ?? '').trim();
+              if (status == 'Sedang Mendaki' && ticket.tanggalTurun != null) {
+                try {
+                  final tanggalTurun = DateTime.parse(ticket.tanggalTurun!);
+                  final turunDate = DateTime(tanggalTurun.year, tanggalTurun.month, tanggalTurun.day);
+                  if (turunDate.isBefore(today)) {
+                    final overdueDays = today.difference(turunDate).inDays;
+                    overdueTickets.add(
+                      _OverdueTicketViewData(
+                        model: ticket,
+                        overdueDays: overdueDays,
+                      ),
+                    );
+                    continue;
+                  }
+                } catch (_) {}
+              }
               paidTickets.add(ticket);
             }
           }
@@ -286,18 +308,14 @@ class _TiketSayaPageState extends State<TiketSayaPage> {
             physics: const BouncingScrollPhysics(),
             shrinkWrap: true,
             children: [
-              _buildSectionTitle(
-                icon: Icons.access_time_filled,
-                iconColor: const Color(0xFFF97316),
-                title: 'Selesaikan Pembayaran',
-              ),
-              SizedBox(height: 12.h),
-              if (pendingTickets.isEmpty)
-                _buildEmptySection(
-                  icon: Icons.payment_rounded,
-                  message: 'Tidak ada pembayaran yang menunggu',
-                )
-              else
+              // === Seksi: Selesaikan Pembayaran (hidden jika kosong) ===
+              if (pendingTickets.isNotEmpty) ...[
+                _buildSectionTitle(
+                  icon: Icons.access_time_filled,
+                  iconColor: const Color(0xFFF97316),
+                  title: 'Selesaikan Pembayaran',
+                ),
+                SizedBox(height: 12.h),
                 ...pendingTickets.asMap().entries.map((entry) {
                   final index = entry.key;
                   final data = entry.value;
@@ -315,7 +333,36 @@ class _TiketSayaPageState extends State<TiketSayaPage> {
                     ),
                   );
                 }),
-              SizedBox(height: 24.h),
+                SizedBox(height: 24.h),
+              ],
+
+              // === Seksi: Pendakian Overdue (hidden jika kosong) ===
+              if (overdueTickets.isNotEmpty) ...[
+                _buildSectionTitle(
+                  icon: Icons.warning_amber_rounded,
+                  iconColor: const Color(0xFFDC2626),
+                  title: 'Pendakian Overdue',
+                ),
+                SizedBox(height: 12.h),
+                ...overdueTickets.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final data = entry.value;
+                  return Padding(
+                    padding: EdgeInsets.only(
+                      bottom: index == overdueTickets.length - 1 ? 0 : 12.h,
+                    ),
+                    child: ActiveTicketItemWidget(
+                      model: data.model,
+                      isOverdueCard: true,
+                      overdueDays: data.overdueDays,
+                      onTap: () => _handleTicketTap(data.model, state),
+                    ),
+                  );
+                }),
+                SizedBox(height: 24.h),
+              ],
+
+              // === Seksi: Tiket Terpesan ===
               _buildSectionTitle(
                 icon: Icons.check_circle,
                 iconColor: const Color(0xFF16A34A),
@@ -847,5 +894,15 @@ class _PendingStatusFetchResult {
   const _PendingStatusFetchResult({
     required this.orderId,
     this.payload,
+  });
+}
+
+class _OverdueTicketViewData {
+  final TiketItemModel model;
+  final int overdueDays;
+
+  const _OverdueTicketViewData({
+    required this.model,
+    required this.overdueDays,
   });
 }

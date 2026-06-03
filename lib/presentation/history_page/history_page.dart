@@ -86,6 +86,7 @@ class _HistoryPageState extends State<HistoryPage> {
                             style: CustomTextStyles.titleMediumBlack900,
                           ),
                           SizedBox(height: 10.h),
+                          _buildOverdueBanner(context),
                           _buildRecentClimbingList(context),
                         ],
                       ),
@@ -147,6 +148,80 @@ class _HistoryPageState extends State<HistoryPage> {
           )
         ],
       ),
+    );
+  }
+
+  /// Widget banner peringatan pendaki overdue
+  Widget _buildOverdueBanner(BuildContext context) {
+    return BlocSelector<HistoryBloc, HistoryState, HistoryModel?>(
+      selector: (state) => state.historyModelObj,
+      builder: (context, historyModelObj) {
+        final items = historyModelObj?.recentclimbinglistItemList ?? [];
+        final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day);
+
+        int overdueCount = 0;
+        for (final item in items) {
+          final status = (item.status ?? '').trim();
+          if (status == 'Sedang Mendaki' &&
+              item.tanggalTurun != null &&
+              item.tanggalTurun!.isNotEmpty) {
+            try {
+              final tanggalTurun = DateTime.parse(item.tanggalTurun!);
+              final turunDate = DateTime(
+                  tanggalTurun.year, tanggalTurun.month, tanggalTurun.day);
+              if (turunDate.isBefore(today)) {
+                overdueCount++;
+              }
+            } catch (_) {}
+          }
+        }
+
+        if (overdueCount == 0) return const SizedBox.shrink();
+
+        return Container(
+          width: double.infinity,
+          margin: EdgeInsets.only(bottom: 12.h),
+          padding: EdgeInsets.symmetric(horizontal: 14.h, vertical: 12.h),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFEF2F2),
+            borderRadius: BorderRadius.circular(10.h),
+            border: Border.all(color: const Color(0xFFFECACA)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.warning_amber_rounded,
+                  color: const Color(0xFFDC2626), size: 20.h),
+              SizedBox(width: 10.h),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Pendaki Overdue',
+                      style: TextStyle(
+                        fontSize: 14.fSize,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFFDC2626),
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      'Ada $overdueCount pendaki yang sudah melewati tanggal turun tetapi belum melakukan check-out.',
+                      style: TextStyle(
+                        fontSize: 12.fSize,
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFF991B1B),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

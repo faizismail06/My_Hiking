@@ -10,6 +10,8 @@ class ActiveTicketItemWidget extends StatelessWidget {
   final Duration? pendingRemainingTime;
   final bool isCountdownSyncing;
   final VoidCallback? onPayNowTap;
+  final bool isOverdueCard;
+  final int overdueDays;
 
   const ActiveTicketItemWidget({
     super.key,
@@ -19,6 +21,8 @@ class ActiveTicketItemWidget extends StatelessWidget {
     this.pendingRemainingTime,
     this.isCountdownSyncing = false,
     this.onPayNowTap,
+    this.isOverdueCard = false,
+    this.overdueDays = 0,
   });
 
   @override
@@ -32,6 +36,13 @@ class ActiveTicketItemWidget extends StatelessWidget {
       return GestureDetector(
         onTap: onTap,
         child: _buildPendingPaymentCard(tanggal),
+      );
+    }
+
+    if (isOverdueCard) {
+      return GestureDetector(
+        onTap: onTap,
+        child: _buildOverdueCard(tanggal),
       );
     }
 
@@ -215,6 +226,103 @@ class ActiveTicketItemWidget extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildOverdueCard(DateTime? tanggal) {
+    return Container(
+      padding: EdgeInsets.all(14.h),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16.h),
+        border: Border.all(color: const Color(0xFFEF4444), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFEF4444).withValues(alpha: 0.10),
+            blurRadius: 12.h,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 48.h,
+                height: 48.h,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFFDC2626), Color(0xFFEF4444)],
+                  ),
+                  borderRadius: BorderRadius.circular(12.h),
+                ),
+                child: Icon(
+                  Icons.warning_amber_rounded,
+                  color: Colors.white,
+                  size: 24.h,
+                ),
+              ),
+              SizedBox(width: 14.h),
+              Expanded(
+                child: _buildTicketInfo(tanggal),
+              ),
+              _buildOverdueBadge(),
+            ],
+          ),
+          SizedBox(height: 10.h),
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.symmetric(horizontal: 12.h, vertical: 8.h),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFEF2F2),
+              borderRadius: BorderRadius.circular(10.h),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.schedule_rounded,
+                  size: 16.h,
+                  color: const Color(0xFFDC2626),
+                ),
+                SizedBox(width: 8.h),
+                Expanded(
+                  child: Text(
+                    'Pendakian sudah melewati tanggal turun $overdueDays hari yang lalu. Segera lakukan check-out.',
+                    style: TextStyle(
+                      fontSize: 11.fSize,
+                      color: const Color(0xFFDC2626),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOverdueBadge() {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 12.h, vertical: 6.h),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFEE2E2),
+        borderRadius: BorderRadius.circular(20.h),
+      ),
+      child: Text(
+        'Overdue',
+        style: TextStyle(
+          fontSize: 12.fSize,
+          fontWeight: FontWeight.w700,
+          color: const Color(0xFFDC2626),
+          letterSpacing: 0.2,
+        ),
       ),
     );
   }

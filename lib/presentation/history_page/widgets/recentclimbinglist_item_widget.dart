@@ -16,11 +16,42 @@ class RecentclimbinglistItemWidget extends StatelessWidget {
   final RecentclimbinglistItemModel recentclimbinglistItemModelObj;
   final VoidCallback? onTapRecentclimbing;
 
+  /// Cek apakah pendakian ini overdue (Sedang Mendaki + tanggal_turun sudah lewat)
+  bool get _isOverdue {
+    final status = (recentclimbinglistItemModelObj.status ?? '').trim();
+    if (status != 'Sedang Mendaki') return false;
+    final turunStr = recentclimbinglistItemModelObj.tanggalTurun;
+    if (turunStr == null || turunStr.isEmpty) return false;
+    try {
+      final tanggalTurun = DateTime.parse(turunStr);
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final turunDate = DateTime(tanggalTurun.year, tanggalTurun.month, tanggalTurun.day);
+      return turunDate.isBefore(today);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  int get _overdueDays {
+    try {
+      final tanggalTurun = DateTime.parse(recentclimbinglistItemModelObj.tanggalTurun!);
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final turunDate = DateTime(tanggalTurun.year, tanggalTurun.month, tanggalTurun.day);
+      return today.difference(turunDate).inDays;
+    } catch (_) {
+      return 0;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Parsing tanggal dalam build method setelah objek tersedia
     DateTime tanggal =
         DateTime.parse(recentclimbinglistItemModelObj.tanggalNaik.toString());
+
+    final overdue = _isOverdue;
 
     return GestureDetector(
       onTap: () {
@@ -32,8 +63,9 @@ class RecentclimbinglistItemWidget extends StatelessWidget {
           vertical: 14.h,
         ),
         decoration: BoxDecoration(
-          color: theme.colorScheme.onPrimary,
+          color: overdue ? const Color(0xFFFEF2F2) : theme.colorScheme.onPrimary,
           borderRadius: BorderRadiusStyle.roundedBorder6,
+          border: overdue ? Border.all(color: const Color(0xFFEF4444), width: 1) : null,
           boxShadow: [
             BoxShadow(
               color: appTheme.blueGray40019,
@@ -43,33 +75,55 @@ class RecentclimbinglistItemWidget extends StatelessWidget {
             ),
           ],
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Align(
-                alignment: Alignment.bottomLeft,
-                child: Padding(
-                  padding: EdgeInsets.only(top: 2.h),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        // Format tanggal dengan nama bulan
-                        DateFormat('EEEE, dd MMMM yyyy', 'id_ID')
-                            .format(tanggal),
-                        style: theme.textTheme.titleSmall,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.bottomLeft,
+                    child: Padding(
+                      padding: EdgeInsets.only(top: 2.h),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            // Format tanggal dengan nama bulan
+                            DateFormat('EEEE, dd MMMM yyyy', 'id_ID')
+                                .format(tanggal),
+                            style: theme.textTheme.titleSmall,
+                          ),
+                          Text(
+                            recentclimbinglistItemModelObj.gunung.toString(),
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                        ],
                       ),
-                      Text(
-                        recentclimbinglistItemModelObj.gunung.toString(),
-                        style: theme.textTheme.bodyMedium,
-                      ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
+                _buildStatusButton(context),
+              ],
             ),
-            _buildStatusButton(context),
+            if (overdue) ...[
+              SizedBox(height: 6.h),
+              Row(
+                children: [
+                  Icon(Icons.schedule_rounded, size: 13.h, color: const Color(0xFFDC2626)),
+                  SizedBox(width: 4.h),
+                  Text(
+                    'Melewati tanggal turun $_overdueDays hari',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFFDC2626),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
@@ -90,6 +144,7 @@ class RecentclimbinglistItemWidget extends StatelessWidget {
       case 'Cancelled':
         return _buildStatusChip('Cancelled', Colors.red);
       case 'Sedang Mendaki':
+        if (_isOverdue) return _buildStatusChip('Overdue', const Color(0xFFDC2626));
         return _buildMendakiButton(context);
       case 'Selesai':
         return _buildSelesaiButton(context);
