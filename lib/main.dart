@@ -45,6 +45,26 @@
 //                 ],
 //                 initialRoute: AppRoutes.initialRoute,
 //                 routes: AppRoutes.routes,
+//                 onGenerateRoute: (settings) {
+//                   final routeBuilder = AppRoutes.routes[settings.name];
+//                   if (routeBuilder != null) {
+//                     return MaterialPageRoute(
+//                       builder: routeBuilder,
+//                       settings: settings,
+//                     );
+//                   }
+
+//                   return MaterialPageRoute(
+//                     builder: AppRoutes.routes[AppRoutes.landingScreen]!,
+//                     settings: const RouteSettings(name: AppRoutes.landingScreen),
+//                   );
+//                 },
+//                 onUnknownRoute: (settings) {
+//                   return MaterialPageRoute(
+//                     builder: AppRoutes.routes[AppRoutes.landingScreen]!,
+//                     settings: const RouteSettings(name: AppRoutes.landingScreen),
+//                   );
+//                 },
 //               );
 //             },
 //           ),

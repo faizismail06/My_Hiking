@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:myhiking/api/api_service.dart';
@@ -12,7 +13,13 @@ import 'package:file_picker/file_picker.dart';
 // ignore_for_file: must_be_immutable
 class DataProfileScreen extends StatefulWidget {
   final int userId;
-  const DataProfileScreen({super.key, required this.userId});
+  final bool redirectToHomeOnSave;
+
+  const DataProfileScreen({
+    super.key,
+    required this.userId,
+    this.redirectToHomeOnSave = true,
+  });
 
   // static Widget builder(BuildContext context) {
   //   return BlocProvider<DataProfileBloc>(
@@ -36,6 +43,7 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
   bool isLoading = true;
   String? _fileNameIdentity; // Menyimpan nama file yang diunggah
   String? _filePathIdentity;
+  Uint8List? _fileBytesIdentity;
 
   @override
   void initState() {
@@ -286,14 +294,15 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
       final dateOfBirth = state.dateOfBirthController?.text;
       final level = 1; // Contoh level default
       File? profilePicture;
+      Uint8List? profilePictureBytes;
+      String? profilePictureFileName;
 
-      // Jika ada file gambar yang dipilih, gunakan profilePicturePath
-      if (_fileNameIdentity != null) {
-        profilePicture = File(_fileNameIdentity!);
-        print("Profile picture path: $_fileNameIdentity");
-      }
-      if (_filePathIdentity != null) {
-        profilePicture = File(_filePathIdentity!); // Gunakan path lengkap
+      if (_fileBytesIdentity != null && _fileNameIdentity != null) {
+        profilePictureBytes = _fileBytesIdentity;
+        profilePictureFileName = _fileNameIdentity;
+      } else if (_filePathIdentity != null && _fileNameIdentity != null) {
+        profilePicture = File(_filePathIdentity!);
+        profilePictureFileName = _fileNameIdentity;
       }
 
       print("Mengirim data ke API:");
@@ -306,7 +315,7 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
       print("Emergency Phone: $emergencyPhone");
       print("Date of Birth: $dateOfBirth");
       print("Level: $level");
-      print("Profile Picture: ${profilePicture?.path}");
+      print("Profile Picture Name: ${profilePictureFileName ?? '-'}");
 
       // Panggil fungsi API untuk memperbarui profil pengguna
       final response = await ApiService().updateUserProfile(
@@ -320,15 +329,19 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
         emergencyPhone: emergencyPhone,
         dateOfBirth: dateOfBirth,
         profilePicture: profilePicture,
+        profilePictureBytes: profilePictureBytes,
+        profilePictureFileName: profilePictureFileName,
         level: level,
       );
 
       print("Response API: $response");
 
+      if (!mounted) return;
+
       // Jika berhasil, tampilkan dialog sukses
       showDialog(
         context: context,
-        builder: (BuildContext context) {
+        builder: (BuildContext dialogContext) {
           return AlertDialog(
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12.0),
@@ -355,8 +368,12 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
                 SizedBox(height: 20),
                 ElevatedButton(
                   onPressed: () {
-                    Navigator.of(context).pop();
-                    Navigator.pushNamed(context, AppRoutes.berandaScreen);
+                    Navigator.of(dialogContext).pop();
+                    if (widget.redirectToHomeOnSave) {
+                      Navigator.pushNamed(context, AppRoutes.homeScreen);
+                      return;
+                    }
+                    Navigator.of(context).pop(true);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color.fromARGB(255, 33, 117, 84),
@@ -385,6 +402,8 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
       print(e);
       print(stackTrace);
 
+      if (!mounted) return;
+
       // Tampilkan dialog error
       showDialog(
         context: context,
@@ -393,11 +412,17 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
             title: Text("Terjadi Kesalahan"),
             content: Text("Gagal menyimpan data. Pesan error: $e"),
             actions: [
-              TextButton(
+              ElevatedButton(
                 child: Text("OK"),
                 onPressed: () {
                   Navigator.of(context).pop();
                 },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: Colors.white,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
               ),
             ],
           );
@@ -406,92 +431,118 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
     }
   }
 
-  void onTapTxtIdCounter(BuildContext context) {
+  Future<void> onTapTxtIdCounter(BuildContext context) async {
     final oldPasswordController = TextEditingController();
     final newPasswordController = TextEditingController();
     final confirmPasswordController = TextEditingController();
+    bool? isUpdated;
 
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12.0),
-          ),
-          title: Text("Ubah Password"),
-          content: SizedBox(
-            height: 210, // Tinggi disesuaikan untuk menghindari overflow
-            child: Column(
-              children: [
-                _buildPasswordField("Password Lama", oldPasswordController),
-                _buildPasswordField("Password Baru", newPasswordController),
-                _buildPasswordField(
-                    "Konfirmasi Password", confirmPasswordController),
-              ],
+    try {
+      isUpdated = await showDialog<bool>(
+        context: context,
+        builder: (BuildContext dialogContext) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12.0),
             ),
-          ),
-          actions: <Widget>[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                TextButton(
-                  child: Text("Batal"),
-                  onPressed: () {
-                    oldPasswordController.dispose();
-                    newPasswordController.dispose();
-                    confirmPasswordController.dispose();
-                    Navigator.of(context).pop();
-                  },
-                ),
-                TextButton(
-                  child: Text("Simpan Password Baru"),
-                  onPressed: () async {
-                    try {
-                      final response = await ApiService().updatePassword(
-                        userId: userId1,
-                        oldPassword: oldPasswordController.text,
-                        newPassword: newPasswordController.text,
-                        confirmPassword: confirmPasswordController.text,
-                      );
-                      print("$response");
-                      Navigator.of(context).pop();
+            title: Text("Ubah Password"),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildPasswordField("Password Lama", oldPasswordController),
+                  _buildPasswordField("Password Baru", newPasswordController),
+                  _buildPasswordField(
+                      "Konfirmasi Password", confirmPasswordController),
+                ],
+              ),
+            ),
+            actions: <Widget>[
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      child: Text("Batal"),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.grey[700],
+                      ),
+                      onPressed: () {
+                        Navigator.of(dialogContext).pop(false);
+                      },
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton(
+                      child: Text(
+                        "Simpan",
+                        textAlign: TextAlign.center,
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.colorScheme.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 12),
+                      ),
+                      onPressed: () async {
+                        try {
+                          final response = await ApiService().updatePassword(
+                            userId: userId1,
+                            oldPassword: oldPasswordController.text,
+                            newPassword: newPasswordController.text,
+                            confirmPassword: confirmPasswordController.text,
+                          );
+                          print("$response");
+                          Navigator.of(dialogContext).pop(true);
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content: Text(
+                                    'Gagal mengubah password: $e')),
+                          );
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          );
+        },
+      );
+    } finally {
+      oldPasswordController.dispose();
+      newPasswordController.dispose();
+      confirmPasswordController.dispose();
+    }
 
-                      // Tampilkan dialog sukses
-                      showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: Icon(Icons.check_circle,
-                              color: Colors.green, size: 60),
-                          content: Text(
-                            "Password Berhasil Diubah",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 18),
-                          ),
-                          actions: [
-                            TextButton(
-                              child: Text("OK"),
-                              onPressed: () => Navigator.of(context).pop(),
-                            ),
-                          ],
-                        ),
-                      );
-                    } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Gagal mengubah password: $e')),
-                      );
-                    } finally {
-                      oldPasswordController.dispose();
-                      newPasswordController.dispose();
-                      confirmPasswordController.dispose();
-                    }
-                  },
-                ),
-              ],
+    if (!mounted) return;
+
+    if (isUpdated == true) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Icon(Icons.check_circle, color: Colors.green, size: 60),
+          content: Text(
+            "Password Berhasil Diubah",
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 18),
+          ),
+          actions: [
+            ElevatedButton(
+              child: Text("OK"),
+              onPressed: () => Navigator.of(context).pop(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.colorScheme.primary,
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
             ),
           ],
-        );
-      },
-    );
+        ),
+      );
+    }
   }
 
   Widget _buildPasswordField(String label, TextEditingController controller) {
@@ -1009,7 +1060,7 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
   /// Section Widget
   Widget _buildIdentityUploadSection(BuildContext context) {
     return SizedBox(
-      height: 100.h,
+      height: 150.h,
       width: double.maxFinite,
       child: Stack(
         alignment: Alignment.center,
@@ -1060,6 +1111,7 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
                               await FilePicker.platform.pickFiles(
                             type: FileType.custom,
                             allowedExtensions: ['jpg', 'jpeg', 'png'],
+                            withData: true,
                           );
 
                           if (result != null) {
@@ -1144,12 +1196,14 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
                               );
                             } else {
                               // File size is acceptable, proceed with update
+                              final bytes = file.bytes;
                               setState(() {
                                 _fileNameIdentity = file.name;
-                                _filePathIdentity = file.path;
+                                _filePathIdentity = kIsWeb ? null : file.path;
+                                _fileBytesIdentity = bytes;
                               });
                               print('File dipilih: ${file.name}');
-                              print('Path lengkap: ${file.path}');
+                              print('File bytes tersedia: ${bytes != null}');
                             }
                           } else {
                             print('Pemilihan file dibatalkan');
@@ -1179,12 +1233,91 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
                       ),
                     ],
                   ),
-                )
+                ),
+                if (_fileNameIdentity != null) SizedBox(height: 8.h),
+                if (_fileNameIdentity != null)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextButton.icon(
+                          style: TextButton.styleFrom(
+                            alignment: Alignment.centerLeft,
+                            padding: EdgeInsets.zero,
+                            minimumSize: const Size(0, 0),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          onPressed: _showIdentityPreview,
+                          icon: const Icon(Icons.image_outlined, size: 18),
+                          label: Text(
+                            _fileNameIdentity!,
+                            overflow: TextOverflow.ellipsis,
+                            style: CustomTextStyles.bodySmallBlack900Light
+                                .copyWith(
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Hapus file',
+                        onPressed: () {
+                          setState(() {
+                            _fileNameIdentity = null;
+                            _filePathIdentity = null;
+                            _fileBytesIdentity = null;
+                          });
+                        },
+                        icon:
+                            const Icon(Icons.delete_outline, color: Colors.red),
+                      ),
+                    ],
+                  ),
               ],
             ),
           )
         ],
       ),
+    );
+  }
+
+  Future<void> _showIdentityPreview() async {
+    if (_fileNameIdentity == null) return;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        Widget preview;
+
+        if (_fileBytesIdentity != null) {
+          preview = InteractiveViewer(
+            child: Image.memory(_fileBytesIdentity!, fit: BoxFit.contain),
+          );
+        } else if (!kIsWeb && _filePathIdentity != null) {
+          preview = InteractiveViewer(
+            child: Image.file(File(_filePathIdentity!), fit: BoxFit.contain),
+          );
+        } else {
+          preview = const Text('Preview tidak tersedia untuk file ini.');
+        }
+
+        return AlertDialog(
+          title: Text(_fileNameIdentity!),
+          content: SizedBox(
+            width: 320,
+            height: 320,
+            child: Center(child: preview),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.grey[700],
+              ),
+              child: const Text('Tutup'),
+            ),
+          ],
+        );
+      },
     );
   }
 

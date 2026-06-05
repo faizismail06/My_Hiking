@@ -131,39 +131,39 @@ class AppNavigationScreen extends StatelessWidget {
                             ),
                             _buildScreenTitle(
                               context,
-                              screenTitle: "Pilihan bank pembayaran",
+                              screenTitle: "Payment Method",
                               onTapScreenTitle: () => OnTapScreenTitle(
-                                  AppRoutes.pilihanBankPembayaranScreen),
+                                  AppRoutes.paymentMethodScreen),
                             ),
                             _buildScreenTitle(
                               context,
-                              screenTitle: "rincian pembayaran & upload",
+                              screenTitle: "Payment Upload",
                               onTapScreenTitle: () => OnTapScreenTitle(
-                                  AppRoutes.rincianPembayaranUploadScreen),
+                                  AppRoutes.paymentUploadScreen),
                             ),
                             _buildScreenTitle(
                               context,
-                              screenTitle: "Menunggu Verifikasi",
+                              screenTitle: "Pending Verification",
                               onTapScreenTitle: () => OnTapScreenTitle(
-                                  AppRoutes.menungguVerifikasiScreen),
+                                  AppRoutes.pendingVerificationScreen),
                             ),
                             _buildScreenTitle(
                               context,
-                              screenTitle: "Sukses",
+                              screenTitle: "Success",
                               onTapScreenTitle: () =>
-                                  OnTapScreenTitle(AppRoutes.suksesScreen),
+                                  OnTapScreenTitle(AppRoutes.successScreen),
                             ),
                             _buildScreenTitle(
                               context,
-                              screenTitle: "Pesanan dibatalkan",
+                              screenTitle: "Order Cancelled",
                               onTapScreenTitle: () => OnTapScreenTitle(
-                                  AppRoutes.pesananDibatalkanScreen),
+                                  AppRoutes.orderCancelledScreen),
                             ),
                             _buildScreenTitle(
                               context,
-                              screenTitle: "Beranda",
+                              screenTitle: "Home",
                               onTapScreenTitle: () =>
-                                  OnTapScreenTitle(AppRoutes.berandaScreen),
+                                  OnTapScreenTitle(AppRoutes.homeScreen),
                             ),
                             _buildScreenTitle(
                               context,
@@ -173,15 +173,15 @@ class AppNavigationScreen extends StatelessWidget {
                             ),
                             _buildScreenTitle(
                               context,
-                              screenTitle: "Route",
+                              screenTitle: "Trail",
                               onTapScreenTitle: () =>
-                                  OnTapScreenTitle(AppRoutes.routeScreen),
+                                  OnTapScreenTitle(AppRoutes.trailScreen),
                             ),
                             _buildScreenTitle(
                               context,
-                              screenTitle: "Tata Tertib",
+                              screenTitle: "Rules",
                               onTapScreenTitle: () =>
-                                  OnTapScreenTitle(AppRoutes.tataTertibScreen),
+                                  OnTapScreenTitle(AppRoutes.rulesScreen),
                             ),
                             _buildScreenTitle(
                               context,
@@ -197,9 +197,9 @@ class AppNavigationScreen extends StatelessWidget {
                             ),
                             _buildScreenTitle(
                               context,
-                              screenTitle: "Tiket",
+                              screenTitle: "Ticket",
                               onTapScreenTitle: () =>
-                                  OnTapScreenTitle(AppRoutes.tiketScreen),
+                                  OnTapScreenTitle(AppRoutes.ticketScreen),
                             ),
                             _buildScreenTitle(
                               context,
@@ -215,15 +215,15 @@ class AppNavigationScreen extends StatelessWidget {
                             ),
                             _buildScreenTitle(
                               context,
-                              screenTitle: "transaksi page",
+                              screenTitle: "Transaction Page",
                               onTapScreenTitle: () =>
-                                  OnTapScreenTitle(AppRoutes.transaksiPage),
+                                  OnTapScreenTitle(AppRoutes.transactionPage),
                             ),
                             _buildScreenTitle(
                               context,
-                              screenTitle: "Riwayat",
+                              screenTitle: "History",
                               onTapScreenTitle: () =>
-                                  OnTapScreenTitle(AppRoutes.riwayatPage),
+                                  OnTapScreenTitle(AppRoutes.historyPage),
                             )
                           ],
                         ),

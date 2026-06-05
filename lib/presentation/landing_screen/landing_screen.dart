@@ -12,7 +12,8 @@ class LandingScreen extends StatelessWidget {
     return BlocProvider<LandingBloc>(
       create: (context) => LandingBloc(const LandingState(
         landingModelObj: LandingModel(),
-      ))..add(LandingInitialEvent()),
+      ))
+        ..add(LandingInitialEvent()),
       child: const LandingScreen(),
     );
   }

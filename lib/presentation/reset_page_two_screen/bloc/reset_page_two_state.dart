@@ -27,7 +27,8 @@ class ResetPageTwoState extends Equatable {
   }) {
     return ResetPageTwoState(
       passwordController: passwordController ?? this.passwordController,
-      passwordoneController: passwordoneController ?? this.passwordoneController,
+      passwordoneController:
+          passwordoneController ?? this.passwordoneController,
       resetPageTwoModelObj: resetPageTwoModelObj ?? this.resetPageTwoModelObj,
     );
   }

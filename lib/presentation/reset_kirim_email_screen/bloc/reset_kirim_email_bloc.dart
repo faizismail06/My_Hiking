@@ -7,7 +7,8 @@ part 'reset_kirim_email_event.dart';
 part 'reset_kirim_email_state.dart';
 
 /// A bloc that manages the state of a ResetKirimEmail according to the event that is dispatched to it.
-class ResetKirimEmailBloc extends Bloc<ResetKirimEmailEvent, ResetKirimEmailState> {
+class ResetKirimEmailBloc
+    extends Bloc<ResetKirimEmailEvent, ResetKirimEmailState> {
   ResetKirimEmailBloc(super.initialState) {
     on<ResetKirimEmailInitialEvent>(_onInitialize);
   }

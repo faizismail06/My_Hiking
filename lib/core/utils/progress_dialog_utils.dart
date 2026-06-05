@@ -3,6 +3,7 @@ import 'package:myhiking/core/utils/navigator_service.dart';
 
 class ProgressDialogUtils {
   static bool isProgressVisible = false;
+  static BuildContext? _progressDialogContext;
 
   /// Common method for showing progress dialog
   static void showProgressDialog({
@@ -12,9 +13,11 @@ class ProgressDialogUtils {
     if (!isProgressVisible &&
         NavigatorService.navigatorKey.currentState?.overlay?.context != null) {
       showDialog(
+        useRootNavigator: true,
         barrierDismissible: isCancellable,
         context: NavigatorService.navigatorKey.currentState!.overlay!.context,
-        builder: (BuildContext context) {
+        builder: (BuildContext dialogContext) {
+          _progressDialogContext = dialogContext;
           return const Center(
             child: CircularProgressIndicator.adaptive(
               strokeWidth: 4,
@@ -32,7 +35,15 @@ class ProgressDialogUtils {
   /// Common method for hiding progress dialog
   static void hideProgressDialog() {
     if (isProgressVisible) {
-      Navigator.pop(NavigatorService.navigatorKey.currentState!.overlay!.context);
+      final dialogContext = _progressDialogContext;
+      if (dialogContext != null) {
+        try {
+          Navigator.of(dialogContext, rootNavigator: true).pop();
+        } catch (_) {
+          // Ignore when dialog context is no longer active.
+        }
+      }
+      _progressDialogContext = null;
       isProgressVisible = false;
     }
   }

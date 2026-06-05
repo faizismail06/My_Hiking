@@ -1,0 +1,206 @@
+import 'package:flutter/material.dart';
+import 'package:myhiking/presentation/profile_screen/profile_screen.dart';
+import '../../core/app_export.dart';
+import '../../widgets/custom_bottom_bar.dart';
+import '../tiket_saya_page/tiket_saya_page.dart';
+import 'home_initial_page.dart';
+import 'bloc/home_bloc.dart';
+import 'models/home_model.dart';
+
+// ignore_for_file: must_be_immutable
+class HomeScreen extends StatefulWidget {
+  HomeScreen({
+    super.key,
+    String? initialInnerRoute,
+  }) : initialInnerRoute = _normalizeInitialInnerRoute(initialInnerRoute);
+
+  final String initialInnerRoute;
+
+  static String _normalizeInitialInnerRoute(String? route) {
+    switch (route) {
+      case AppRoutes.tiketSayaPage:
+      case AppRoutes.profileScreen:
+      case AppRoutes.homeInitialPage:
+        return route!;
+      default:
+        return AppRoutes.homeInitialPage;
+    }
+  }
+
+  static Widget builder(BuildContext context) {
+    final args = ModalRoute.of(context)?.settings.arguments;
+    String? initialInnerRoute;
+    if (args is Map<String, dynamic>) {
+      initialInnerRoute = args['initialInnerRoute'] as String?;
+    }
+
+    return BlocProvider<HomeBloc>(
+      create: (context) => HomeBloc(
+        HomeState(homeModelObj: const HomeModel()),
+      )..add(HomeInitialEvent()),
+      child: HomeScreen(initialInnerRoute: initialInnerRoute),
+    );
+  }
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  late String _currentInnerRoute;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentInnerRoute = widget.initialInnerRoute;
+  }
+
+  void _navigateToTab(BottomBarEnum type) {
+    final targetRoute = _getCurrentRoute(type);
+    if (_currentInnerRoute == targetRoute) {
+      return;
+    }
+
+    setState(() {
+      _currentInnerRoute = targetRoute;
+    });
+  }
+
+  int _resolveBottomIndex() {
+    return switch (_currentInnerRoute) {
+      AppRoutes.tiketSayaPage => 1,
+      AppRoutes.profileScreen => 2,
+      _ => 0,
+    };
+  }
+
+  String _getCurrentRoute(BottomBarEnum type) {
+    switch (type) {
+      case BottomBarEnum.Favorite:
+        return AppRoutes.homeInitialPage;
+      case BottomBarEnum.Iconmap:
+        return AppRoutes.tiketSayaPage;
+      case BottomBarEnum.Iconprofile:
+        return AppRoutes.profileScreen;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Scaffold(
+        resizeToAvoidBottomInset: false,
+        backgroundColor:
+            theme.colorScheme.onPrimary, // Pastikan background bersih
+        body: Container(
+          width: double.maxFinite,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.onPrimary,
+          ),
+          child: Column(
+            children: [
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 180),
+                  child: SizedBox(
+                    key: ValueKey<String>(_currentInnerRoute),
+                    width: double.maxFinite,
+                    child: getCurrentPage(context, _currentInnerRoute),
+                  ),
+                ),
+              ),
+              SizedBox(height: 8.h)
+            ],
+          ),
+        ),
+        // Floating Action Button untuk Chatbot yang dimodernisasi
+        floatingActionButton: _buildChatbotFAB(context),
+        bottomNavigationBar: SizedBox(
+          width: double.maxFinite,
+          child: _buildBottomNavigation(context),
+        ),
+      ),
+    );
+  }
+
+  /// Widget untuk Chatbot FAB Modern (Glowing effect)
+  Widget _buildChatbotFAB(BuildContext context) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 10.h),
+      child: Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: theme.colorScheme.primary.withValues(alpha: 0.4),
+              blurRadius: 16.h,
+              spreadRadius: 2.h,
+              offset: Offset(0, 6.h),
+            ),
+          ],
+        ),
+        child: FloatingActionButton(
+          onPressed: () {
+            Navigator.of(context, rootNavigator: true).pushNamed(
+              AppRoutes.chatbotScreen,
+            );
+          },
+          backgroundColor:
+              Colors.transparent, // Transparan agar gradient box terlihat
+          elevation: 0, // Matikan default elevation untuk custom shadow
+          child: Container(
+            width: double.maxFinite,
+            height: double.maxFinite,
+            padding: EdgeInsets.all(12.h),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  theme.colorScheme.primary.withValues(alpha: 0.9),
+                  const Color(0xFF1B8A5A),
+                ],
+              ),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.2),
+                width: 1.5,
+              ),
+            ),
+            child: Icon(
+              Icons.smart_toy_outlined,
+              color: Colors.white,
+              size: 26.h,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Section Widget
+  Widget _buildBottomNavigation(BuildContext context) {
+    return SizedBox(
+      width: double.maxFinite,
+      child: CustomBottomBar(
+        initialIndex: _resolveBottomIndex(),
+        onChanged: _navigateToTab,
+      ),
+    );
+  }
+
+  Widget getCurrentPage(BuildContext context, String currentRoute) {
+    switch (currentRoute) {
+      case '/':
+        return HomeInitialPage.builder(context);
+      case AppRoutes.homeInitialPage:
+        return HomeInitialPage.builder(context);
+      case AppRoutes.tiketSayaPage:
+        return TiketSayaPage.builder(context);
+      case AppRoutes.profileScreen:
+        return ProfileScreen.builder(context);
+      default:
+        return HomeInitialPage.builder(context);
+    }
+  }
+}

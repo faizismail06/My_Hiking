@@ -17,7 +17,8 @@ class ResetKirimEmailState extends Equatable {
   }) {
     return ResetKirimEmailState(
       passwordController: passwordController ?? this.passwordController,
-      resetKirimEmailModelObj: resetKirimEmailModelObj ?? this.resetKirimEmailModelObj,
+      resetKirimEmailModelObj:
+          resetKirimEmailModelObj ?? this.resetKirimEmailModelObj,
     );
   }
 }

@@ -4,7 +4,13 @@ import '../core/app_export.dart';
 enum BottomBarEnum { Favorite, Iconmap, Iconprofile }
 
 class CustomBottomBar extends StatefulWidget {
-  CustomBottomBar({super.key, this.onChanged});
+  CustomBottomBar({
+    super.key,
+    this.onChanged,
+    this.initialIndex = 0,
+  });
+
+  final int initialIndex;
   Function(BottomBarEnum)? onChanged;
 
   @override
@@ -30,6 +36,25 @@ class CustomBottomBarState extends State<CustomBottomBar> {
       type: BottomBarEnum.Iconprofile,
     ),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    selectedIndex =
+        widget.initialIndex.clamp(0, bottomMenuList.length - 1).toInt();
+  }
+
+  @override
+  void didUpdateWidget(covariant CustomBottomBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final nextIndex =
+        widget.initialIndex.clamp(0, bottomMenuList.length - 1).toInt();
+    if (nextIndex != selectedIndex) {
+      setState(() {
+        selectedIndex = nextIndex;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

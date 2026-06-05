@@ -45,7 +45,7 @@ class ChangeDateEvent extends BookingEvent {
   List<Object?> get props => [date];
 }
 
-// Event untuk mengupdate tanggal
+// Event untuk mengupdate tanggal naik
 class UpdateBookingDateEvent extends BookingEvent {
   final String formattedDate;
 
@@ -53,6 +53,33 @@ class UpdateBookingDateEvent extends BookingEvent {
 
   @override
   List<Object?> get props => [formattedDate];
+}
+
+// Event untuk mengupdate tanggal turun
+class UpdateReturnDateEvent extends BookingEvent {
+  final String formattedDate;
+
+  UpdateReturnDateEvent(this.formattedDate);
+
+  @override
+  List<Object?> get props => [formattedDate];
+}
+
+class FetchBookingQuotaEvent extends BookingEvent {
+  final int idGunung;
+  final int jalurId;
+  final String tanggalNaik;
+  final String tanggalTurun;
+
+  FetchBookingQuotaEvent({
+    required this.idGunung,
+    required this.jalurId,
+    required this.tanggalNaik,
+    required this.tanggalTurun,
+  });
+
+  @override
+  List<Object?> get props => [idGunung, jalurId, tanggalNaik, tanggalTurun];
 }
 
 class CreateBookingEvent extends BookingEvent {
@@ -71,6 +98,35 @@ class UpdateMemberIdField extends BookingEvent {
   UpdateMemberIdField(this.anggotaIds);
 }
 
+// Event to update selected members list
+class UpdateSelectedMembers extends BookingEvent {
+  final List<SelectedMember> selectedMembers;
+
+  UpdateSelectedMembers(this.selectedMembers);
+
+  @override
+  List<Object?> get props => [selectedMembers];
+}
+
+// Event to add a single selected member
+class AddSelectedMember extends BookingEvent {
+  final SelectedMember member;
+
+  AddSelectedMember(this.member);
+
+  @override
+  List<Object?> get props => [member];
+}
+
+// Event to remove a selected member
+class RemoveSelectedMember extends BookingEvent {
+  final int memberId;
+
+  RemoveSelectedMember(this.memberId);
+
+  @override
+  List<Object?> get props => [memberId];
+}
 
 /// Event triggered when the user updates their booking details.
 // class UpdateBookingEvent extends BookingEvent {

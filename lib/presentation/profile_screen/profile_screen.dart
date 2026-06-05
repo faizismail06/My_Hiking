@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:myhiking/api/api_service.dart';
 import 'package:myhiking/presentation/data_profile_screen/bloc/data_profile_bloc.dart';
 import 'package:myhiking/presentation/data_profile_screen/data_profile_screen.dart';
@@ -6,8 +7,6 @@ import 'package:myhiking/presentation/landing_screen/landing_screen.dart';
 import 'package:myhiking/presentation/profile_screen/bloc/profile_bloc.dart';
 import '../../core/app_export.dart';
 import '../../widgets/custom_icon_button.dart';
-
-final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -26,6 +25,8 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   String userName = '';
   int userId = 0;
+  String? userTier;
+  String? userTierSource;
   bool isLoading = true;
   @override
   void initState() {
@@ -57,9 +58,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final response = await ApiService().getUser(token);
       if (response['success']) {
         if (mounted) {
+          final data = response['data'] as Map<String, dynamic>;
           setState(() {
-            userName = response['data']['name'];
-            userId = response['data']['id'];
+            userName = (data['name'] ?? '').toString();
+            userId = data['id'] is int
+                ? data['id'] as int
+                : int.tryParse((data['id'] ?? '').toString()) ?? 0;
+            userTier = data['tier']?.toString();
+            userTierSource = data['tier_source']?.toString();
             isLoading = false;
           });
         }
@@ -90,16 +96,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return SafeArea(
             child: Scaffold(
           backgroundColor: appTheme.gray50,
-          body: Container(
-            width: double.maxFinite,
-            padding: EdgeInsets.only(top: 20.h),
-            child: Column(
-              mainAxisSize: MainAxisSize.max,
-              children: [
-                _buildProfileHeader(context),
-                SizedBox(height: 44.h),
-                _buildProfileSettings(context),
-              ],
+          body: SingleChildScrollView(
+            child: Container(
+              width: double.maxFinite,
+              padding: EdgeInsets.symmetric(horizontal: 0, vertical: 24.h),
+              child: Column(
+                mainAxisSize: MainAxisSize.max,
+                children: [
+                  _buildProfileHeader(context),
+                  SizedBox(height: 32.h),
+                  _buildProfileSettings(context),
+                  SizedBox(height: 20.h),
+                ],
+              ),
             ),
           ),
         ));
@@ -109,28 +118,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   /// Section Widget: Profile Header
   Widget _buildProfileHeader(BuildContext context) {
+    final tierPresentation = _tierPresentation(userTier);
+
     return SizedBox(
-      height: 156.h,
+      height: 164.h,
       width: double.maxFinite,
       child: Stack(
         alignment: Alignment.bottomRight,
         children: [
           Container(
             width: 224.h,
-            margin: EdgeInsets.only(bottom: 30.h),
-            padding: EdgeInsets.only(left: 58.h, top: 14.h, bottom: 14.h),
+            margin: EdgeInsets.only(bottom: 26.h),
+            padding: EdgeInsets.only(left: 58.h, top: 10.h, bottom: 10.h),
             decoration: BoxDecoration(
               color: theme.colorScheme.primary.withOpacity(0.7),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.start,
               children: [
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
                     userName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.titleLarge,
                   ),
                 ),
@@ -138,16 +151,55 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   padding: EdgeInsets.only(left: 0.h),
                   child: Text(
                     "ID : ${userId.toString()}",
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: CustomTextStyles.titleMediumOnPrimary_1,
                   ),
                 ),
-                SizedBox(height: 4.h)
+                SizedBox(height: 5.h),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 9.h, vertical: 4.h),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.16),
+                    borderRadius: BorderRadius.circular(999.h),
+                    border: Border.all(
+                      color: tierPresentation.color.withOpacity(0.85),
+                      width: 1.h,
+                    ),
+                  ),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          tierPresentation.icon,
+                          color: tierPresentation.color,
+                          size: 13.h,
+                        ),
+                        SizedBox(width: 6.h),
+                        Text(
+                          tierPresentation.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: CustomTextStyles.bodySmallGray50003.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.2,
+                            fontSize: 11.fSize,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
           CustomImageView(
             imagePath: ImageConstant.imgAmping91,
-            height: 156.h,
+            height: 164.h,
             width: 228.h,
             alignment: Alignment.centerLeft,
           ),
@@ -156,20 +208,77 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  _TierPresentation _tierPresentation(String? rawTier) {
+    final normalized = (rawTier ?? '').trim().toLowerCase();
+
+    if (normalized.isEmpty || normalized == 'null') {
+      return const _TierPresentation(
+        label: 'Tier: Belum Ditentukan',
+        color: Color(0xFFFFD54F),
+        icon: Icons.help_outline_rounded,
+      );
+    }
+
+    if (normalized == 'pemula' ||
+        normalized == 'beginner' ||
+        normalized == 'tier_1') {
+      return const _TierPresentation(
+        label: 'Tier 1 - Pemula',
+        color: Color(0xFF8BC34A),
+        icon: Icons.eco_outlined,
+      );
+    }
+
+    if (normalized == 'menengah' ||
+        normalized == 'intermediate' ||
+        normalized == 'tier_2') {
+      return const _TierPresentation(
+        label: 'Tier 2 - Menengah',
+        color: Color(0xFFFFB300),
+        icon: Icons.hiking_rounded,
+      );
+    }
+
+    if (normalized == 'mahir' ||
+        normalized == 'advanced' ||
+        normalized == 'tier_3') {
+      return const _TierPresentation(
+        label: 'Tier 3 - Mahir',
+        color: Color(0xFFE57373),
+        icon: Icons.workspace_premium_outlined,
+      );
+    }
+
+    return _TierPresentation(
+      label: 'Tier: ${rawTier ?? '-'}',
+      color: const Color(0xFF81C784),
+      icon: Icons.flag_outlined,
+    );
+  }
+
+  String _formatTierSource(String? source) {
+    if (source == null || source.trim().isEmpty) return '-';
+    return source.replaceAll('_', ' ').split(' ').map((word) {
+      if (word.isEmpty) return '';
+      return word[0].toUpperCase() + word.substring(1).toLowerCase();
+    }).join(' ');
+  }
+
   /// Section Widget: Profile Settings
   Widget _buildProfileSettings(BuildContext context) {
     return Container(
       width: double.maxFinite,
-      margin: EdgeInsets.symmetric(horizontal: 24.h),
+      padding: EdgeInsets.symmetric(horizontal: 16.h),
       child: Column(
         children: [
+          // Data Profile Option
           GestureDetector(
             onTap: () => onTapProfileone(context),
             child: Container(
-              padding: EdgeInsets.all(12.h),
+              padding: EdgeInsets.symmetric(horizontal: 16.h, vertical: 16.h),
               decoration: BoxDecoration(
                 color: theme.colorScheme.onPrimary,
-                borderRadius: BorderRadiusStyle.roundedBorder14,
+                borderRadius: BorderRadius.circular(16.h),
                 border: Border.all(
                   color: theme.colorScheme.onPrimary,
                   width: 1.h,
@@ -178,49 +287,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   BoxShadow(
                     color: appTheme.blueGray40019.withOpacity(0.08),
                     spreadRadius: 2.h,
-                    blurRadius: 2.h,
+                    blurRadius: 8.h,
                     offset: const Offset(0, 4),
                   ),
                 ],
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Card(
-                    clipBehavior: Clip.antiAlias,
-                    elevation: 0,
-                    margin: EdgeInsets.only(left: 4.h, bottom: 2.h),
-                    color: appTheme.blueGray50,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadiusStyle.roundedBorder14,
-                    ),
-                    child: Container(
-                      height: 24.h,
-                      width: 24.h,
-                      decoration: BoxDecoration(
-                        color: appTheme.blueGray50,
-                        borderRadius: BorderRadiusStyle.roundedBorder14,
+                  Row(
+                    children: [
+                      Container(
+                        height: 28.h,
+                        width: 28.h,
+                        decoration: BoxDecoration(
+                          color: appTheme.blueGray50,
+                          borderRadius: BorderRadius.circular(8.h),
+                        ),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            CustomImageView(
+                              imagePath: ImageConstant.imgOutlineUsers,
+                              height: 22.h,
+                              width: double.maxFinite,
+                            ),
+                          ],
+                        ),
                       ),
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          CustomImageView(
-                            imagePath: ImageConstant.imgOutlineUsers,
-                            height: 20.h,
-                            width: double.maxFinite,
-                          ),
-                        ],
+                      SizedBox(width: 16.h),
+                      Text(
+                        "lbl_data_profile".tr,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                  Padding(
-                    padding: EdgeInsets.only(left: 14.h),
-                    child: Text(
-                      "lbl_data_profile".tr,
-                      style: theme.textTheme.bodyLarge,
-                    ),
-                  ),
-                  const Spacer(),
                   CustomImageView(
                     imagePath: ImageConstant.imgArrowRight,
                     height: 24.h,
@@ -230,110 +333,131 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
           ),
-          SizedBox(height: 10.h),
+
+          SizedBox(height: 14.h),
+
+          // Transaction Option
           GestureDetector(
-            onTap: () => onTapTransaction(context),
+            onTap: () => onTapRiwayatTransaksi(context),
             child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 10.h, vertical: 12.h),
+              padding: EdgeInsets.symmetric(horizontal: 16.h, vertical: 16.h),
               decoration: BoxDecoration(
                 color: theme.colorScheme.onPrimary,
-                borderRadius: BorderRadiusStyle.roundedBorder14,
-                border:
-                    Border.all(color: theme.colorScheme.onPrimary, width: 1.h),
+                borderRadius: BorderRadius.circular(16.h),
+                border: Border.all(
+                  color: theme.colorScheme.onPrimary,
+                  width: 1.h,
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: appTheme.blueGray40019.withOpacity(0.08),
                     spreadRadius: 2.h,
-                    blurRadius: 2.h,
+                    blurRadius: 8.h,
                     offset: const Offset(0, 4),
                   ),
                 ],
               ),
               width: double.maxFinite,
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Padding(
-                    padding: EdgeInsets.only(left: 6.h),
-                    child: CustomIconButton(
-                      height: 24.h,
-                      width: 24.h,
-                      padding: EdgeInsets.all(4.h),
-                      decoration: IconButtonStyleHelper.fillBlueGray,
-                      child: CustomImageView(
-                        imagePath: ImageConstant.imgClock,
+                  Row(
+                    children: [
+                      Container(
+                        height: 28.h,
+                        width: 28.h,
+                        decoration: BoxDecoration(
+                          color: appTheme.blueGray50,
+                          borderRadius: BorderRadius.circular(8.h),
+                        ),
+                        child: Center(
+                          child: CustomImageView(
+                            imagePath: ImageConstant.imgClock,
+                            height: 18.h,
+                            width: 18.h,
+                          ),
+                        ),
                       ),
-                    ),
+                      SizedBox(width: 16.h),
+                      Text(
+                        "Riwayat Transaksi",
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
-                  Padding(
-                    padding: EdgeInsets.only(left: 14.h),
-                    child: Text(
-                      "lbl_cek_transaksi".tr,
-                      style: theme.textTheme.bodyLarge,
-                    ),
-                  ),
-                  const Spacer(),
                   CustomImageView(
                     imagePath: ImageConstant.imgArrowRight,
                     height: 24.h,
                     width: 24.h,
-                    alignment: Alignment.bottomCenter,
                   ),
                 ],
               ),
             ),
           ),
-          SizedBox(height: 10.h),
+
+          SizedBox(height: 14.h),
+
+          // Logout Option
           GestureDetector(
-              onTap: () => onLogout(context),
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 10.h, vertical: 12.h),
-                decoration: BoxDecoration(
+            onTap: () => onLogout(context),
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 16.h, vertical: 16.h),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.onPrimary,
+                borderRadius: BorderRadius.circular(16.h),
+                border: Border.all(
                   color: theme.colorScheme.onPrimary,
-                  borderRadius: BorderRadiusStyle.roundedBorder14,
-                  border: Border.all(
-                      color: theme.colorScheme.onPrimary, width: 1.h),
-                  boxShadow: [
-                    BoxShadow(
-                      color: appTheme.blueGray40019.withOpacity(0.08),
-                      spreadRadius: 2.h,
-                      blurRadius: 2.h,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+                  width: 1.h,
                 ),
-                width: double.maxFinite,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Padding(
-                      padding: EdgeInsets.only(left: 6.h),
-                      child: CustomIconButton(
-                        height: 24.h,
-                        width: 24.h,
+                boxShadow: [
+                  BoxShadow(
+                    color: appTheme.blueGray40019.withOpacity(0.08),
+                    spreadRadius: 2.h,
+                    blurRadius: 8.h,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              width: double.maxFinite,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      CustomIconButton(
+                        height: 28.h,
+                        width: 28.h,
                         padding: EdgeInsets.all(4.h),
-                        decoration: IconButtonStyleHelper.fillBlueGray,
-                        child: Icon(Icons.logout,
-                            color: theme.colorScheme.primary, size: 18),
+                        decoration: BoxDecoration(
+                          color: appTheme.blueGray50,
+                          borderRadius: BorderRadius.circular(8.h),
+                        ),
+                        child: Icon(
+                          Icons.logout,
+                          color: theme.colorScheme.primary,
+                          size: 18,
+                        ),
                       ),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.only(left: 14.h),
-                      child: Text(
+                      SizedBox(width: 16.h),
+                      Text(
                         "Log Out".tr,
-                        style: theme.textTheme.bodyLarge,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                    const Spacer(),
-                    CustomImageView(
-                      imagePath: ImageConstant.imgArrowRight,
-                      height: 24.h,
-                      width: 24.h,
-                      alignment: Alignment.bottomCenter,
-                    ),
-                  ],
-                ),
-              ))
+                    ],
+                  ),
+                  CustomImageView(
+                    imagePath: ImageConstant.imgArrowRight,
+                    height: 24.h,
+                    width: 24.h,
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -347,20 +471,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
           create: (context) => DataProfileBloc(apiService: ApiService()),
           child: DataProfileScreen(
             userId: userId, // Use widget to access jalurId
+            redirectToHomeOnSave: false,
           ),
         ),
       ),
     );
   }
 
-  void onTapTransaction(BuildContext context) {
-    NavigatorService.pushNamed(AppRoutes.transaksiPage);
+  void onTapRiwayatTransaksi(BuildContext context) {
+    NavigatorService.pushNamed(AppRoutes.riwayatTransaksiPage);
   }
 
   void onLogout(BuildContext context) {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      useRootNavigator: false,
+      builder: (BuildContext dialogContext) {
         return AlertDialog(
           title: Text(
             "Keluar dari akun Anda?",
@@ -369,17 +495,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(); // Tutup pop-up tanpa keluar
+                Navigator.of(dialogContext).pop(); // Tutup pop-up tanpa keluar
               },
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.grey[700],
+              ),
               child: Text("Batalkan"),
             ),
             TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Menutup pop-up
-                Navigator.of(context).pushNamedAndRemoveUntil(
-                    AppRoutes.loginScreen,
-                    (route) =>
-                        false); // Menuju ke halaman login dan menghapus stack
+              onPressed: () async {
+                Navigator.of(dialogContext).pop(); // Menutup pop-up
+                if (!mounted) {
+                  return;
+                }
+
+                // Clear DSS preferences
+                final prefs = await SharedPreferences.getInstance();
+                final keys = prefs.getKeys();
+                for (final key in keys) {
+                  if (key.startsWith('dss_pref_')) {
+                    await prefs.remove(key);
+                  }
+                }
+                // Clear token
+                await prefs.remove('token');
+
+                Navigator.of(context, rootNavigator: true)
+                    .pushNamedAndRemoveUntil(
+                        AppRoutes.loginScreen,
+                        (route) =>
+                            false); // Menuju ke halaman login dan menghapus stack
               },
               child: Text(
                 "Keluar",
@@ -391,4 +536,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
       },
     );
   }
+}
+
+class _TierPresentation {
+  final String label;
+  final Color color;
+  final IconData icon;
+
+  const _TierPresentation({
+    required this.label,
+    required this.color,
+    required this.icon,
+  });
 }

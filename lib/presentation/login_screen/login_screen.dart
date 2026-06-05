@@ -1,16 +1,35 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:myhiking/api/api_service.dart';
+import 'package:myhiking/widgets/app_loading_overlay.dart';
 import '../../core/app_export.dart';
 import '../../widgets/custom_elevated_button.dart';
 import '../../widgets/custom_text_form_field.dart';
 import 'bloc/login_bloc.dart';
 import 'models/login_model.dart';
 
+// Android: Mobile OAuth Client ID
+const String _googleServerClientId = String.fromEnvironment(
+  'GOOGLE_CLIENT_ID',
+  defaultValue: '',
+);
+
+// Web: Web OAuth Client ID (untuk Flutter Web)
+const String _googleWebClientId = String.fromEnvironment(
+  'GOOGLE_WEB_CLIENT_ID',
+  defaultValue: '',
+);
+
 class LoginScreen extends StatelessWidget {
-  const LoginScreen({super.key});
+  LoginScreen({super.key});
+
+  final ApiService _apiService = ApiService();
 
   static Widget builder(BuildContext context) {
     return BlocProvider<LoginBloc>(
@@ -18,7 +37,7 @@ class LoginScreen extends StatelessWidget {
         loginModelObj: const LoginModel(),
       ))
         ..add(LoginInitialEvent()),
-      child: const LoginScreen(),
+      child: LoginScreen(),
     );
   }
 
@@ -33,29 +52,29 @@ class LoginScreen extends StatelessWidget {
               width: double.maxFinite,
               padding: EdgeInsets.only(
                 left: 24.h,
-                top: 12.h,
+                top: 6.h,
                 right: 24.h,
               ),
               child: Column(
                 children: [
                   SizedBox(
-                    width: 184.h,
+                    width: 176.h,
                     child: Column(
                       children: [
                         SizedBox(
-                          height: 54.h,
-                          width: 68.h,
+                          height: 48.h,
+                          width: 62.h,
                           child: Stack(
                             alignment: Alignment.center,
                             children: [
                               CustomImageView(
                                 imagePath: ImageConstant.imgNn,
-                                height: 52.h,
+                                height: 46.h,
                                 width: double.maxFinite,
                               ),
                               CustomImageView(
                                 imagePath: ImageConstant.imgNn,
-                                height: 54.h,
+                                height: 48.h,
                                 width: double.maxFinite,
                               )
                             ],
@@ -72,45 +91,54 @@ class LoginScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-                  SizedBox(height: 74.h),
+                  SizedBox(height: 34.h),
                   CustomImageView(
                     imagePath: ImageConstant.img37081,
-                    height: 192.h,
+                    height: 172.h,
                     width: double.maxFinite,
                     margin: EdgeInsets.only(
                       left: 4.h,
                       right: 18.h,
                     ),
                   ),
-                  SizedBox(height: 20.h),
+                  SizedBox(height: 12.h),
+                  SizedBox(height: 7.h),
                   Align(
-                    alignment: Alignment.centerLeft,
-                    child: Padding(
-                      padding: EdgeInsets.only(left: 10.h),
-                      child: Text(
-                        "LOGIN".tr,
-                        style: CustomTextStyles.titleMediumSemiBold,
-                      ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      "LOGIN".tr,
+                      style: CustomTextStyles.titleMediumSemiBold,
+                      textAlign: TextAlign.center,
                     ),
+                  ),
+                  SizedBox(height: 10.h),
+                  _buildGoogleButton(context),
+                  SizedBox(height: 10.h),
+                  Row(
+                    children: [
+                      Expanded(child: Divider()),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 10.h),
+                        child: Text("OR"),
+                      ),
+                      Expanded(child: Divider()),
+                    ],
                   ),
                   _buildEmailInputSection(context),
                   SizedBox(height: 10.h),
                   Align(
                     alignment: Alignment.centerRight,
-                    child: GestureDetector(
-                      onTap: () {
-                        onTapTxtLupapassword(context);
-                      },
-                      child: Padding(
-                        padding: EdgeInsets.only(right: 6.h),
-                        child: Text(
-                          "lbl_lupa_password".tr,
-                          style: CustomTextStyles.labelMediumGray60001,
-                        ),
+                    child: Padding(
+                      padding: EdgeInsets.only(right: 6.h),
+                      child: _buildInlineActionButton(
+                        context,
+                        label: "lbl_lupa_password".tr,
+                        onPressed: () => onTapTxtLupapassword(context),
+                        compact: true,
                       ),
                     ),
                   ),
-                  SizedBox(height: 40.h),
+                  SizedBox(height: 14.h),
                   CustomElevatedButton(
                     text: "lbl_masuk".tr,
                     margin: EdgeInsets.symmetric(horizontal: 66.h),
@@ -118,13 +146,60 @@ class LoginScreen extends StatelessWidget {
                       onTapMasuk(context);
                     },
                   ),
-                  SizedBox(height: 102.h),
+                  SizedBox(height: 8.h),
                 ],
               ),
             ),
           ),
         ),
         bottomNavigationBar: _buildRegistrationPrompt(context),
+      ),
+    );
+  }
+
+  Widget _buildGoogleButton(BuildContext context) {
+    return SizedBox(
+      width: double.maxFinite,
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 66.h),
+        child: OutlinedButton(
+          onPressed: () => onTapGoogleSignIn(context),
+          style: OutlinedButton.styleFrom(
+            backgroundColor: Colors.white,
+            foregroundColor: const Color(0xFF1F1F1F),
+            minimumSize: Size(double.maxFinite, 44.h),
+            side: const BorderSide(color: Color(0xFF747775), width: 1),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(999.h),
+            ),
+            padding: EdgeInsets.symmetric(horizontal: 12.h, vertical: 10.h),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset(
+                'images/logo_google.png',
+                width: 14,
+                height: 14,
+                fit: BoxFit.contain,
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  'Sign in with Google',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: const Color(0xFF1F1F1F),
+                    fontSize: 14.fSize,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -137,7 +212,7 @@ class LoginScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(height: 20.h),
+          SizedBox(height: 5.h),
           Text(
             "Email".tr,
             style: theme.textTheme.labelMedium,
@@ -223,31 +298,80 @@ class LoginScreen extends StatelessWidget {
   /// Section Widget
   Widget _buildRegistrationPrompt(BuildContext context) {
     return SizedBox(
-      height: 28.h,
+      height: 44.h,
       width: double.maxFinite,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Padding(
-            padding: EdgeInsets.only(bottom: 12.h),
-            child: Text(
-              "msg_belum_punya_akun".tr,
-              style: CustomTextStyles.labelMediumGray60001,
-            ),
+          Text(
+            "msg_belum_punya_akun".tr,
+            style: CustomTextStyles.labelMediumGray60001,
           ),
           SizedBox(width: 2.h),
-          GestureDetector(
-            onTap: () {
-              onTapTxtRegistrasidi(context);
-            },
-            child: Text(
-              "msg_registrasi_di_sini".tr,
-              style: CustomTextStyles.labelMedium10,
-            ),
-          )
+          _buildInlineActionButton(
+            context,
+            label: "msg_registrasi_di_sini".tr,
+            onPressed: () => onTapTxtRegistrasidi(context),
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _buildInlineActionButton(
+    BuildContext context, {
+    required String label,
+    required VoidCallback onPressed,
+    bool compact = false,
+  }) {
+    return TextButton(
+      onPressed: onPressed,
+      style: ButtonStyle(
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        padding: WidgetStateProperty.all(
+          EdgeInsets.symmetric(vertical: compact ? 2.h : 0),
+        ),
+        minimumSize: WidgetStateProperty.all(Size.zero),
+        visualDensity: VisualDensity.compact,
+        animationDuration: const Duration(milliseconds: 180),
+        splashFactory: InkRipple.splashFactory,
+        foregroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.pressed)) {
+            return appTheme.teal900;
+          }
+          return theme.colorScheme.primary;
+        }),
+        textStyle: WidgetStateProperty.resolveWith((states) {
+          final isActive = states.contains(WidgetState.hovered) ||
+              states.contains(WidgetState.focused) ||
+              states.contains(WidgetState.pressed);
+          final baseStyle = compact
+              ? CustomTextStyles.labelMediumGray60001
+              : CustomTextStyles.labelMedium10;
+          return baseStyle.copyWith(
+            color: theme.colorScheme.primary,
+            fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
+            decoration:
+                isActive ? TextDecoration.underline : TextDecoration.none,
+            decorationColor: theme.colorScheme.primary,
+          );
+        }),
+        backgroundColor: WidgetStateProperty.all(Colors.transparent),
+        overlayColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.pressed)) {
+            return theme.colorScheme.primary.withValues(alpha: 0.12);
+          }
+          if (states.contains(WidgetState.hovered)) {
+            return theme.colorScheme.primary.withValues(alpha: 0.05);
+          }
+          return null;
+        }),
+        side: WidgetStateProperty.all(
+            const BorderSide(color: Colors.transparent)),
+        shape: WidgetStateProperty.all(const RoundedRectangleBorder()),
+      ),
+      child: Text(label),
     );
   }
 
@@ -258,7 +382,7 @@ class LoginScreen extends StatelessWidget {
     );
   }
 
-  /// Navigates to the berandaScreen when the action is triggered.
+  /// Navigates to the homeScreen when the action is triggered.
   void onTapMasuk(BuildContext context) async {
     final emailController = context.read<LoginBloc>().state.lockoneController;
     final passwordController =
@@ -269,7 +393,7 @@ class LoginScreen extends StatelessWidget {
       final password = passwordController.text;
 
       // Endpoint URL
-      final url = Uri.parse("http://myhiking.my.id/api/login");
+      final url = Uri.parse('$baseUrl/login');
 
       try {
         // Mengirim request ke server
@@ -287,11 +411,24 @@ class LoginScreen extends StatelessWidget {
         // Mengecek response dari server
         if (response.statusCode == 200) {
           final responseData = jsonDecode(response.body);
+          final newToken = responseData['token'] as String;
           SharedPreferences prefs = await SharedPreferences.getInstance();
-          await prefs.setString('token', responseData['token']);
+          await prefs.setString('token', newToken);
 
-          // Navigate to berandaScreen after successful login
-          NavigatorService.pushNamed(AppRoutes.berandaScreen);
+          // Fetch and cache DSS preferences from backend
+          // Pass token langsung agar tidak tergantung SharedPreferences flush
+          try {
+            final dssPrefs =
+                await _apiService.getDssPreferences(tokenOverride: newToken);
+            for (final entry in dssPrefs.entries) {
+              await prefs.setDouble('dss_pref_${entry.key}', entry.value);
+            }
+          } catch (e) {
+            // Non-blocking: preferences fetch error won't prevent login
+            print('DSS preferences fetch error: $e');
+          }
+
+          await _navigateToHomeWithDssWarmup(context);
         } else {
           // Jika login gagal, tampilkan pop-up error
           final errorData = jsonDecode(response.body);
@@ -302,7 +439,10 @@ class LoginScreen extends StatelessWidget {
           );
         }
       } on SocketException {
-        _showErrorDialog(context, "Tidak ada koneksi internet.");
+        _showErrorDialog(
+          context,
+          "Tidak bisa terhubung ke server. Pastikan backend aktif dan URL API benar.",
+        );
       } on FormatException catch (e) {
         debugPrint('FORMAT ERROR: $e');
         _showErrorDialog(context, "Response server tidak valid.");
@@ -325,16 +465,147 @@ class LoginScreen extends StatelessWidget {
           title: Text("Login Gagal"),
           content: Text(message),
           actions: <Widget>[
-            TextButton(
+            ElevatedButton(
               onPressed: () {
                 Navigator.of(context).pop();
               },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.colorScheme.primary,
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
               child: Text("OK"),
             ),
           ],
         );
       },
     );
+  }
+
+  Future<void> onTapGoogleSignIn(BuildContext context) async {
+    if (!_isGoogleSignInSupportedPlatform()) {
+      _showErrorDialog(
+        context,
+        'Google Sign-In belum didukung di platform ini. Jalankan di Android, iOS, macOS, atau Web.',
+      );
+      return;
+    }
+
+    // Validasi: pastikan client ID untuk platform yang aktif sudah diisi
+    final clientIdToUse = kIsWeb ? _googleWebClientId : _googleServerClientId;
+    final platformName = kIsWeb ? 'Web' : 'Android';
+
+    if (clientIdToUse.isEmpty) {
+      _showErrorDialog(
+        context,
+        'GOOGLE_${kIsWeb ? 'WEB_' : ''}CLIENT_ID belum terbaca di Flutter. Jalankan ulang dengan --dart-define=GOOGLE_${kIsWeb ? 'WEB_' : ''}CLIENT_ID=... ($platformName).',
+      );
+      return;
+    }
+
+    try {
+      final GoogleSignIn googleSignIn = GoogleSignIn(
+        scopes: ['email'],
+        // serverClientId hanya dipakai di Android untuk server-side verification
+        serverClientId: kIsWeb ? null : _googleServerClientId,
+        // clientId untuk Web OAuth Client
+        clientId: kIsWeb ? _googleWebClientId : null,
+      );
+      await googleSignIn.signOut();
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+
+      if (googleUser == null) {
+        return;
+      }
+
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      // Android: gunakan idToken
+      // Web: gunakan accessToken jika idToken tidak ada
+      final String? googleToken = googleAuth.idToken ?? googleAuth.accessToken;
+
+      if (googleToken == null || googleToken.isEmpty) {
+        _showErrorDialog(
+          context,
+          'Gagal mendapatkan token Google. Pastikan GOOGLE_${kIsWeb ? 'WEB_' : ''}CLIENT_ID ($platformName) valid dan dijalankan via --dart-define.',
+        );
+        return;
+      }
+
+      final responseData = await _apiService.loginWithGoogle(googleToken);
+      final token = responseData['token']?.toString();
+
+      if (token == null || token.isEmpty) {
+        _showErrorDialog(context, 'Token login tidak ditemukan.');
+        return;
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('token', token);
+
+      // Fetch and cache DSS preferences from backend
+      // Pass token langsung agar tidak tergantung SharedPreferences flush
+      try {
+        final dssPrefs =
+            await _apiService.getDssPreferences(tokenOverride: token);
+        for (final entry in dssPrefs.entries) {
+          await prefs.setDouble('dss_pref_${entry.key}', entry.value);
+        }
+      } catch (e) {
+        // Non-blocking: preferences fetch error won't prevent login
+        print('DSS preferences fetch error: $e');
+      }
+
+      await _navigateToHomeWithDssWarmup(context);
+    } on SocketException {
+      _showErrorDialog(context, 'Tidak ada koneksi internet.');
+    } on MissingPluginException {
+      _showErrorDialog(
+        context,
+        'Plugin Google Sign-In belum aktif. Lakukan full restart aplikasi dan jalankan di platform yang didukung.',
+      );
+    } catch (e) {
+      _showErrorDialog(context, e.toString().replaceFirst('Exception: ', ''));
+    }
+  }
+
+  bool _isGoogleSignInSupportedPlatform() {
+    if (kIsWeb) {
+      return true;
+    }
+
+    return defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.macOS;
+  }
+
+  Future<void> _navigateToHomeWithDssWarmup(BuildContext context) async {
+    bool dialogShown = false;
+
+    try {
+      final hasCache = await _apiService.hasHomeFeedCache();
+      if (!hasCache && context.mounted) {
+        dialogShown = true;
+        AppLoadingOverlay.show(
+          context,
+          message: 'Mohon tunggu...',
+        );
+      }
+
+      await _apiService.warmHomeFeedCache();
+    } catch (e) {
+      debugPrint('DSS warmup error: $e');
+    } finally {
+      if (dialogShown && context.mounted) {
+        AppLoadingOverlay.hide(context);
+      }
+    }
+
+    if (context.mounted) {
+      NavigatorService.pushNamed(AppRoutes.homeScreen);
+    }
   }
 
   /// Navigates to the registScreen when the action is triggered.

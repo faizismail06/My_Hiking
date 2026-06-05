@@ -168,6 +168,15 @@ final Map<String, String> enUs = {
   "lbl_riwayat": "Riwayat ",
   "msg_rabu_27_agustus": "Rabu, 27 Agustus 2024",
 
+  // Tiket Saya Screen
+  "lbl_tiket_saya": "Tiket Saya",
+  "lbl_tiket_aktif": "Tiket Aktif",
+  "lbl_riwayat_pendakian": "Riwayat Pendakian",
+  "lbl_total_pendakian": "Total Pendakian",
+  "lbl_gunung_ditaklukkan": "Gunung Ditaklukkan",
+  "lbl_belum_ada_tiket": "Belum ada tiket aktif",
+  "lbl_belum_ada_riwayat": "Belum ada riwayat pendakian",
+
   // Pop Up Checkout Screen
   "lbl_barcode": "BARCODE",
   "lbl_checkout": "CHECKOUT",

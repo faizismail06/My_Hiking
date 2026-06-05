@@ -6,7 +6,6 @@ import 'package:http/http.dart' as http;
 import '../models/recentclimbinglist_item_model.dart';
 import '../models/riwayat_model.dart';
 
-
 part 'riwayat_event.dart';
 part 'riwayat_state.dart';
 
@@ -27,7 +26,8 @@ class RiwayatBloc extends Bloc<RiwayatEvent, RiwayatState> {
       String userId = event.userId;
 
       // Memanggil fetchRecentClimbingList dengan userId
-      List<RecentclimbinglistItemModel> recentClimbingList = await fetchRecentClimbingList(userId);
+      List<RecentclimbinglistItemModel> recentClimbingList =
+          await fetchRecentClimbingList(userId);
 
       // Emit state dengan userId dan data yang diambil
       emit(
@@ -49,7 +49,8 @@ class RiwayatBloc extends Bloc<RiwayatEvent, RiwayatState> {
   }
 
   // Function untuk mengambil data dari API dengan userId
-  Future<List<RecentclimbinglistItemModel>> fetchRecentClimbingList(String userId) async {
+  Future<List<RecentclimbinglistItemModel>> fetchRecentClimbingList(
+      String userId) async {
     final response = await http.get(Uri.parse('$baseUrl/pesanan'));
 
     if (response.statusCode == 200) {
@@ -74,7 +75,8 @@ class RiwayatBloc extends Bloc<RiwayatEvent, RiwayatState> {
   ) async {
     try {
       // Mengambil data dari API tanpa menggunakan userId (untuk kasus inisialisasi)
-      List<RecentclimbinglistItemModel> recentClimbingList = await fetchRecentClimbingList("");
+      List<RecentclimbinglistItemModel> recentClimbingList =
+          await fetchRecentClimbingList("");
 
       // Emit state dengan data yang diambil
       emit(

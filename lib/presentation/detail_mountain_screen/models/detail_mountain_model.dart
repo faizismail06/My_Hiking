@@ -6,6 +6,8 @@ class DetailMountainModel {
   final String province;
   final double height; // Menambahkan properti height
   final String? gambar;
+  final double? latitude;
+  final double? longitude;
 
   DetailMountainModel({
     required this.name,
@@ -13,17 +15,22 @@ class DetailMountainModel {
     required this.province,
     required this.height, // Menambahkan parameter height
     required this.gambar,
+    this.latitude,
+    this.longitude,
   });
 
   // Konstruktor untuk membuat DetailMountainModel dari Gunung
   factory DetailMountainModel.fromGunung(Gunung gunung) {
     return DetailMountainModel(
-      name: gunung.nama,
-      elevation: gunung.ketinggian,
-      province: gunung.province,
-      height: gunung.ketinggian
-          .toDouble(), // Misalnya ketinggian digunakan untuk height
-      gambar: gunung.gambar,
+      name: gunung.nama.isNotEmpty ? gunung.nama : 'Unknown Mountain',
+      elevation: gunung.ketinggian > 0 ? gunung.ketinggian : 0,
+      province: gunung.province.isNotEmpty ? gunung.province : 'Unknown Region',
+      height: (gunung.ketinggian > 0 ? gunung.ketinggian : 0).toDouble(),
+      gambar: (gunung.gambar?.isNotEmpty ?? false)
+          ? gunung.gambar
+          : 'assets/images/img_error.png',
+      latitude: gunung.latitude,
+      longitude: gunung.longitude,
     );
   }
 
@@ -35,6 +42,8 @@ class DetailMountainModel {
       'province': province,
       'height': height, // Menambahkan height ke dalam JSON
       'gambar': gambar,
+      'latitude': latitude,
+      'longitude': longitude,
     };
   }
 }

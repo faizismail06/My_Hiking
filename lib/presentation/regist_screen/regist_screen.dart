@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:myhiking/api/api_service.dart';
+import 'dart:io';
 import 'dart:convert'; // Add this import
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/app_export.dart';
 import '../../widgets/custom_elevated_button.dart';
 import '../../widgets/custom_text_form_field.dart';
@@ -8,9 +13,22 @@ import 'bloc/regist_bloc.dart';
 import 'models/regist_model.dart';
 import 'package:http/http.dart' as http;
 
+// Android: Mobile OAuth Client ID
+const String _googleServerClientId = String.fromEnvironment(
+  'GOOGLE_CLIENT_ID',
+  defaultValue: '',
+);
+
+// Web: Web OAuth Client ID (untuk Flutter Web)
+const String _googleWebClientId = String.fromEnvironment(
+  'GOOGLE_WEB_CLIENT_ID',
+  defaultValue: '',
+);
 
 class RegistScreen extends StatelessWidget {
-  const RegistScreen({super.key});
+  RegistScreen({super.key});
+
+  final ApiService _apiService = ApiService();
 
   static Widget builder(BuildContext context) {
     return BlocProvider<RegistBloc>(
@@ -19,7 +37,7 @@ class RegistScreen extends StatelessWidget {
           registModelObj: const RegistModel(),
         ),
       )..add(RegistInitialEvent()),
-      child: const RegistScreen(),
+      child: RegistScreen(),
     );
   }
 
@@ -35,15 +53,16 @@ class RegistScreen extends StatelessWidget {
                 child: SingleChildScrollView(
                   child: Container(
                     width: double.maxFinite,
-                    padding: EdgeInsets.only(left: 24.h, top: 56.h, right: 24.h),
+                    padding:
+                        EdgeInsets.only(left: 24.h, top: 24.h, right: 24.h),
                     child: Column(
                       children: [
                         Column(
                           children: [
                             CustomImageView(
                               imagePath: ImageConstant.imgNn,
-                              height: 54.h,
-                              width: 68.h,
+                              height: 48.h,
+                              width: 62.h,
                             ),
                             Text(
                               "lbl_myhiking".tr,
@@ -55,12 +74,12 @@ class RegistScreen extends StatelessWidget {
                             ),
                           ],
                         ),
-                        SizedBox(height: 70.h),
+                        SizedBox(height: 38.h),
                         Text(
                           "lbl_registrasi".tr,
                           style: CustomTextStyles.titleLargeBluegray800,
                         ),
-                        SizedBox(height: 54.h),
+                        SizedBox(height: 34.h),
                         _buildFullNameSection(context),
                         SizedBox(height: 14.h),
                         _buildEmailSection(context),
@@ -68,8 +87,10 @@ class RegistScreen extends StatelessWidget {
                         _buildPasswordSection(context),
                         SizedBox(height: 16.h),
                         _buildConfirmPasswordSection(context),
-                        SizedBox(height: 44.h),
+                        SizedBox(height: 30.h),
                         _buildRegisterButton(context),
+                        SizedBox(height: 12.h),
+                        _buildGoogleRegisterButton(context),
                         SizedBox(height: 8.h),
                       ],
                     ),
@@ -168,6 +189,50 @@ class RegistScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildGoogleRegisterButton(BuildContext context) {
+    return SizedBox(
+      width: double.maxFinite,
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 66.h),
+        child: OutlinedButton(
+          onPressed: () => onTapGoogleRegister(context),
+          style: OutlinedButton.styleFrom(
+            backgroundColor: Colors.white,
+            foregroundColor: const Color(0xFF1F1F1F),
+            minimumSize: Size(double.maxFinite, 44.h),
+            side: const BorderSide(color: Color(0xFF747775), width: 1),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(999.h),
+            ),
+            padding: EdgeInsets.symmetric(horizontal: 12.h, vertical: 10.h),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'G',
+                style: TextStyle(
+                  color: const Color(0xFF4285F4),
+                  fontSize: 18.fSize,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              SizedBox(width: 8.h),
+              Text(
+                'Sign up with Google',
+                style: TextStyle(
+                  color: const Color(0xFF1F1F1F),
+                  fontSize: 14.fSize,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   /// Footer section
   Widget _buildFooterSection(BuildContext context) {
     return SizedBox(
@@ -190,40 +255,175 @@ class RegistScreen extends StatelessWidget {
 
   /// Handle register button tap
   void onTapRegisterButton(BuildContext context) async {
-  final name = context.read<RegistBloc>().state.edittextoneController?.text;
-  final email = context.read<RegistBloc>().state.emailtwoController?.text;
-  final password = context.read<RegistBloc>().state.passwordtwoController?.text;
-  final confirmPassword = context.read<RegistBloc>().state.passwordthreeController?.text;
+    final name = context.read<RegistBloc>().state.edittextoneController?.text;
+    final email = context.read<RegistBloc>().state.emailtwoController?.text;
+    final password =
+        context.read<RegistBloc>().state.passwordtwoController?.text;
+    final confirmPassword =
+        context.read<RegistBloc>().state.passwordthreeController?.text;
 
-  if (password == confirmPassword) {
-    // Kirim data ke server
-    final response = await http.post(
-      Uri.parse('http://127.0.0.1:8000/api/register'),
-      headers: <String, String>{
-        'Content-Type': 'application/json; charset=UTF-8',
-      },
-      body: jsonEncode(<String, String>{
-        'name': name ?? '',
-        'email': email ?? '',
-        'password': password ?? '',
-        'password_confirmation': confirmPassword ?? '', 
-      }),
-    );
+    if ((password ?? '').length < 8) {
+      _showErrorDialog(context, 'Password minimal 8 karakter.');
+      return;
+    }
+
+    if (password != confirmPassword) {
+      _showErrorDialog(context, 'Password tidak sesuai.');
+      return;
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/register'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: jsonEncode(<String, String>{
+          'name': name ?? '',
+          'email': email ?? '',
+          'password': password ?? '',
+          'password_confirmation': confirmPassword ?? '',
+        }),
+      );
 
       if (response.statusCode == 201) {
-        // Registrasi berhasil
         NavigatorService.pushNamed(AppRoutes.loginScreen);
       } else {
-        // Tampilkan pesan error
-        print('Failed to register: ${response.body}');
+        _showErrorDialog(context, 'Registrasi gagal: ${response.body}');
       }
-    } else {
-      // Tampilkan pesan password tidak sesuai
-      print('Password tidak sesuai');
+    } on SocketException {
+      _showErrorDialog(
+        context,
+        'Tidak bisa terhubung ke server. Pastikan backend aktif dan URL API benar.',
+      );
+    } catch (e) {
+      _showErrorDialog(context, 'Terjadi kesalahan: $e');
     }
   }
-  
 
+  Future<void> onTapGoogleRegister(BuildContext context) async {
+    if (!_isGoogleSignInSupportedPlatform()) {
+      _showErrorDialog(
+        context,
+        'Google Sign-In belum didukung di platform ini. Jalankan di Android, iOS, macOS, atau Web.',
+      );
+      return;
+    }
+
+    // Validasi: pastikan client ID untuk platform yang aktif sudah diisi
+    final clientIdToUse = kIsWeb ? _googleWebClientId : _googleServerClientId;
+    final platformName = kIsWeb ? 'Web' : 'Android';
+
+    if (clientIdToUse.isEmpty) {
+      _showErrorDialog(
+        context,
+        'GOOGLE_${kIsWeb ? 'WEB_' : ''}CLIENT_ID belum terbaca di Flutter. Jalankan ulang dengan --dart-define=GOOGLE_${kIsWeb ? 'WEB_' : ''}CLIENT_ID=... ($platformName).',
+      );
+      return;
+    }
+
+    try {
+      final GoogleSignIn googleSignIn = GoogleSignIn(
+        scopes: ['email'],
+        // serverClientId hanya dipakai di Android untuk server-side verification
+        serverClientId: kIsWeb ? null : _googleServerClientId,
+        // clientId untuk Web OAuth Client
+        clientId: kIsWeb ? _googleWebClientId : null,
+      );
+      await googleSignIn.signOut();
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+
+      if (googleUser == null) {
+        return;
+      }
+
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      // Android: gunakan idToken
+      // Web: gunakan accessToken jika idToken tidak ada
+      final String? googleToken = googleAuth.idToken ?? googleAuth.accessToken;
+
+      if (googleToken == null || googleToken.isEmpty) {
+        _showErrorDialog(
+          context,
+          'Gagal mendapatkan token Google. Pastikan GOOGLE_${kIsWeb ? 'WEB_' : ''}CLIENT_ID ($platformName) valid dan dijalankan via --dart-define.',
+        );
+        return;
+      }
+
+      final responseData = await _apiService.loginWithGoogle(googleToken);
+      final token = responseData['token']?.toString();
+
+      if (token == null || token.isEmpty) {
+        _showErrorDialog(context, 'Token login tidak ditemukan.');
+        return;
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('token', token);
+
+      // Fetch and cache DSS preferences from backend
+      // Pass token langsung agar tidak tergantung SharedPreferences flush
+      try {
+        final dssPrefs =
+            await _apiService.getDssPreferences(tokenOverride: token);
+        for (final entry in dssPrefs.entries) {
+          await prefs.setDouble('dss_pref_${entry.key}', entry.value);
+        }
+      } catch (e) {
+        // Non-blocking: preferences fetch error won't prevent registration
+        print('DSS preferences fetch error: $e');
+      }
+
+      NavigatorService.pushNamed(AppRoutes.homeScreen);
+    } on SocketException {
+      _showErrorDialog(context, 'Tidak ada koneksi internet.');
+    } on MissingPluginException {
+      _showErrorDialog(
+        context,
+        'Plugin Google Sign-In belum aktif. Lakukan full restart aplikasi dan jalankan di platform yang didukung.',
+      );
+    } catch (e) {
+      _showErrorDialog(context, e.toString().replaceFirst('Exception: ', ''));
+    }
+  }
+
+  bool _isGoogleSignInSupportedPlatform() {
+    if (kIsWeb) {
+      return true;
+    }
+
+    return defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.macOS;
+  }
+
+  void _showErrorDialog(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Google Register Gagal'),
+          content: Text(message),
+          actions: <Widget>[
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.colorScheme.primary,
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   /// Full name input field
   Widget _buildEdittextone(BuildContext context) {
@@ -251,61 +451,60 @@ class RegistScreen extends StatelessWidget {
     );
   }
 
-/// Password input field
-Widget _buildPasswordtwo(BuildContext context) {
-  return BlocSelector<RegistBloc, RegistState, bool>(
-    selector: (state) => state.isPassword2Visible ?? false,
-    builder: (context, isVisible) {
-      return BlocSelector<RegistBloc, RegistState, TextEditingController?>(
-        selector: (state) => state.passwordtwoController,
-        builder: (context, passwordtwoController) {
-          return CustomTextFormField(
-            controller: passwordtwoController,
-            obscureText: !isVisible,
-            contentPadding: EdgeInsets.all(12.h),
-            suffix: IconButton(
-              icon: Icon(
-                isVisible ? Icons.visibility : Icons.visibility_off,
-                color: Colors.grey,
+  /// Password input field
+  Widget _buildPasswordtwo(BuildContext context) {
+    return BlocSelector<RegistBloc, RegistState, bool>(
+      selector: (state) => state.isPassword2Visible ?? false,
+      builder: (context, isVisible) {
+        return BlocSelector<RegistBloc, RegistState, TextEditingController?>(
+          selector: (state) => state.passwordtwoController,
+          builder: (context, passwordtwoController) {
+            return CustomTextFormField(
+              controller: passwordtwoController,
+              obscureText: !isVisible,
+              contentPadding: EdgeInsets.all(12.h),
+              suffix: IconButton(
+                icon: Icon(
+                  isVisible ? Icons.visibility : Icons.visibility_off,
+                  color: Colors.grey,
+                ),
+                onPressed: () {
+                  context.read<RegistBloc>().add(TogglePassword2Visibility());
+                },
               ),
-              onPressed: () {
-                context.read<RegistBloc>().add(TogglePassword2Visibility());
-              },
-            ),
-          );
-        },
-      );
-    },
-  );
-}
+            );
+          },
+        );
+      },
+    );
+  }
 
-/// Confirm password input field
-Widget _buildPasswordthree(BuildContext context) {
-  return BlocSelector<RegistBloc, RegistState, bool>(
-    selector: (state) => state.isPassword3Visible ?? false,
-    builder: (context, isVisible) {
-      return BlocSelector<RegistBloc, RegistState, TextEditingController?>(
-        selector: (state) => state.passwordthreeController,
-        builder: (context, passwordthreeController) {
-          return CustomTextFormField(
-            controller: passwordthreeController,
-            textInputAction: TextInputAction.done,
-            obscureText: !isVisible,
-            contentPadding: EdgeInsets.all(12.h),
-            suffix: IconButton(
-              icon: Icon(
-                isVisible ? Icons.visibility : Icons.visibility_off,
-                color: Colors.grey,
+  /// Confirm password input field
+  Widget _buildPasswordthree(BuildContext context) {
+    return BlocSelector<RegistBloc, RegistState, bool>(
+      selector: (state) => state.isPassword3Visible ?? false,
+      builder: (context, isVisible) {
+        return BlocSelector<RegistBloc, RegistState, TextEditingController?>(
+          selector: (state) => state.passwordthreeController,
+          builder: (context, passwordthreeController) {
+            return CustomTextFormField(
+              controller: passwordthreeController,
+              textInputAction: TextInputAction.done,
+              obscureText: !isVisible,
+              contentPadding: EdgeInsets.all(12.h),
+              suffix: IconButton(
+                icon: Icon(
+                  isVisible ? Icons.visibility : Icons.visibility_off,
+                  color: Colors.grey,
+                ),
+                onPressed: () {
+                  context.read<RegistBloc>().add(TogglePassword3Visibility());
+                },
               ),
-              onPressed: () {
-                context.read<RegistBloc>().add(TogglePassword3Visibility());
-              },
-            ),
-          );
-        },
-      );
-    },
-  );
-}
-
+            );
+          },
+        );
+      },
+    );
+  }
 }

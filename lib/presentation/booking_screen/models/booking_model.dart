@@ -1,33 +1,29 @@
-import 'package:myhiking/models/jalurmodel.dart';
+﻿import 'package:myhiking/models/trail_model.dart';
 
 class BookingModel {
   final String name;
   final String location; // Lokasi detail (gabungan alamat)
   final String gambar;
   final double biaya;
-  final Gunung gunung; // Informasi gunung
+  final Mountain mountain; // Informasi gunung
 
   BookingModel({
     required this.name,
     required this.location,
     required this.biaya,
-    required this.gunung,
+    required this.mountain,
     required this.gambar,
   });
 
-  /// Membuat model dari ResJalurModel yang berisi satu jalur
-  static BookingModel resJalurModelFromJson(ResJalurModel data) {
-    // Return a single BookingModel from the first jalur in the list
-    // You can select which jalur to use, here we are using the first one
-
+  /// Membuat model dari ResTrailModel yang berisi satu trail
+  static BookingModel resTrailModelFromJson(ResTrailModel data) {
     return BookingModel(
-      name: data.jalur.nama,
-
+      name: data.trail.nama,
       location:
-          "${data.jalur.village}, ${data.jalur.district}, ${data.jalur.regency}, ${data.jalur.province}",
-      biaya: data.jalur.biaya,
-      gunung: data.jalur.gunung,
-      gambar: data.jalur.gambar ??
+          "${data.trail.village}, ${data.trail.district}, ${data.trail.regency}, ${data.trail.province}",
+      biaya: data.trail.biaya,
+      mountain: data.trail.gunung,
+      gambar: data.trail.gambar ??
           "gambar tidak ada", // Default message for missing image
     );
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../api/api_service.dart';
 import '../../core/app_export.dart';
 import 'bloc/riwayat_bloc.dart';
@@ -24,6 +25,7 @@ class RiwayatPage extends StatefulWidget {
   @override
   _RiwayatPageState createState() => _RiwayatPageState();
 }
+
 class _RiwayatPageState extends State<RiwayatPage> {
   String userId = '';
   String userName = '';
@@ -32,7 +34,7 @@ class _RiwayatPageState extends State<RiwayatPage> {
   void initState() {
     super.initState();
     _getUserProfile();
-    }
+  }
 
   Future<void> _getUserProfile() async {
     final token = await ApiService().getToken();
@@ -51,6 +53,7 @@ class _RiwayatPageState extends State<RiwayatPage> {
 
     // print(userName);
   }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -162,13 +165,13 @@ class _RiwayatPageState extends State<RiwayatPage> {
             itemCount: riwayatModelObj?.recentclimbinglistItemList.length ?? 0,
             itemBuilder: (context, index) {
               RecentclimbinglistItemModel model =
-                  riwayatModelObj?.recentclimbinglistItemList[index] ?? 
-                  RecentclimbinglistItemModel();
+                  riwayatModelObj?.recentclimbinglistItemList[index] ??
+                      RecentclimbinglistItemModel();
               return RecentclimbinglistItemWidget(
                 model,
                 onTapRecentclimbing: () {
-                  // Panggil metode untuk menampilkan dialog checkout dengan pesananId
-                  _showCheckoutDialogWithPesananId(context, model.id);
+                  // Navigate to ticket action screen
+                  _navigateToTicketAction(context, model);
                 },
               );
             },
@@ -178,10 +181,43 @@ class _RiwayatPageState extends State<RiwayatPage> {
     );
   }
 
-  /// Metode untuk menampilkan dialog checkout dengan pesananId
-  void _showCheckoutDialogWithPesananId(BuildContext context, dynamic pesananId) {
-    // Konversi pesananId ke int jika belum
-    int parsedPesananId = int.tryParse(pesananId.toString()) ?? 0;
+  /// Navigate to ticket action screen
+  void _navigateToTicketAction(
+      BuildContext context, RecentclimbinglistItemModel model) {
+    int parsedPesananId = int.tryParse(model.id.toString()) ?? 0;
+    final status = (model.status ?? '').trim().toLowerCase();
 
+    // Format the hiking date for display
+    String formattedDate = '';
+    try {
+      DateTime tanggal = DateTime.parse(model.tanggalNaik.toString());
+      formattedDate = DateFormat('EEEE, dd MMMM yyyy', 'id_ID').format(tanggal);
+    } catch (e) {
+      formattedDate = model.tanggalNaik ?? '';
+    }
+
+    if (status == 'cancel requested' || status == 'cancelled') {
+      Navigator.of(context, rootNavigator: true).pushNamed(
+        AppRoutes.refundRequestResultPage,
+        arguments: {
+          'orderId': parsedPesananId,
+          'status': model.status ?? 'Cancel Requested',
+          'mountainName': model.gunung ?? 'Gunung',
+          'hikingDate': formattedDate,
+        },
+      );
+      return;
+    }
+
+    // Use root navigator to navigate outside the nested navigator
+    Navigator.of(context, rootNavigator: true).pushNamed(
+      AppRoutes.ticketActionScreen,
+      arguments: {
+        'orderId': parsedPesananId,
+        'status': model.status ?? 'Booking',
+        'mountainName': model.gunung ?? 'Gunung',
+        'hikingDate': formattedDate,
+      },
+    );
   }
 }

@@ -6,7 +6,8 @@ part 'kode_verifikasi_event.dart';
 part 'kode_verifikasi_state.dart';
 
 // A bloc that manages the state of a KodeVerifikasi according to the event that is dispatched
-class KodeVerifikasiBloc extends Bloc<KodeVerifikasiEvent, KodeVerifikasiState> {
+class KodeVerifikasiBloc
+    extends Bloc<KodeVerifikasiEvent, KodeVerifikasiState> {
   KodeVerifikasiBloc(super.initialState) {
     on<KodeVerifikasiInitialEvent>(_onInitialize);
   }

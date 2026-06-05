@@ -20,14 +20,14 @@ class Booking {
       success: json["success"],
       message: json["message"],
       data:
-          ModelBooking.fromJson(json["pesanan"]), // Directly passing 'pesanan'
+          ModelBooking.fromJson(json["order"]), // Directly passing 'order'
     );
   }
 
   Map<String, dynamic> toJson() => {
         "success": success,
         "message": message,
-        "pesanan": data.toJson(),
+        "order": data.toJson(),
       };
 }
 
@@ -70,8 +70,8 @@ class ModelBooking {
       createdAt: json['created_at'] ?? '',
       updatedAt: json['updated_at'] ?? '',
       totalHargaTiket: json['total_harga_tiket'],
-      anggotaIds: json['anggota_ids'] != null
-          ? (json['anggota_ids'] as List)
+      anggotaIds: json['members'] != null
+          ? (json['members'] as List)
               .map((item) => Anggota.fromJson(item))
               .toList()
           : [],
@@ -90,7 +90,7 @@ class ModelBooking {
       'created_at': createdAt,
       'updated_at': updatedAt,
       'total_harga_tiket': totalHargaTiket,
-      'anggota_ids': anggotaIds != null
+      'members': anggotaIds != null
           ? anggotaIds!.map((anggota) => anggota.toJson()).toList()
           : [],
     };
@@ -137,7 +137,7 @@ class TransactionResponseModel {
   factory TransactionResponseModel.fromJson(Map<String, dynamic> json) {
     return TransactionResponseModel(
       message: json['message'],
-      transaction: TransactionModel.fromJson(json['transaksi']),
+      transaction: TransactionModel.fromJson(json['transaction']),
     );
   }
 }
@@ -145,11 +145,12 @@ class TransactionResponseModel {
 class TransactionModel {
   final int id;
   final int idPesanan;
-  final int paymentId;
   final int totalBayar;
   final String statusPesanan;
   final String? waktuPembayaran;
   final String? bukti;
+  final String? paymentType; // Midtrans payment type
+  final String? paymentMethodName; // Human-readable payment method name
   String? gunung;
   String? jalur;
   String? userId;
@@ -157,11 +158,12 @@ class TransactionModel {
   TransactionModel({
     required this.id,
     required this.idPesanan,
-    required this.paymentId,
     required this.totalBayar,
     required this.statusPesanan,
     this.waktuPembayaran,
     this.bukti,
+    this.paymentType,
+    this.paymentMethodName,
     this.gunung,
     this.jalur,
     this.userId,
@@ -171,22 +173,23 @@ class TransactionModel {
     return TransactionModel(
       id: json['id'],
       idPesanan: json['id_pesanan'],
-      paymentId: json['payment_id'],
       totalBayar: json['total_bayar'],
       statusPesanan: json['status_pesanan'],
       waktuPembayaran: json['waktu_pembayaran'],
       bukti: json['bukti'],
+      paymentType: json['payment_type'],
+      paymentMethodName: json['payment_method_name'],
     );
   }
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'id_pesanan': idPesanan,
-      'payment_id': paymentId,
       'total_bayar': totalBayar,
       'status_pesanan': statusPesanan,
       'waktu_pembayaran': waktuPembayaran,
       'bukti': bukti,
+      'payment_type': paymentType,
     };
   }
 }
