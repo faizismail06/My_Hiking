@@ -176,22 +176,25 @@ class LoginScreen extends StatelessWidget {
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                'G',
-                style: TextStyle(
-                  color: const Color(0xFF4285F4),
-                  fontSize: 18.fSize,
-                  fontWeight: FontWeight.w700,
-                ),
+              Image.asset(
+                'images/logo_google.png',
+                width: 14,
+                height: 14,
+                fit: BoxFit.contain,
               ),
-              SizedBox(width: 8.h),
-              Text(
-                'Sign in with Google',
-                style: TextStyle(
-                  color: const Color(0xFF1F1F1F),
-                  fontSize: 14.fSize,
-                  fontWeight: FontWeight.w500,
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  'Sign in with Google',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: const Color(0xFF1F1F1F),
+                    fontSize: 14.fSize,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
             ],
