@@ -18,6 +18,8 @@ import '../../api/api_service.dart';
 import '../../core/app_export.dart';
 import '../../core/utils/web_file_downloader_stub.dart'
     if (dart.library.html) '../../core/utils/web_file_downloader_web.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
+import '../../services/background_tracking_service.dart';
 import 'bloc/offline_tracking_cubit.dart';
 import 'bloc/offline_tracking_state.dart';
 
@@ -53,6 +55,8 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
   StreamSubscription<Position>? _positionSubscription;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   StreamSubscription<OfflineTrackingState>? _cubitSubscription;
+  StreamSubscription? _bgUpdateSubscription;
+  StreamSubscription? _bgDurationSubscription;
   Timer? _durationTimer;
 
   bool _isPreparingLocation = false;
@@ -67,18 +71,144 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
   void initState() {
     super.initState();
     unawaited(_bootstrapCacheAndConnectivity());
-    
-    // Mulai/stop timer berdasarkan perubahan status tracking
-    if (_cubit.state.isTracking) {
-      _startDurationTimer();
+    if (!kIsWeb) {
+      _initBackgroundServiceListener();
     }
-    _cubitSubscription = _cubit.stream.listen((state) {
-      if (state.isTracking) {
+    
+    // Timer UI hanya untuk Web. Di Android, background service sudah
+    // mengirim durationUpdate setiap detik via service.invoke('durationUpdate', ...),
+    // yang langsung mengupdate cubit — jika timer UI juga jalan, durasi jadi +2x lipat.
+    if (kIsWeb) {
+      if (_cubit.state.isTracking) {
         _startDurationTimer();
-      } else {
-        _stopDurationTimer();
+      }
+      _cubitSubscription = _cubit.stream.listen((state) {
+        if (state.isTracking) {
+          _startDurationTimer();
+        } else {
+          _stopDurationTimer();
+        }
+      });
+    } else {
+      // Di Android: timer hanya untuk trigger rebuild UI setiap detik
+      // (agar jam tetap jalan meski tidak ada update dari background).
+      // Tapi elapsedDuration sepenuhnya diambil dari cubit (background service).
+      _cubitSubscription = _cubit.stream.listen((state) {
+        if (mounted) setState(() {});
+      });
+    }
+  }
+
+  void _initBackgroundServiceListener() {
+    final service = FlutterBackgroundService();
+    
+    _bgUpdateSubscription = service.on('update').listen((event) {
+      if (event != null && mounted) {
+        final List? pts = event['points'];
+        final List<LatLng> trackedPoints = pts != null
+            ? pts.map((item) => LatLng(item['lat'], item['lng'])).toList()
+            : [];
+        final double distance = (event['distance'] ?? 0.0).toDouble();
+        final int durationSeconds = event['duration'] ?? 0;
+        
+        Position? currentPos;
+        final currentPosData = event['current_position'];
+        if (currentPosData != null) {
+          currentPos = Position(
+            latitude: currentPosData['lat'],
+            longitude: currentPosData['lng'],
+            timestamp: DateTime.now(),
+            altitude: currentPosData['altitude'] ?? 0.0,
+            heading: currentPosData['heading'] ?? 0.0,
+            speed: currentPosData['speed'] ?? 0.0,
+            accuracy: currentPosData['accuracy'] ?? 0.0,
+            speedAccuracy: 0.0,
+            altitudeAccuracy: 0.0,
+            headingAccuracy: 0.0,
+          );
+        }
+
+        _cubit.updateTrackingMetrics(
+          trackedPoints: trackedPoints,
+          distanceMeters: distance,
+          duration: Duration(seconds: durationSeconds),
+          currentPosition: currentPos,
+        );
       }
     });
+
+    _bgDurationSubscription = service.on('durationUpdate').listen((event) {
+      if (event != null && mounted && _state.isTracking) {
+        final int durationSeconds = event['duration'] ?? 0;
+        _cubit.updateDuration(Duration(seconds: durationSeconds));
+      }
+    });
+
+    unawaited(_restoreStateFromBackground());
+  }
+
+  Future<void> _restoreStateFromBackground() async {
+    if (kIsWeb) return;
+    try {
+      final isRunning = await FlutterBackgroundService().isRunning();
+      if (isRunning) {
+        final baseDir = await getApplicationDocumentsDirectory();
+        final file = File('${baseDir.path}/${BackgroundTrackingService.activeTrackFileName}');
+        if (await file.exists()) {
+          final raw = await file.readAsString();
+          if (raw.trim().isNotEmpty) {
+            final data = jsonDecode(raw);
+            final List? pts = data['tracked_points'];
+            final List<LatLng> trackedPoints = pts != null
+                ? pts.map((item) => LatLng(item['lat'], item['lng'])).toList()
+                : [];
+            final List? routePts = data['gpx_route_points'];
+            final List<LatLng> gpxRoutePoints = routePts != null
+                ? routePts.map((item) => LatLng(item['lat'], item['lng'])).toList()
+                : [];
+            
+            final double distanceMeters = (data['distance_meters'] ?? 0.0).toDouble();
+            final int durationSeconds = data['duration_seconds'] ?? 0;
+            final bool isTracking = data['is_tracking'] ?? false;
+            final String? gpxName = data['selected_gpx_name'];
+            final DateTime? startedAt = data['started_at'] != null
+                ? DateTime.parse(data['started_at'])
+                : null;
+
+            _cubit.restoreTrackingState(
+              trackedPoints: trackedPoints,
+              distanceMeters: distanceMeters,
+              duration: Duration(seconds: durationSeconds),
+              isTracking: isTracking,
+              startedAt: startedAt,
+              gpxName: gpxName,
+              gpxRoutePoints: gpxRoutePoints.isNotEmpty ? gpxRoutePoints : null,
+            );
+
+            setState(() {
+              _isOfflineMapUnlocked = true;
+            });
+
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _fitMapToAllPoints();
+            });
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error restoring state in UI: $e');
+    }
+  }
+
+  Future<void> _clearActiveTrackFile() async {
+    if (kIsWeb) return;
+    try {
+      final baseDir = await getApplicationDocumentsDirectory();
+      final file = File('${baseDir.path}/${BackgroundTrackingService.activeTrackFileName}');
+      if (await file.exists()) {
+        await file.delete();
+      }
+    } catch (_) {}
   }
 
   @override
@@ -87,6 +217,8 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
     _cubitSubscription?.cancel();
     _positionSubscription?.cancel();
     _connectivitySubscription?.cancel();
+    _bgUpdateSubscription?.cancel();
+    _bgDurationSubscription?.cancel();
     _cubit.close();
     super.dispose();
   }
@@ -250,11 +382,29 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
     }
 
     if (kIsWeb) {
-      if (showSnackBar) {
-        _showSnack(
-          'Mode web tidak memiliki cache file lokal. Gunakan Simpan GPX.',
-          backgroundColor: Colors.orange,
-        );
+      try {
+        final elapsed = _state.elapsedDuration;
+        await _sendCacheItemToServer({
+          'order_id': widget.orderId,
+          'cached_at': DateTime.now().toIso8601String(),
+          'point_count': _state.trackedPoints.length,
+          'distance_meters': _state.trackedDistanceMeters,
+          'duration_seconds': elapsed.inSeconds,
+          'gpx_content': _buildTrackedGpx(),
+        });
+        if (showSnackBar) {
+          _showSnack(
+            'Track berhasil disinkronkan langsung ke server!',
+            backgroundColor: Colors.green,
+          );
+        }
+      } catch (e) {
+        if (showSnackBar) {
+          _showSnack(
+            'Gagal sinkronisasi ke server: $e',
+            backgroundColor: Colors.red,
+          );
+        }
       }
       return;
     }
@@ -808,6 +958,27 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
       return false;
     }
 
+    // Request notification permission on Android 13+
+    if (!kIsWeb && Platform.isAndroid) {
+      var notificationStatus = await Permission.notification.status;
+      if (notificationStatus.isDenied) {
+        notificationStatus = await Permission.notification.request();
+      }
+
+      if (notificationStatus.isDenied || notificationStatus.isPermanentlyDenied) {
+        if (!mounted) {
+          return false;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Izin notifikasi dibutuhkan untuk menampilkan status tracking latar belakang.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return false;
+      }
+    }
+
     return true;
   }
 
@@ -897,38 +1068,58 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
 
       final firstPoint = LatLng(current.latitude, current.longitude);
 
-      await _positionSubscription?.cancel();
-      _cubit.startTracking(current: current, firstPoint: firstPoint);
+      if (!kIsWeb) {
+        // Initialize the background service lazily (after permissions are granted)
+        await BackgroundTrackingService.initialize();
 
-      _positionSubscription = Geolocator.getPositionStream(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.bestForNavigation,
-          distanceFilter: 5,
-        ),
-      ).listen((position) {
-        final nextPoint = LatLng(position.latitude, position.longitude);
-        var addedDistance = 0.0;
-
-        if (_state.trackedPoints.isNotEmpty) {
-          final previousPoint = _state.trackedPoints.last;
-          addedDistance = _distance.as(
-            LengthUnit.Meter,
-            previousPoint,
-            nextPoint,
-          );
+        final service = FlutterBackgroundService();
+        final isRunning = await service.isRunning();
+        if (!isRunning) {
+          await service.startService();
         }
+        
+        service.invoke('start', {
+          'order_id': widget.orderId,
+          'mountain_name': widget.mountainName,
+          'selected_gpx_name': _state.selectedGpxName,
+          'gpx_route_points': _state.gpxRoutePoints.map((pt) => {'lat': pt.latitude, 'lng': pt.longitude}).toList(),
+        });
 
-        _cubit.appendTrackedPoint(
-          position: position,
-          point: nextPoint,
-          addedDistanceMeters: addedDistance,
-        );
-      }, onError: (error) {
-        _showSnack(
-          'Update GPS bermasalah: $error',
-          backgroundColor: Colors.red,
-        );
-      });
+        _cubit.startTracking(current: current, firstPoint: firstPoint);
+      } else {
+        await _positionSubscription?.cancel();
+        _cubit.startTracking(current: current, firstPoint: firstPoint);
+
+        _positionSubscription = Geolocator.getPositionStream(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.bestForNavigation,
+            distanceFilter: 5,
+          ),
+        ).listen((position) {
+          final nextPoint = LatLng(position.latitude, position.longitude);
+          var addedDistance = 0.0;
+
+          if (_state.trackedPoints.isNotEmpty) {
+            final previousPoint = _state.trackedPoints.last;
+            addedDistance = _distance.as(
+              LengthUnit.Meter,
+              previousPoint,
+              nextPoint,
+            );
+          }
+
+          _cubit.appendTrackedPoint(
+            position: position,
+            point: nextPoint,
+            addedDistanceMeters: addedDistance,
+          );
+        }, onError: (error) {
+          _showSnack(
+            'Update GPS bermasalah: $error',
+            backgroundColor: Colors.red,
+          );
+        });
+      }
 
       if (mounted) {
         setState(() {
@@ -954,19 +1145,29 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
   }
 
   Future<void> _stopTracking() async {
-    await _positionSubscription?.cancel();
-    _positionSubscription = null;
+    if (!kIsWeb) {
+      FlutterBackgroundService().invoke('stop');
+    } else {
+      await _positionSubscription?.cancel();
+      _positionSubscription = null;
+    }
 
     if (mounted) {
       _cubit.stopTracking();
     }
 
     await _cacheCurrentTrackForSync(showSnackBar: true);
+    await _clearActiveTrackFile();
   }
 
   Future<void> _resetTracking() async {
-    await _positionSubscription?.cancel();
-    _positionSubscription = null;
+    if (!kIsWeb) {
+      FlutterBackgroundService().invoke('stop');
+      await _clearActiveTrackFile();
+    } else {
+      await _positionSubscription?.cancel();
+      _positionSubscription = null;
+    }
 
     if (_state.trackedPoints.length >= 2) {
       await _cacheCurrentTrackForSync(showSnackBar: false);

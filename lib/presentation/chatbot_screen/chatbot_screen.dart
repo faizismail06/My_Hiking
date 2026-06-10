@@ -972,7 +972,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   /// Download file Excel
   Future<void> _downloadFile(String downloadUrl) async {
     try {
-      final fullUrl = 'http://103.93.132.167:5000$downloadUrl';
+      final fullUrl = 'http://127.0.0.1:5000/$downloadUrl';
       final uri = Uri.parse(fullUrl);
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
