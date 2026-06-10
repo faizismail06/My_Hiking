@@ -35,7 +35,8 @@ class OfflineTrackingCubit extends Cubit<OfflineTrackingState> {
     emit(state.copyWith(
       currentPosition: current,
       isTracking: true,
-      trackingStartedAt: state.trackingStartedAt ?? DateTime.now(),
+      trackingStartedAt: DateTime.now(),
+      clearTrackingStoppedAt: true,
       trackedPoints: nextTracked,
     ));
   }
@@ -54,14 +55,26 @@ class OfflineTrackingCubit extends Cubit<OfflineTrackingState> {
   }
 
   void stopTracking() {
-    emit(state.copyWith(isTracking: false));
+    final now = DateTime.now();
+    final segmentDuration = state.trackingStartedAt == null
+        ? Duration.zero
+        : now.difference(state.trackingStartedAt!);
+
+    emit(state.copyWith(
+      isTracking: false,
+      trackingStoppedAt: now,
+      accumulatedDuration: state.accumulatedDuration + segmentDuration,
+      clearTrackingStartedAt: true,
+    ));
   }
 
   void resetTracking() {
     emit(state.copyWith(
       trackedPoints: const [],
       trackedDistanceMeters: 0,
+      accumulatedDuration: Duration.zero,
       clearTrackingStartedAt: true,
+      clearTrackingStoppedAt: true,
       clearCurrentPosition: true,
       isTracking: false,
     ));

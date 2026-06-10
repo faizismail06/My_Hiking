@@ -14,12 +14,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 const String baseUrl = String.fromEnvironment(
   'API_BASE_URL',
-  defaultValue: 'http://127.0.0.1:8000/api',
+  defaultValue: 'http://103.93.132.167/api',
 );
 
 const String chatbotBaseUrl = String.fromEnvironment(
   'CHATBOT_BASE_URL',
-  defaultValue: 'http://127.0.0.1:5000/api',
+  defaultValue: 'http://103.93.132.167/chatbot/api',
 );
 
 class ApiActionException implements Exception {

@@ -271,7 +271,7 @@ class _TrailScreenState extends State<TrailScreen> {
   Widget _buildHeaderSection(
       BuildContext context, TrailScreenModel trailModel, Jalur? jalur) {
     final imageUrl = trailModel.gambar ??
-        'assets/images/placeholder.png'; // Default placeholder image
+        'assets/images/img_error.png'; // Default placeholder image
 
     return Container(
       width: double.infinity,

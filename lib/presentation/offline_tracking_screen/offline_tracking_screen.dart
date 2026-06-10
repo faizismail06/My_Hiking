@@ -52,6 +52,8 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
 
   StreamSubscription<Position>? _positionSubscription;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+  StreamSubscription<OfflineTrackingState>? _cubitSubscription;
+  Timer? _durationTimer;
 
   bool _isPreparingLocation = false;
   bool _isOfflineMapUnlocked = false;
@@ -65,14 +67,42 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
   void initState() {
     super.initState();
     unawaited(_bootstrapCacheAndConnectivity());
+    
+    // Mulai/stop timer berdasarkan perubahan status tracking
+    if (_cubit.state.isTracking) {
+      _startDurationTimer();
+    }
+    _cubitSubscription = _cubit.stream.listen((state) {
+      if (state.isTracking) {
+        _startDurationTimer();
+      } else {
+        _stopDurationTimer();
+      }
+    });
   }
 
   @override
   void dispose() {
+    _durationTimer?.cancel();
+    _cubitSubscription?.cancel();
     _positionSubscription?.cancel();
     _connectivitySubscription?.cancel();
     _cubit.close();
     super.dispose();
+  }
+
+  void _startDurationTimer() {
+    _durationTimer?.cancel();
+    _durationTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+  }
+
+  void _stopDurationTimer() {
+    _durationTimer?.cancel();
+    _durationTimer = null;
   }
 
   Future<void> _bootstrapCacheAndConnectivity() async {
@@ -131,23 +161,23 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
 
   Future<List<Map<String, dynamic>>> _readPendingQueue() async {
     if (kIsWeb) {
-      return const [];
+      return [];
     }
 
     try {
       final file = await _resolvePendingQueueFile();
       if (!await file.exists()) {
-        return const [];
+        return [];
       }
 
       final raw = await file.readAsString();
       if (raw.trim().isEmpty) {
-        return const [];
+        return [];
       }
 
       final decoded = jsonDecode(raw);
       if (decoded is! List) {
-        return const [];
+        return [];
       }
 
       return decoded
@@ -159,7 +189,7 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
           )
           .toList();
     } catch (_) {
-      return const [];
+      return [];
     }
   }
 
@@ -231,9 +261,7 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
 
     try {
       final queue = await _readPendingQueue();
-      final elapsed = _state.trackingStartedAt == null
-          ? Duration.zero
-          : DateTime.now().difference(_state.trackingStartedAt!);
+      final elapsed = _state.elapsedDuration;
 
       queue.add({
         'cache_id':
@@ -671,8 +699,8 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
 
     try {
       final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: const ['gpx', 'xml'],
+        type: kIsWeb ? FileType.custom : FileType.any,
+        allowedExtensions: kIsWeb ? const ['gpx', 'xml'] : null,
         withData: true,
       );
 
@@ -681,6 +709,12 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
       }
 
       final file = result.files.single;
+      final extension = file.extension?.toLowerCase() ?? '';
+      final nameLower = file.name.toLowerCase();
+      if (extension != 'gpx' && extension != 'xml' && !nameLower.endsWith('.gpx') && !nameLower.endsWith('.xml')) {
+        throw Exception('Hanya file dengan ekstensi .gpx atau .xml yang diperbolehkan');
+      }
+
       final bytes = file.bytes ??
           (!kIsWeb && file.path != null
               ? await File(file.path!).readAsBytes()
@@ -1592,9 +1626,7 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
       value: _cubit,
       child: BlocBuilder<OfflineTrackingCubit, OfflineTrackingState>(
         builder: (context, state) {
-          final elapsed = state.trackingStartedAt == null
-              ? Duration.zero
-              : DateTime.now().difference(state.trackingStartedAt!);
+          final elapsed = state.elapsedDuration;
 
           return Scaffold(
             appBar: AppBar(

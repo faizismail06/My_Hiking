@@ -89,21 +89,8 @@ flutter_icons:
 flutter:
   uses-material-design: true
   assets:
-    - assets/
     - assets/lottie/
-    - assets/lottie/sandy_loading.json
-    - assets/lottie/trail_loading.json
     - assets/images/
-    - assets/images/pendaki.png
-    - assets/images/camp.png
-    - assets/images/puncak.png
-    - assets/images/siluetgunung.jpeg
-    - assets/images/img_home.png
-    - assets/images/img_image_156x316.png
-    - assets/images/logo_pendaki.jpeg
-    - assets/images/logo_pemula.png
-    - assets/images/logo_menengah.png
-    - assets/images/logo_mahir.png
 
   fonts:
     - family: Poppins

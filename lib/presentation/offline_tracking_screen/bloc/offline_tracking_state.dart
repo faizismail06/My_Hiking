@@ -21,7 +21,9 @@ class OfflineTrackingState {
   final bool isUploadingGpx;
   final bool isTracking;
   final double trackedDistanceMeters;
+  final Duration accumulatedDuration;
   final DateTime? trackingStartedAt;
+  final DateTime? trackingStoppedAt;
   final String? selectedGpxName;
 
   const OfflineTrackingState({
@@ -32,9 +34,21 @@ class OfflineTrackingState {
     this.isUploadingGpx = false,
     this.isTracking = false,
     this.trackedDistanceMeters = 0,
+    this.accumulatedDuration = Duration.zero,
     this.trackingStartedAt,
+    this.trackingStoppedAt,
     this.selectedGpxName,
   });
+
+  Duration get elapsedDuration {
+    if (trackingStartedAt == null) {
+      return accumulatedDuration;
+    }
+    if (isTracking) {
+      return accumulatedDuration + DateTime.now().difference(trackingStartedAt!);
+    }
+    return accumulatedDuration;
+  }
 
   OfflineTrackingState copyWith({
     List<LatLng>? gpxRoutePoints,
@@ -45,8 +59,11 @@ class OfflineTrackingState {
     bool? isUploadingGpx,
     bool? isTracking,
     double? trackedDistanceMeters,
+    Duration? accumulatedDuration,
     DateTime? trackingStartedAt,
     bool clearTrackingStartedAt = false,
+    DateTime? trackingStoppedAt,
+    bool clearTrackingStoppedAt = false,
     String? selectedGpxName,
     bool clearSelectedGpxName = false,
   }) {
@@ -61,9 +78,13 @@ class OfflineTrackingState {
       isTracking: isTracking ?? this.isTracking,
       trackedDistanceMeters:
           trackedDistanceMeters ?? this.trackedDistanceMeters,
+      accumulatedDuration: accumulatedDuration ?? this.accumulatedDuration,
       trackingStartedAt: clearTrackingStartedAt
           ? null
           : (trackingStartedAt ?? this.trackingStartedAt),
+      trackingStoppedAt: clearTrackingStoppedAt
+          ? null
+          : (trackingStoppedAt ?? this.trackingStoppedAt),
       selectedGpxName: clearSelectedGpxName
           ? null
           : (selectedGpxName ?? this.selectedGpxName),

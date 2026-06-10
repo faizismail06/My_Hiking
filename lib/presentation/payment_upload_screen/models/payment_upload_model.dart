@@ -52,7 +52,7 @@ class Payment {
     );
   }
   String get imagePath {
-    const baseUrl = 'http://127.0.0.1:8000/storage';
+    const baseUrl = 'http://103.93.132.167:8000/storage';
     return (gambarPembayaran != null && gambarPembayaran.isNotEmpty)
         ? '$baseUrl/$gambarPembayaran'
         : '';

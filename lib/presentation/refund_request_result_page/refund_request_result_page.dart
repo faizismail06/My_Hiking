@@ -670,7 +670,7 @@ class _RefundRequestResultPageState extends State<RefundRequestResultPage> {
     // Ganti host agar sesuai dengan konfigurasi server Flutter saat testing lokal
     if (proofUrl != null && proofUrl.contains('localhost')) {
       proofUrl =
-          proofUrl.replaceAll('http://localhost', 'http://127.0.0.1:8000');
+          proofUrl.replaceAll('http://localhost', 'http://103.93.132.167:8000');
     }
 
     return Container(
