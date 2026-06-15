@@ -253,6 +253,16 @@ class ChatbotCubit extends Cubit<ChatbotState> {
     }
   }
 
+  int? _toInt(dynamic value) {
+    if (value is int) {
+      return value;
+    }
+    if (value is double) {
+      return value.toInt();
+    }
+    return int.tryParse((value ?? '').toString());
+  }
+
   Future<void> loadChatHistory(int historyId) async {
     try {
       final result = await _apiService.getChatHistory(historyId);
@@ -263,6 +273,19 @@ class ChatbotCubit extends Cubit<ChatbotState> {
           rebuiltMessages.add(ChatMessage(
             message: msg['message'] ?? '',
             isUser: msg['isUser'] ?? false,
+            orderId: _toInt(msg['order_id']),
+            transactionId: _toInt(msg['transaction_id']),
+            isPaid: msg['is_paid'] == true,
+            mountains: msg['mountains'] != null
+                ? List<Map<String, dynamic>>.from(
+                    (msg['mountains'] as List).map((e) => Map<String, dynamic>.from(e as Map)))
+                : null,
+            source: msg['source']?.toString(),
+            intent: msg['intent']?.toString(),
+            responseType: msg['type']?.toString(),
+            data: msg['data'] != null
+                ? Map<String, dynamic>.from(msg['data'] as Map)
+                : null,
           ));
         }
         setCurrentHistoryId(historyId);

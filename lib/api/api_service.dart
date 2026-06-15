@@ -25,12 +25,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 // Development
 const String baseUrl = String.fromEnvironment(
   'API_BASE_URL',
-  defaultValue: 'http://192.168.1.17:8000/api',
+  defaultValue: 'http://127.0.0.1:8000/api',
 );
 
 const String chatbotBaseUrl = String.fromEnvironment(
   'CHATBOT_BASE_URL',
-  defaultValue: 'http://192.168.1.17:5000/api',
+  defaultValue: 'http://127.0.0.1:5000/api',
 );
 
 
@@ -1529,6 +1529,12 @@ class ApiService {
           'deeplink_url': responseData['deeplink_url'],
           'qr_code_url': responseData['qr_code_url'],
           'qr_string': responseData['qr_string'],
+          'mountains': responseData['mountains'],
+          // Static FAQ fields
+          'source': responseData['source'],
+          'intent': responseData['intent'],
+          'type': responseData['type'],
+          'data': responseData['data'],
         };
       } else {
         return {

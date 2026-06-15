@@ -16,6 +16,13 @@ class ChatMessage {
   final String? qrCodeUrl;
   final String? qrString;
   bool isPaid;
+  final List<Map<String, dynamic>>? mountains;
+
+  // Static FAQ fields
+  final String? source;        // 'static_faq' atau 'gemini_api'
+  final String? intent;        // e.g. 'list_mountains', 'payment_info'
+  final String? responseType;  // e.g. 'text', 'buttons', 'mountain_cards', 'route_cards'
+  final Map<String, dynamic>? data; // data payload untuk buttons, routes, dll
 
   ChatMessage({
     required this.message,
@@ -35,6 +42,11 @@ class ChatMessage {
     this.qrCodeUrl,
     this.qrString,
     this.isPaid = false,
+    this.mountains,
+    this.source,
+    this.intent,
+    this.responseType,
+    this.data,
   }) : timestamp = timestamp ?? DateTime.now();
 
   ChatMessage copyWith({
@@ -55,6 +67,11 @@ class ChatMessage {
     String? qrCodeUrl,
     String? qrString,
     bool? isPaid,
+    List<Map<String, dynamic>>? mountains,
+    String? source,
+    String? intent,
+    String? responseType,
+    Map<String, dynamic>? data,
   }) {
     return ChatMessage(
       message: message ?? this.message,
@@ -74,6 +91,11 @@ class ChatMessage {
       qrCodeUrl: qrCodeUrl ?? this.qrCodeUrl,
       qrString: qrString ?? this.qrString,
       isPaid: isPaid ?? this.isPaid,
+      mountains: mountains ?? this.mountains,
+      source: source ?? this.source,
+      intent: intent ?? this.intent,
+      responseType: responseType ?? this.responseType,
+      data: data ?? this.data,
     );
   }
 
@@ -83,5 +105,10 @@ class ChatMessage {
         'is_paid': isPaid,
         if (orderId != null) 'order_id': orderId,
         if (transactionId != null) 'transaction_id': transactionId,
+        if (mountains != null) 'mountains': mountains,
+        if (source != null) 'source': source,
+        if (intent != null) 'intent': intent,
+        if (responseType != null) 'type': responseType,
+        if (data != null) 'data': data,
       };
 }

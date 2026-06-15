@@ -396,8 +396,6 @@ class _DetailMountainScreenState extends State<DetailMountainScreen> {
   }
 
   onTapIconarrowone(BuildContext context) {
-    NavigatorService.pushNamed(
-      AppRoutes.homeScreen,
-    );
+    Navigator.of(context).pop();
   }
 }
