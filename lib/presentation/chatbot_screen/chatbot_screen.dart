@@ -123,14 +123,17 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   /// Load user ID jika belum ada
   Future<void> _loadUserIdIfNeeded() async {
     if (_userId != null) {
+      if (!mounted) return;
       _loadFriends();
       _loadChatHistories(autoOpenLatestIfNeeded: true);
       return;
     }
     try {
       final token = await _apiService.getToken();
+      if (!mounted) return;
       if (token != null) {
         final response = await _apiService.getUserProfile(token);
+        if (!mounted) return;
         if (response['success']) {
           _cubit.setUserId(response['data']['id']);
           await _loadFriends();
@@ -146,6 +149,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     if (_userId == null) return;
     try {
       final result = await _apiService.getFriends(_userId!);
+      if (!mounted) return;
       if (result['success'] == true && result['data'] is List) {
         _cubit.setFriends(List<Map<String, dynamic>>.from(result['data']));
       }
@@ -164,6 +168,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         userId: _userId!,
         role: widget.role,
       );
+      if (!mounted) return;
       if (result['success'] == true && result['data'] != null) {
         final histories = List<Map<String, dynamic>>.from(result['data']);
         _cubit.setChatHistories(histories);
@@ -189,6 +194,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   Future<void> _loadChatHistory(int historyId) async {
     try {
       final result = await _apiService.getChatHistory(historyId);
+      if (!mounted) return;
       if (result['success'] == true && result['data'] != null) {
         final messages = result['data']['messages'] as List;
         final rebuiltMessages = <ChatMessage>[];
@@ -239,6 +245,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         historyId: _currentHistoryId,
       );
 
+      if (!mounted) return;
       if (result['success'] == true && result['history_id'] != null) {
         final historyId = result['history_id'];
         if (historyId is int && _currentHistoryId != historyId) {
@@ -254,6 +261,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   Future<void> _deleteHistory(int historyId) async {
     try {
       await _apiService.deleteChatHistory(historyId, userId: _userId);
+      if (!mounted) return;
       _loadChatHistories();
       if (_currentHistoryId == historyId) {
         _cubit.setCurrentHistoryId(null);
@@ -278,6 +286,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   /// Cek koneksi ke server chatbot
   Future<void> _checkServerConnection() async {
     final isHealthy = await _apiService.isChatbotServerHealthy();
+    if (!mounted) return;
     _cubit.setServerConnected(isHealthy);
   }
 
@@ -315,6 +324,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         ),
       );
 
+      if (!mounted) return;
       for (var i = 0; i < pendingOrderIds.length; i++) {
         final orderId = pendingOrderIds[i];
         final response = statuses[i];
@@ -573,6 +583,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       selectedMemberNames: _selectedMemberNames.values.toList(),
     );
 
+    if (!mounted) return;
     _cubit.setLoading(false);
     if (response['success']) {
       final rawMessage = response['message']?.toString() ?? '';
