@@ -15,6 +15,46 @@ class OfflineTrackingCubit extends Cubit<OfflineTrackingState> {
     emit(state.copyWith(isUploadingGpx: value));
   }
 
+  void restoreTrackingState({
+    required List<LatLng> trackedPoints,
+    required double distanceMeters,
+    required Duration duration,
+    required bool isTracking,
+    DateTime? startedAt,
+    String? gpxName,
+    List<LatLng>? gpxRoutePoints,
+  }) {
+    emit(state.copyWith(
+      trackedPoints: List<LatLng>.from(trackedPoints),
+      trackedDistanceMeters: distanceMeters,
+      accumulatedDuration: duration,
+      isTracking: isTracking,
+      trackingStartedAt: startedAt,
+      selectedGpxName: gpxName,
+      gpxRoutePoints: gpxRoutePoints != null ? List<LatLng>.from(gpxRoutePoints) : null,
+    ));
+  }
+
+  void updateTrackingMetrics({
+    required List<LatLng> trackedPoints,
+    required double distanceMeters,
+    required Duration duration,
+    Position? currentPosition,
+  }) {
+    emit(state.copyWith(
+      trackedPoints: List<LatLng>.from(trackedPoints),
+      trackedDistanceMeters: distanceMeters,
+      accumulatedDuration: duration,
+      currentPosition: currentPosition,
+    ));
+  }
+
+  void updateDuration(Duration duration) {
+    emit(state.copyWith(
+      accumulatedDuration: duration,
+    ));
+  }
+
   void setGpxData({
     required List<LatLng> points,
     List<OfflineGpxWaypoint>? waypoints,
@@ -35,7 +75,8 @@ class OfflineTrackingCubit extends Cubit<OfflineTrackingState> {
     emit(state.copyWith(
       currentPosition: current,
       isTracking: true,
-      trackingStartedAt: state.trackingStartedAt ?? DateTime.now(),
+      trackingStartedAt: DateTime.now(),
+      clearTrackingStoppedAt: true,
       trackedPoints: nextTracked,
     ));
   }
@@ -54,14 +95,26 @@ class OfflineTrackingCubit extends Cubit<OfflineTrackingState> {
   }
 
   void stopTracking() {
-    emit(state.copyWith(isTracking: false));
+    final now = DateTime.now();
+    final segmentDuration = state.trackingStartedAt == null
+        ? Duration.zero
+        : now.difference(state.trackingStartedAt!);
+
+    emit(state.copyWith(
+      isTracking: false,
+      trackingStoppedAt: now,
+      accumulatedDuration: state.accumulatedDuration + segmentDuration,
+      clearTrackingStartedAt: true,
+    ));
   }
 
   void resetTracking() {
     emit(state.copyWith(
       trackedPoints: const [],
       trackedDistanceMeters: 0,
+      accumulatedDuration: Duration.zero,
       clearTrackingStartedAt: true,
+      clearTrackingStoppedAt: true,
       clearCurrentPosition: true,
       isTracking: false,
     ));

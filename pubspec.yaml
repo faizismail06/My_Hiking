@@ -48,8 +48,9 @@ dependencies:
   path_provider: ^2.0.15
   provider: ^6.0.0
   widgets_to_image: ^1.0.0
-  # flutter_background_service: ^2.0.0
-  # flutter_background_service_android: ^2.0.4
+  flutter_background_service: ^5.0.5
+  flutter_background_service_android: ^6.1.1
+  flutter_local_notifications: ^17.2.4
   permission_handler: ^11.3.1
   url_launcher: ^6.3.1 # Pastikan untuk menggunakan versi terbaru
   url_launcher_windows: ^3.0.8
@@ -89,21 +90,8 @@ flutter_icons:
 flutter:
   uses-material-design: true
   assets:
-    - assets/
     - assets/lottie/
-    - assets/lottie/sandy_loading.json
-    - assets/lottie/trail_loading.json
     - assets/images/
-    - assets/images/pendaki.png
-    - assets/images/camp.png
-    - assets/images/puncak.png
-    - assets/images/siluetgunung.jpeg
-    - assets/images/img_home.png
-    - assets/images/img_image_156x316.png
-    - assets/images/logo_pendaki.jpeg
-    - assets/images/logo_pemula.png
-    - assets/images/logo_menengah.png
-    - assets/images/logo_mahir.png
 
   fonts:
     - family: Poppins

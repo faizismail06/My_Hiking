@@ -179,7 +179,7 @@ class LoginScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Image.asset(
-                'images/logo_google.png',
+                'assets/images/logo_google.png',
                 width: 14,
                 height: 14,
                 fit: BoxFit.contain,

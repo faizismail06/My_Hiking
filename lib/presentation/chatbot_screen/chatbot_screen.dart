@@ -8,6 +8,10 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../api/api_service.dart';
 import '../../core/app_export.dart';
 import '../waiting_payment_page/waiting_payment_page.dart';
+import '../detail_mountain_screen/detail_mountain_screen.dart';
+import '../detail_mountain_screen/bloc/detail_mountain_bloc.dart';
+import '../trail_screen/trail_screen.dart';
+import '../trail_screen/bloc/trail_bloc.dart';
 import 'bloc/chatbot_cubit.dart';
 import 'bloc/chatbot_state.dart';
 import 'models/chat_message.dart';
@@ -47,6 +51,8 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   bool _isSyncingPaymentStatus = false;
   final Set<int> _busyPaymentOrderIds = <int>{};
   bool _hasAttemptedInitialHistoryLoad = false;
+  bool _showScrollToBottomBtn = false;
+  bool _canPop = false;
 
   static final Map<String, bool> _freshChatOnNextOpen = <String, bool>{};
 
@@ -71,6 +77,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     _loadUserIdIfNeeded();
     _addWelcomeMessage();
     _startPaymentStatusSync();
+    _scrollController.addListener(_scrollListener);
   }
 
   String get _chatSessionKey => '${widget.role}:${widget.userId ?? 0}';
@@ -82,9 +89,22 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     _freshChatOnNextOpen[_chatSessionKey] = value;
   }
 
+  void _scrollListener() {
+    if (!_scrollController.hasClients) return;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.offset;
+    final showButton = maxScroll - currentScroll > 200;
+    if (showButton != _showScrollToBottomBtn) {
+      setState(() {
+        _showScrollToBottomBtn = showButton;
+      });
+    }
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _scrollController.removeListener(_scrollListener);
     _paymentStatusSyncTimer?.cancel();
     _autoSaveHistory();
     _messageController.dispose();
@@ -103,14 +123,17 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   /// Load user ID jika belum ada
   Future<void> _loadUserIdIfNeeded() async {
     if (_userId != null) {
+      if (!mounted) return;
       _loadFriends();
       _loadChatHistories(autoOpenLatestIfNeeded: true);
       return;
     }
     try {
       final token = await _apiService.getToken();
+      if (!mounted) return;
       if (token != null) {
         final response = await _apiService.getUserProfile(token);
+        if (!mounted) return;
         if (response['success']) {
           _cubit.setUserId(response['data']['id']);
           await _loadFriends();
@@ -126,6 +149,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     if (_userId == null) return;
     try {
       final result = await _apiService.getFriends(_userId!);
+      if (!mounted) return;
       if (result['success'] == true && result['data'] is List) {
         _cubit.setFriends(List<Map<String, dynamic>>.from(result['data']));
       }
@@ -144,6 +168,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         userId: _userId!,
         role: widget.role,
       );
+      if (!mounted) return;
       if (result['success'] == true && result['data'] != null) {
         final histories = List<Map<String, dynamic>>.from(result['data']);
         _cubit.setChatHistories(histories);
@@ -169,6 +194,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   Future<void> _loadChatHistory(int historyId) async {
     try {
       final result = await _apiService.getChatHistory(historyId);
+      if (!mounted) return;
       if (result['success'] == true && result['data'] != null) {
         final messages = result['data']['messages'] as List;
         final rebuiltMessages = <ChatMessage>[];
@@ -179,6 +205,16 @@ class _ChatbotScreenState extends State<ChatbotScreen>
             orderId: _toInt(msg['order_id']),
             transactionId: _toInt(msg['transaction_id']),
             isPaid: msg['is_paid'] == true,
+            mountains: msg['mountains'] != null
+                ? List<Map<String, dynamic>>.from(
+                    (msg['mountains'] as List).map((e) => Map<String, dynamic>.from(e as Map)))
+                : null,
+            source: msg['source']?.toString(),
+            intent: msg['intent']?.toString(),
+            responseType: msg['type']?.toString(),
+            data: msg['data'] != null
+                ? Map<String, dynamic>.from(msg['data'] as Map)
+                : null,
           ));
         }
         _cubit.setCurrentHistoryId(historyId);
@@ -209,6 +245,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         historyId: _currentHistoryId,
       );
 
+      if (!mounted) return;
       if (result['success'] == true && result['history_id'] != null) {
         final historyId = result['history_id'];
         if (historyId is int && _currentHistoryId != historyId) {
@@ -224,6 +261,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   Future<void> _deleteHistory(int historyId) async {
     try {
       await _apiService.deleteChatHistory(historyId, userId: _userId);
+      if (!mounted) return;
       _loadChatHistories();
       if (_currentHistoryId == historyId) {
         _cubit.setCurrentHistoryId(null);
@@ -248,6 +286,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   /// Cek koneksi ke server chatbot
   Future<void> _checkServerConnection() async {
     final isHealthy = await _apiService.isChatbotServerHealthy();
+    if (!mounted) return;
     _cubit.setServerConnected(isHealthy);
   }
 
@@ -285,6 +324,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         ),
       );
 
+      if (!mounted) return;
       for (var i = 0; i < pendingOrderIds.length; i++) {
         final orderId = pendingOrderIds[i];
         final response = statuses[i];
@@ -482,10 +522,18 @@ class _ChatbotScreenState extends State<ChatbotScreen>
             'Silakan tanya apa saja!';
     }
 
-    _cubit.addMessage(ChatMessage(
-      message: welcomeMsg,
-      isUser: false,
-    ));
+    final List<String> paragraphs = welcomeMsg
+        .split('\n\n')
+        .map((p) => p.trim())
+        .where((p) => p.isNotEmpty)
+        .toList();
+
+    for (var paragraph in paragraphs) {
+      _cubit.addMessage(ChatMessage(
+        message: paragraph,
+        isUser: false,
+      ));
+    }
   }
 
   /// Kirim pesan ke chatbot
@@ -535,36 +583,96 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       selectedMemberNames: _selectedMemberNames.values.toList(),
     );
 
+    if (!mounted) return;
     _cubit.setLoading(false);
     if (response['success']) {
       final rawMessage = response['message']?.toString() ?? '';
+      final responseSource = response['source']?.toString();
+      final responseType = response['type']?.toString();
+      final responseIntent = response['intent']?.toString();
+      final responseData = response['data'];
+
       final hasPayment = _toInt(response['order_id']) != null ||
           _toInt(response['transaction_id']) != null ||
           response['payment_url'] != null;
 
-      _cubit.addMessage(ChatMessage(
-        message:
-            hasPayment ? _normalizeChatbotPaymentText(rawMessage) : rawMessage,
-        isUser: false,
-        downloadUrl: response['download_url'],
-        paymentUrl: response['payment_url'],
-        orderId: response['order_id'] is int
-            ? response['order_id']
-            : int.tryParse(response['order_id']?.toString() ?? ''),
-        transactionId: response['transaction_id'] is int
-            ? response['transaction_id']
-            : int.tryParse(response['transaction_id']?.toString() ?? ''),
-        paymentMethod:
-            _sanitizePaymentMethod(response['payment_method']?.toString()),
-        totalPayment: _toInt(response['total_payment']),
-        transactionCreatedAt: response['transaction_created_at']?.toString(),
-        paymentCode: response['payment_code']?.toString(),
-        paymentCodeLabel: response['payment_code_label']?.toString(),
-        paymentInstruction: response['payment_instruction']?.toString(),
-        deeplinkUrl: response['deeplink_url']?.toString(),
-        qrCodeUrl: response['qr_code_url']?.toString(),
-        qrString: response['qr_string']?.toString(),
-      ));
+      // Cek apakah ini response dari static FAQ dengan data kaya (mountain_cards, route_cards, buttons)
+      final bool isRichStaticResponse = responseSource == 'static_faq' &&
+          responseType != null &&
+          responseType != 'text' &&
+          responseData != null;
+
+      if (isRichStaticResponse) {
+        // Untuk Static FAQ: satu bubble teks + data (cards/buttons) di bawahnya
+        // Ambil mountains dari data jika type mountain_cards
+        List<Map<String, dynamic>>? mountainsList;
+        if (responseType == 'mountain_cards' && responseData is Map) {
+          final rawMountains = responseData['mountains'];
+          if (rawMountains is List) {
+            mountainsList = List<Map<String, dynamic>>.from(
+                rawMountains.map((e) => Map<String, dynamic>.from(e as Map)));
+          }
+        }
+
+        _cubit.addMessage(ChatMessage(
+          message: rawMessage,
+          isUser: false,
+          source: responseSource,
+          intent: responseIntent,
+          responseType: responseType,
+          data: responseData is Map ? Map<String, dynamic>.from(responseData) : null,
+          mountains: mountainsList,
+        ));
+      } else {
+        // Untuk Gemini API / static text: split paragraf seperti sebelumnya
+        final processedMessage = hasPayment ? _normalizeChatbotPaymentText(rawMessage) : rawMessage;
+
+        final List<String> paragraphs = processedMessage
+            .split('\n\n')
+            .map((p) => p.trim())
+            .where((p) => p.isNotEmpty)
+            .toList();
+
+        if (paragraphs.isEmpty) {
+          paragraphs.add(processedMessage);
+        }
+
+        final rawMountains = response['mountains'];
+        final List<Map<String, dynamic>>? mountainsList = rawMountains is List
+            ? List<Map<String, dynamic>>.from(
+                rawMountains.map((e) => Map<String, dynamic>.from(e as Map)))
+            : null;
+
+        for (int i = 0; i < paragraphs.length; i++) {
+          final isLast = i == paragraphs.length - 1;
+          _cubit.addMessage(ChatMessage(
+            message: paragraphs[i],
+            isUser: false,
+            downloadUrl: isLast ? response['download_url'] : null,
+            paymentUrl: isLast ? response['payment_url'] : null,
+            orderId: isLast ? (response['order_id'] is int
+                ? response['order_id']
+                : int.tryParse(response['order_id']?.toString() ?? '')) : null,
+            transactionId: isLast ? (response['transaction_id'] is int
+                ? response['transaction_id']
+                : int.tryParse(response['transaction_id']?.toString() ?? '')) : null,
+            paymentMethod: isLast ? _sanitizePaymentMethod(response['payment_method']?.toString()) : null,
+            totalPayment: isLast ? _toInt(response['total_payment']) : null,
+            transactionCreatedAt: isLast ? response['transaction_created_at']?.toString() : null,
+            paymentCode: isLast ? response['payment_code']?.toString() : null,
+            paymentCodeLabel: isLast ? response['payment_code_label']?.toString() : null,
+            paymentInstruction: isLast ? response['payment_instruction']?.toString() : null,
+            deeplinkUrl: isLast ? response['deeplink_url']?.toString() : null,
+            qrCodeUrl: isLast ? response['qr_code_url']?.toString() : null,
+            qrString: isLast ? response['qr_string']?.toString() : null,
+            mountains: isLast ? mountainsList : null,
+            source: isLast ? responseSource : null,
+            intent: isLast ? responseIntent : null,
+            responseType: isLast ? responseType : null,
+            data: isLast && responseData is Map ? Map<String, dynamic>.from(responseData) : null,
+          ));
+        }
+      }
     } else {
       _cubit.addMessage(ChatMessage(
         message: response['message'] ??
@@ -972,7 +1080,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   /// Download file Excel
   Future<void> _downloadFile(String downloadUrl) async {
     try {
-      final fullUrl = 'http://127.0.0.1:5000$downloadUrl';
+      final fullUrl = 'http://127.0.0.1:5000/$downloadUrl';
       final uri = Uri.parse(fullUrl);
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -1314,6 +1422,93 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     });
   }
 
+  Widget _buildMountainCards(List<Map<String, dynamic>> mountains) {
+    return MountainCardsCarousel(
+      mountains: mountains,
+      baseUrl: baseUrl,
+      onQuickReply: _handleQuickReplyButton,
+    );
+  }
+
+  Widget _buildRouteCards(Map<String, dynamic> data) {
+    return RouteCardsCarousel(
+      data: data,
+      baseUrl: baseUrl,
+      onQuickReply: _handleQuickReplyButton,
+    );
+  }
+
+  Widget _routeStatChip(IconData icon, String label) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 6.h, vertical: 3.h),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0F7F4),
+        borderRadius: BorderRadius.circular(8.h),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11.h, color: const Color(0xFF1B8A5A)),
+          SizedBox(width: 3.h),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 9.fSize,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF1B8A5A),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildButtonChips(Map<String, dynamic> data) {
+    final buttons = data['buttons'];
+    if (buttons == null || buttons is! List || buttons.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      width: MediaQuery.of(context).size.width * 0.82,
+      margin: EdgeInsets.only(top: 10.h, bottom: 4.h),
+      child: Wrap(
+        spacing: 8.h,
+        runSpacing: 8.h,
+        children: buttons.map<Widget>((btn) {
+          final b = btn as Map<String, dynamic>;
+          return OutlinedButton.icon(
+            onPressed: () =>
+                _handleQuickReplyButton(b['payload']?.toString() ?? ''),
+            icon: Icon(Icons.arrow_forward_ios_rounded,
+                size: 12.h, color: const Color(0xFF1B8A5A)),
+            label: Text(
+              b['label']?.toString() ?? '',
+              style: TextStyle(
+                fontSize: 12.fSize,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF1B8A5A),
+              ),
+            ),
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: Color(0xFF1B8A5A), width: 1.2),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20.h)),
+              padding:
+                  EdgeInsets.symmetric(horizontal: 14.h, vertical: 8.h),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  void _handleQuickReplyButton(String payload) {
+    if (payload.isEmpty) return;
+    _messageController.text = payload;
+    _sendMessage();
+  }
+
   /// Widget untuk bubble chat
   Widget _buildMessageBubble(ChatMessage message) {
     if (_messages.length == 1 &&
@@ -1369,6 +1564,11 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                     : CrossAxisAlignment.start,
                 children: [
                   Container(
+                    width: (message.mountains != null && message.mountains!.isNotEmpty) ||
+                            (!message.isUser && message.responseType == 'route_cards' && message.data != null) ||
+                            (!message.isUser && message.responseType == 'buttons' && message.data != null)
+                        ? double.infinity
+                        : null,
                     padding:
                         EdgeInsets.symmetric(horizontal: 16.h, vertical: 12.h),
                     decoration: BoxDecoration(
@@ -1391,6 +1591,24 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                           height: 1.5),
                     ),
                   ),
+                  if (message.mountains != null && message.mountains!.isNotEmpty) ...[
+                    SizedBox(height: 8.h),
+                    _buildMountainCards(message.mountains!),
+                  ],
+                  // Route cards from Static FAQ
+                  if (!message.isUser &&
+                      message.responseType == 'route_cards' &&
+                      message.data != null) ...[
+                    SizedBox(height: 8.h),
+                    _buildRouteCards(message.data!),
+                  ],
+                  // Button chips from Static FAQ
+                  if (!message.isUser &&
+                      message.responseType == 'buttons' &&
+                      message.data != null) ...[
+                    SizedBox(height: 6.h),
+                    _buildButtonChips(message.data!),
+                  ],
                   if (hasPaymentOrder &&
                       isLatestPaymentMessage &&
                       hasPreparedPayment &&
@@ -1899,8 +2117,20 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       value: _cubit,
       child: BlocBuilder<ChatbotCubit, ChatbotState>(
         builder: (context, state) {
-          return Scaffold(
-            backgroundColor: const Color(0xFFF1F8F1),
+          return PopScope(
+            canPop: _canPop,
+            onPopInvoked: (didPop) async {
+              if (didPop) return;
+              await _autoSaveHistory();
+              if (context.mounted) {
+                setState(() {
+                  _canPop = true;
+                });
+                Navigator.of(context).pop();
+              }
+            },
+            child: Scaffold(
+              backgroundColor: const Color(0xFFF1F8F1),
             drawer: _buildHistoryDrawer(),
             appBar: AppBar(
               backgroundColor: Colors.transparent,
@@ -1910,14 +2140,14 @@ class _ChatbotScreenState extends State<ChatbotScreen>
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back_ios_new),
                 onPressed: () async {
-                  await _autoSaveHistory();
-                  if (!mounted) return;
-                  final navigator = Navigator.of(this.context);
+                  final navigator = Navigator.of(context);
                   if (navigator.canPop()) {
                     navigator.pop();
                   } else {
+                    await _autoSaveHistory();
+                    if (!mounted) return;
                     Navigator.pushNamedAndRemoveUntil(
-                        this.context, AppRoutes.homeScreen, (route) => false);
+                        context, AppRoutes.homeScreen, (route) => false);
                   }
                 },
               ),
@@ -1969,16 +2199,49 @@ class _ChatbotScreenState extends State<ChatbotScreen>
               children: [
                 if (_messages.length > 1)
                   Expanded(
-                    child: ListView.builder(
-                      controller: _scrollController,
-                      padding: EdgeInsets.only(bottom: 16.h),
-                      itemCount: _messages.length + (_isLoading ? 1 : 0),
-                      itemBuilder: (context, index) {
-                        if (index == _messages.length && _isLoading) {
-                          return _buildTypingIndicator();
-                        }
-                        return _buildMessageBubble(_messages[index]);
-                      },
+                    child: Stack(
+                      children: [
+                        ListView.builder(
+                          controller: _scrollController,
+                          padding: EdgeInsets.only(bottom: 16.h),
+                          itemCount: _messages.length + (_isLoading ? 1 : 0),
+                          itemBuilder: (context, index) {
+                            if (index == _messages.length && _isLoading) {
+                              return _buildTypingIndicator();
+                            }
+                            return _buildMessageBubble(_messages[index]);
+                          },
+                        ),
+                        if (_showScrollToBottomBtn)
+                          Positioned(
+                            bottom: 12.h,
+                            right: 16.h,
+                            child: GestureDetector(
+                              onTap: _scrollToBottom,
+                              child: Container(
+                                width: 36.h,
+                                height: 36.h,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.15),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ],
+                                  border: Border.all(color: Colors.grey.shade200),
+                                ),
+                                child: const Icon(
+                                  Icons.keyboard_arrow_down_rounded,
+                                  color: Color(0xFF1B8A5A),
+                                  size: 24,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   )
                 else
@@ -2182,9 +2445,728 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                 ),
               ],
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
+    ),
+  );
+}
+}
+
+class MountainCardsCarousel extends StatefulWidget {
+  final List<Map<String, dynamic>> mountains;
+  final String baseUrl;
+  final Function(String) onQuickReply;
+
+  const MountainCardsCarousel({
+    super.key,
+    required this.mountains,
+    required this.baseUrl,
+    required this.onQuickReply,
+  });
+
+  @override
+  State<MountainCardsCarousel> createState() => _MountainCardsCarouselState();
+}
+
+class _MountainCardsCarouselState extends State<MountainCardsCarousel> {
+  int _currentPage = 0;
+  late PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final mountains = widget.mountains;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          height: 280.h,
+          width: double.infinity,
+          child: PageView.builder(
+            controller: _pageController,
+            pageSnapping: true,
+            physics: const PageScrollPhysics(),
+            onPageChanged: (index) {
+              setState(() {
+                _currentPage = index;
+              });
+            },
+            itemCount: mountains.length,
+            itemBuilder: (context, index) {
+              final m = mountains[index];
+              final String nama = m['nama'] ?? 'Gunung';
+              final String ketinggian = '${m['ketinggian'] ?? 0} mdpl';
+              final String provinsi = m['provinsi'] ?? 'Indonesia';
+              final int? id = m['id'];
+              final String gambarGunung = m['gambar_gunung'] ?? '';
+              final String deskripsi = m['deskripsi'] ?? '';
+
+              final String fullImageUrl = gambarGunung.isNotEmpty
+                  ? '${widget.baseUrl}/images/$gambarGunung'
+                  : '';
+
+              return Container(
+                margin: EdgeInsets.only(bottom: 8.h),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16.h),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.06),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                  border: Border.all(color: appTheme.gray200.withOpacity(0.8)),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16.h),
+                  child: InkWell(
+                    onTap: () {
+                      if (id != null) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => BlocProvider(
+                              create: (context) => DetailMountainBloc(
+                                  apiService: ApiService())
+                                ..add(DetailMountainInitialEvent(id)),
+                              child: DetailMountainScreen(idGunung: id),
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          height: 120.h,
+                          width: double.infinity,
+                          child: Stack(
+                            children: [
+                              Positioned.fill(
+                                child: fullImageUrl.isNotEmpty
+                                    ? Image.network(
+                                        fullImageUrl,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) =>
+                                            Container(
+                                          color: Colors.grey[100],
+                                          child: Icon(Icons.terrain,
+                                              color: Colors.grey[400], size: 32.h),
+                                        ),
+                                      )
+                                    : Container(
+                                        color: Colors.grey[100],
+                                        child: Icon(Icons.terrain,
+                                            color: Colors.grey[400], size: 32.h),
+                                      ),
+                              ),
+                              Positioned(
+                                top: 8.h,
+                                right: 8.h,
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 10.h, vertical: 4.h),
+                                  decoration: BoxDecoration(
+                                      color: const Color(0xFF1B8A5A),
+                                      borderRadius: BorderRadius.circular(12.h)),
+                                  child: Text(
+                                    ketinggian,
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10.fSize,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 12.h, vertical: 8.h),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                nama,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14.fSize,
+                                  color: appTheme.blueGray900,
+                                ),
+                              ),
+                              SizedBox(height: 4.h),
+                              Row(
+                                children: [
+                                  Icon(Icons.location_on_rounded,
+                                      size: 12.h, color: const Color(0xFF1B8A5A)),
+                                  SizedBox(width: 4.h),
+                                  Expanded(
+                                    child: Text(
+                                      provinsi,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: 11.fSize,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (deskripsi.isNotEmpty) ...[
+                                SizedBox(height: 4.h),
+                                Text(
+                                  deskripsi,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: Colors.grey[700],
+                                    fontSize: 11.fSize,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ] else
+                                SizedBox(height: 30.h),
+                              SizedBox(height: 8.h),
+                              Container(
+                                width: double.infinity,
+                                height: 34.h,
+                                child: ElevatedButton(
+                                  onPressed: () => widget.onQuickReply('pesan tiket $nama'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF1B8A5A),
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(10.h)),
+                                    elevation: 0,
+                                  ),
+                                  child: Text(
+                                    'Pesan Tiket',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12.fSize,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        if (mountains.length > 1) ...[
+          SizedBox(height: 6.h),
+          Center(
+            child: _buildPageIndicator(mountains.length, _currentPage),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildPageIndicator(int itemCount, int currentPage) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(itemCount, (dotIndex) {
+            final distance = (dotIndex - currentPage).abs();
+            double width = 0;
+            double height = 0;
+            double margin = 0;
+            Color color = Colors.grey[300]!;
+
+            if (distance == 0) {
+              width = 16.h;
+              height = 6.h;
+              margin = 4.h;
+              color = const Color(0xFF1B8A5A);
+            } else if (distance == 1) {
+              width = 6.h;
+              height = 6.h;
+              margin = 4.h;
+              color = Colors.grey[400]!;
+            } else if (distance == 2) {
+              width = 4.h;
+              height = 4.h;
+              margin = 4.h;
+              color = Colors.grey[300]!;
+            } else {
+              width = 0;
+              height = 0;
+              margin = 0;
+            }
+
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: EdgeInsets.symmetric(horizontal: margin),
+              width: width,
+              height: height,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(3.h),
+              ),
+            );
+          }),
+        ),
+        if (itemCount > 5) ...[
+          SizedBox(width: 8.h),
+          Text(
+            '(${currentPage + 1} dari $itemCount)',
+            style: TextStyle(
+              fontSize: 10.fSize,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
+
+class RouteCardsCarousel extends StatefulWidget {
+  final Map<String, dynamic> data;
+  final String baseUrl;
+  final Function(String) onQuickReply;
+
+  const RouteCardsCarousel({
+    super.key,
+    required this.data,
+    required this.baseUrl,
+    required this.onQuickReply,
+  });
+
+  @override
+  State<RouteCardsCarousel> createState() => _RouteCardsCarouselState();
+}
+
+class _RouteCardsCarouselState extends State<RouteCardsCarousel> {
+  int _currentPage = 0;
+  late PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final routes = widget.data['routes'];
+    if (routes == null || routes is! List || routes.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    // Check if any route card has visible buttons (i.e. not containing "detail" in label)
+    bool hasBookingButtons = false;
+    for (var route in routes) {
+      if (route is Map) {
+        final buttons = route['buttons'];
+        if (buttons is List && buttons.isNotEmpty) {
+          final visibleButtons = buttons.where(
+            (btn) => btn is Map && btn['label']?.toString().toLowerCase().contains('detail') != true,
+          ).toList();
+          if (visibleButtons.isNotEmpty) {
+            hasBookingButtons = true;
+            break;
+          }
+        }
+      }
+    }
+
+    final double carouselHeight = hasBookingButtons ? 290.h : 240.h;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          height: carouselHeight,
+          width: double.infinity,
+          child: PageView.builder(
+            controller: _pageController,
+            pageSnapping: true,
+            physics: const PageScrollPhysics(),
+            onPageChanged: (index) {
+              setState(() {
+                _currentPage = index;
+              });
+            },
+            itemCount: routes.length,
+            itemBuilder: (context, index) {
+              final route = routes[index];
+              final r = route as Map<String, dynamic>;
+              final String namaJalur = r['nama_jalur'] ?? 'Jalur';
+              final double jarak = (r['jarak'] is num) ? (r['jarak'] as num).toDouble() : 0;
+              final int biaya = (r['biaya'] is num) ? (r['biaya'] as num).toInt() : 0;
+              final String estimasi = r['estimasi_waktu'] ?? '-';
+              final String kesulitan = r['tingkat_kesulitan'] ?? '-';
+              final String basecamp = r['basecamp'] ?? '';
+              final String deskripsi = r['deskripsi'] ?? '';
+              final String gambarJalur = r['gambar_jalur'] ?? '';
+              final List buttons = r['buttons'] ?? [];
+
+              final String fullImageUrl = gambarJalur.isNotEmpty &&
+                      !gambarJalur.startsWith('assets/')
+                  ? '${widget.baseUrl}/images/$gambarJalur'
+                  : '';
+
+              final biayaStr = NumberFormat.currency(
+                locale: 'id_ID',
+                symbol: 'Rp ',
+                decimalDigits: 0,
+              ).format(biaya);
+
+              String difficultyLabel = kesulitan;
+              Color difficultyColor = const Color(0xFF1B8A5A);
+              if (kesulitan == 'mudah') {
+                difficultyLabel = 'Mudah';
+                difficultyColor = const Color(0xFF4CAF50);
+              } else if (kesulitan == 'sedang') {
+                difficultyLabel = 'Sedang';
+                difficultyColor = const Color(0xFFFFA726);
+              } else if (kesulitan == 'sulit') {
+                difficultyLabel = 'Sulit';
+                difficultyColor = const Color(0xFFEF5350);
+              } else if (kesulitan == 'sangat_sulit') {
+                difficultyLabel = 'Sangat Sulit';
+                difficultyColor = const Color(0xFFB71C1C);
+              }
+
+              return Container(
+                margin: EdgeInsets.only(bottom: 8.h),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16.h),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.06),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                  border: Border.all(color: appTheme.gray200.withOpacity(0.8)),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16.h),
+                  child: InkWell(
+                    onTap: () {
+                      final int? id = r['id'] is num ? (r['id'] as num).toInt() : null;
+                      final int? idGunung = r['id_gunung'] is num ? (r['id_gunung'] as num).toInt() : null;
+                      if (id != null && idGunung != null) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => BlocProvider(
+                              create: (context) => TrailBloc(apiService: ApiService()),
+                              child: TrailScreen(
+                                jalurId: id,
+                                idGunung: idGunung,
+                              ),
+                            ),
+                          ),
+                        );
+                      } else {
+                        final detailBtn = buttons.firstWhere(
+                          (btn) => btn['label']?.toString().toLowerCase().contains('detail') == true,
+                          orElse: () => null,
+                        );
+                        if (detailBtn != null) {
+                          widget.onQuickReply(detailBtn['payload']?.toString() ?? '');
+                        }
+                      }
+                    },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          height: 120.h,
+                          width: double.infinity,
+                          child: Stack(
+                            children: [
+                              Positioned.fill(
+                                child: fullImageUrl.isNotEmpty
+                                    ? Image.network(
+                                        fullImageUrl,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) => Container(
+                                          color: Colors.grey[100],
+                                          child: Icon(Icons.terrain,
+                                              color: Colors.grey[400], size: 32.h),
+                                        ),
+                                      )
+                                    : Container(
+                                        color: Colors.grey[100],
+                                        child: Icon(Icons.terrain,
+                                            color: Colors.grey[400], size: 32.h),
+                                      ),
+                              ),
+                              Positioned(
+                                top: 8.h,
+                                right: 8.h,
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 10.h, vertical: 4.h),
+                                  decoration: BoxDecoration(
+                                    color: difficultyColor,
+                                    borderRadius: BorderRadius.circular(12.h),
+                                  ),
+                                  child: Text(
+                                    difficultyLabel,
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10.fSize,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 12.h, vertical: 8.h),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                namaJalur,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14.fSize,
+                                  color: appTheme.blueGray900,
+                                ),
+                              ),
+                              SizedBox(height: 4.h),
+                              Row(
+                                children: [
+                                  _routeStatChip(Icons.straighten, '${jarak.toStringAsFixed(1)} km'),
+                                  SizedBox(width: 8.h),
+                                  _routeStatChip(Icons.timer_outlined, estimasi),
+                                  SizedBox(width: 8.h),
+                                  _routeStatChip(Icons.attach_money, biayaStr),
+                                ],
+                              ),
+                              if (basecamp.isNotEmpty) ...[
+                                SizedBox(height: 4.h),
+                                Row(
+                                  children: [
+                                    Icon(Icons.location_on_rounded,
+                                        size: 12.h, color: const Color(0xFF1B8A5A)),
+                                    SizedBox(width: 4.h),
+                                    Expanded(
+                                      child: Text(
+                                        basecamp,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: Colors.grey[600],
+                                          fontSize: 11.fSize,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                              if (deskripsi.isNotEmpty) ...[
+                                SizedBox(height: 4.h),
+                                Text(
+                                  deskripsi,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: Colors.grey[700],
+                                    fontSize: 11.fSize,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ] else
+                                SizedBox(height: 14.h),
+                              Builder(builder: (context) {
+                                final visibleButtons = buttons.where(
+                                  (btn) => btn['label']?.toString().toLowerCase().contains('detail') != true,
+                                ).toList();
+                                if (visibleButtons.isNotEmpty) {
+                                  return Column(
+                                    children: [
+                                      SizedBox(height: 6.h),
+                                      Column(
+                                        children: visibleButtons.map<Widget>((btn) {
+                                          final b = btn as Map<String, dynamic>;
+                                          return Container(
+                                            width: double.infinity,
+                                            height: 34.h,
+                                            margin: EdgeInsets.only(bottom: 4.h),
+                                            child: ElevatedButton(
+                                              onPressed: () => widget.onQuickReply(
+                                                  b['payload']?.toString() ?? ''),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: const Color(0xFF1B8A5A),
+                                                shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(10.h)),
+                                                elevation: 0,
+                                              ),
+                                              child: Text(
+                                                b['label']?.toString() ?? '',
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 12.fSize,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        }).toList(),
+                                      ),
+                                    ],
+                                  );
+                                }
+                                return const SizedBox.shrink();
+                              }),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        if (routes.length > 1) ...[
+          SizedBox(height: 6.h),
+          Center(
+            child: _buildPageIndicator(routes.length, _currentPage),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _routeStatChip(IconData icon, String label) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8.h, vertical: 4.h),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8F5E9),
+        borderRadius: BorderRadius.circular(8.h),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 10.h, color: const Color(0xFF1B8A5A)),
+          SizedBox(width: 4.h),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 9.fSize,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF1B8A5A),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPageIndicator(int itemCount, int currentPage) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(itemCount, (dotIndex) {
+            final distance = (dotIndex - currentPage).abs();
+            double width = 0;
+            double height = 0;
+            double margin = 0;
+            Color color = Colors.grey[300]!;
+
+            if (distance == 0) {
+              width = 16.h;
+              height = 6.h;
+              margin = 4.h;
+              color = const Color(0xFF1B8A5A);
+            } else if (distance == 1) {
+              width = 6.h;
+              height = 6.h;
+              margin = 4.h;
+              color = Colors.grey[400]!;
+            } else if (distance == 2) {
+              width = 4.h;
+              height = 4.h;
+              margin = 4.h;
+              color = Colors.grey[300]!;
+            } else {
+              width = 0;
+              height = 0;
+              margin = 0;
+            }
+
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: EdgeInsets.symmetric(horizontal: margin),
+              width: width,
+              height: height,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(3.h),
+              ),
+            );
+          }),
+        ),
+        if (itemCount > 5) ...[
+          SizedBox(width: 8.h),
+          Text(
+            '(${currentPage + 1} dari $itemCount)',
+            style: TextStyle(
+              fontSize: 10.fSize,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+

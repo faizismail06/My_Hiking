@@ -12,6 +12,17 @@ import 'package:myhiking/presentation/home_screen/models/recommendation_model.da
 import 'package:myhiking/presentation/data_profile_screen/models/res_user.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+// const String baseUrl = String.fromEnvironment(
+//   'API_BASE_URL',
+//   defaultValue: 'http://103.93.132.167/api',
+// );
+
+// const String chatbotBaseUrl = String.fromEnvironment(
+//   'CHATBOT_BASE_URL',
+//   defaultValue: 'http://103.93.132.167/chatbot/api',
+// );
+
+// Development
 const String baseUrl = String.fromEnvironment(
   'API_BASE_URL',
   defaultValue: 'http://127.0.0.1:8000/api',
@@ -21,6 +32,7 @@ const String chatbotBaseUrl = String.fromEnvironment(
   'CHATBOT_BASE_URL',
   defaultValue: 'http://127.0.0.1:5000/api',
 );
+
 
 class ApiActionException implements Exception {
   final String code;
@@ -1517,6 +1529,12 @@ class ApiService {
           'deeplink_url': responseData['deeplink_url'],
           'qr_code_url': responseData['qr_code_url'],
           'qr_string': responseData['qr_string'],
+          'mountains': responseData['mountains'],
+          // Static FAQ fields
+          'source': responseData['source'],
+          'intent': responseData['intent'],
+          'type': responseData['type'],
+          'data': responseData['data'],
         };
       } else {
         return {

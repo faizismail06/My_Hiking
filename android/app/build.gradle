@@ -6,13 +6,14 @@ plugins {
 }
 
 android {
-    namespace = "com.example.myhiking" // Pastikan namespace sesuai dengan struktur package Anda.
+    namespace = "com.ta.myhiking" // Pastikan namespace sesuai dengan struktur package Anda.
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        coreLibraryDesugaringEnabled true
     }
 
     kotlinOptions {
@@ -21,7 +22,7 @@ android {
 
     defaultConfig {
         // Pastikan applicationId ini unik untuk aplikasi Anda.
-        applicationId = "com.example.myhiking"
+        applicationId = "com.ta.myhiking"
         // Versi minimum dan target SDK aplikasi Anda.
         minSdkVersion flutter.minSdkVersion
         targetSdkVersion flutter.targetSdkVersion
@@ -42,4 +43,8 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
 }
