@@ -302,18 +302,22 @@ class ChatbotCubit extends Cubit<ChatbotState> {
     final userMessages = state.messages.where((m) => m.isUser).toList();
     if (userMessages.isEmpty) return;
 
+    final initialHistoryId = state.currentHistoryId;
+    final messagesJson = state.messages.map((m) => m.toJson()).toList();
+
     try {
-      final messagesJson = state.messages.map((m) => m.toJson()).toList();
       final result = await _apiService.saveChatHistory(
         userId: state.userId!,
         role: _role,
         messages: messagesJson,
-        historyId: state.currentHistoryId,
+        historyId: initialHistoryId,
       );
 
       if (result['success'] == true && result['history_id'] != null) {
-        final historyId = result['history_id'];
-        if (historyId is int && state.currentHistoryId != historyId) {
+        final historyId = _toInt(result['history_id']);
+        if (historyId != null &&
+            state.currentHistoryId == initialHistoryId &&
+            state.currentHistoryId != historyId) {
           setCurrentHistoryId(historyId);
         }
       }

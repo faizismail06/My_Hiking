@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -41,13 +42,19 @@ class OfflineTrackingState {
   });
 
   Duration get elapsedDuration {
-    if (trackingStartedAt == null) {
+    if (kIsWeb) {
+      if (trackingStartedAt == null) {
+        return accumulatedDuration;
+      }
+      if (isTracking) {
+        return accumulatedDuration + DateTime.now().difference(trackingStartedAt!);
+      }
+      return accumulatedDuration;
+    } else {
+      // Di Android/iOS: background service sudah mengupdate accumulatedDuration setiap detik.
+      // Kita langsung menggunakan accumulatedDuration untuk menghindari double counting.
       return accumulatedDuration;
     }
-    if (isTracking) {
-      return accumulatedDuration + DateTime.now().difference(trackingStartedAt!);
-    }
-    return accumulatedDuration;
   }
 
   OfflineTrackingState copyWith({

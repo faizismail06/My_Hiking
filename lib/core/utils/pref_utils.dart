@@ -31,4 +31,12 @@ class PrefUtils {
       return 'primary';
     }
   }
+
+  String? getToken() {
+    try {
+      return _sharedPreferences?.getString('token');
+    } catch (e) {
+      return null;
+    }
+  }
 }

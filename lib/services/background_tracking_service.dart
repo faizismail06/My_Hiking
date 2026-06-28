@@ -100,6 +100,8 @@ class BackgroundTrackingService {
     bool isTracking = false;
     String? selectedGpxName;
     List<LatLng> gpxRoutePoints = [];
+    int lastCachedPointCount = 0;
+    int lastSyncedPointCount = 0;
 
     StreamSubscription<Position>? positionSubscription;
     Timer? durationTimer;
@@ -189,43 +191,242 @@ class BackgroundTrackingService {
       return buffer.toString();
     }
 
-    // Try to sync with server in background
-    Future<void> trySyncWithServer() async {
-      if (orderId == null || !isTracking || trackedPoints.length < 2) return;
+    // Internet connectivity check helper
+    Future<bool> hasInternetConnection() async {
+      try {
+        final lookup = await InternetAddress.lookup('example.com').timeout(
+          const Duration(seconds: 3),
+        );
+        return lookup.isNotEmpty && lookup.first.rawAddress.isNotEmpty;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    // Resolve pending cache queue file
+    Future<File> getPendingQueueFile() async {
+      final baseDir = await getApplicationDocumentsDirectory();
+      final cacheDir = Directory('${baseDir.path}/offline_tracking_cache');
+      if (!await cacheDir.exists()) {
+        await cacheDir.create(recursive: true);
+      }
+      return File('${cacheDir.path}/pending_tracks.json');
+    }
+
+    // Read pending queue
+    Future<List<Map<String, dynamic>>> readPendingQueue() async {
+      try {
+        final file = await getPendingQueueFile();
+        if (!await file.exists()) {
+          return [];
+        }
+        final raw = await file.readAsString();
+        if (raw.trim().isEmpty) {
+          return [];
+        }
+        final decoded = jsonDecode(raw);
+        if (decoded is! List) {
+          return [];
+        }
+        return decoded
+            .whereType<Map>()
+            .map((item) => item.map((key, value) => MapEntry(key.toString(), value)))
+            .toList();
+      } catch (_) {
+        return [];
+      }
+    }
+
+    // Write pending queue
+    Future<void> writePendingQueue(List<Map<String, dynamic>> queue) async {
+      try {
+        final file = await getPendingQueueFile();
+        await file.writeAsString(jsonEncode(queue), flush: true);
+      } catch (e) {
+        debugPrint('Error writing pending queue: $e');
+      }
+    }
+
+    // Send cache item to server helper
+    Future<void> sendCacheItemToServer(Map<String, dynamic> item, String token) async {
+      final clientCacheId = item['client_cache_id'] ?? item['cache_id'] ?? '${orderId}_bg_${DateTime.now().millisecondsSinceEpoch}';
+      final itemOrderId = item['order_id'] ?? orderId;
+      final url = Uri.parse('$baseUrl/orders/$itemOrderId/offline-track-sync');
+
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'client_cache_id': clientCacheId,
+          'source': 'mobile_background_tracking',
+          'cached_at': item['cached_at'],
+          'point_count': item['point_count'],
+          'distance_meters': item['distance_meters'],
+          'duration_seconds': item['duration_seconds'],
+          'gpx_content': item['gpx_content'],
+        }),
+      ).timeout(const Duration(seconds: 12));
+
+      if (response.statusCode == 409) {
+        final decoded = jsonDecode(response.body);
+        if (decoded['code'] == 'ORDER_STATUS_NOT_SYNCABLE') {
+          throw OrderNotSyncableException();
+        }
+      }
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
+      }
+
+      final trimmedBody = response.body.trim();
+      if (trimmedBody.isEmpty) {
+        throw Exception('Sync response kosong.');
+      }
+
+      final decoded = jsonDecode(trimmedBody);
+      final success = decoded['success'] == true;
+      final data = decoded['data'];
+      if (!success || data is! Map) {
+        throw Exception('Sync response tidak sukses.');
+      }
+
+      final syncId = data['sync_id'];
+      final syncStatus = data['sync_status']?.toString().toLowerCase();
+      final acceptedStatus = syncStatus == 'synced' || syncStatus == 'duplicate';
+
+      if (syncId == null || !acceptedStatus) {
+        throw Exception('Sync status belum valid.');
+      }
+    }
+
+    // Stop and cleanup service on force checkout
+    void forceCheckoutFlow() async {
+      await positionSubscription?.cancel();
+      durationTimer?.cancel();
+      syncTimer?.cancel();
+      
+      positionSubscription = null;
+      durationTimer = null;
+      syncTimer = null;
+
+      isTracking = false;
+      
+      // Delete active track
+      try {
+        final file = await getActiveTrackFile();
+        if (await file.exists()) {
+          await file.delete();
+        }
+      } catch (_) {}
+
+      // Delete all caches for this order
+      try {
+        final queue = await readPendingQueue();
+        queue.removeWhere((item) => item['order_id'] == orderId);
+        await writePendingQueue(queue);
+      } catch (_) {}
+
+      service.invoke('forceCheckout', {
+        'order_id': orderId,
+        'message': 'Pendaki telah checkout. Tracking dihentikan dan cache lokal dibersihkan.'
+      });
+
+      await service.stopSelf();
+    }
+
+    // Process periodic synchronization and caching
+    Future<void> processSyncCycle() async {
+      if (orderId == null || !isTracking) return;
 
       try {
-        // Cek internet
-        final connectivity = await Geolocator.isLocationServiceEnabled(); // generic check or network lookup
-        // We will perform a direct check to baseUrl API using timeout
-        final SharedPreferences prefs = await SharedPreferences.getInstance();
-        final token = prefs.getString('token');
-        if (token == null || token.isEmpty) return;
+        final isOnline = await hasInternetConnection();
+        if (isOnline) {
+          final SharedPreferences prefs = await SharedPreferences.getInstance();
+          final token = prefs.getString('token');
+          if (token == null || token.isEmpty) return;
 
-        final url = Uri.parse('$baseUrl/orders/$orderId/offline-track-sync');
-        final clientCacheId = '${orderId}_bg_sync_${DateTime.now().millisecondsSinceEpoch}';
+          // 1. Sync pending cache if exists
+          final queue = await readPendingQueue();
+          if (queue.isNotEmpty) {
+            final remaining = <Map<String, dynamic>>[];
+            for (var item in queue) {
+              try {
+                await sendCacheItemToServer(item, token);
+              } on OrderNotSyncableException {
+                if (item['order_id'] == orderId) {
+                  rethrow;
+                }
+                continue; // drop other order items
+              } catch (e) {
+                final err = e.toString().toLowerCase();
+                if (err.contains('gpx_too_large') || err.contains('http 413') || err.contains('order_status_not_syncable')) {
+                  continue; // drop this item
+                }
+                remaining.add(item);
+              }
+            }
+            await writePendingQueue(remaining);
+            service.invoke('cacheUpdate', {
+              'count': remaining.length,
+              'info': remaining.isEmpty ? 'Sinkron selesai. Semua cache terkirim.' : 'Sebagian data belum terkirim (${remaining.length} antrean).',
+            });
+          }
 
-        final response = await http.post(
-          url,
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $token',
-          },
-          body: jsonEncode({
-            'client_cache_id': clientCacheId,
-            'source': 'mobile_background_tracking',
-            'cached_at': DateTime.now().toIso8601String(),
-            'point_count': trackedPoints.length,
-            'distance_meters': trackedDistanceMeters,
-            'duration_seconds': accumulatedDurationSeconds,
-            'gpx_content': buildTrackedGpx(),
-          }),
-        ).timeout(const Duration(seconds: 10));
+          // 2. Sync the latest track real-time if there is a location change since the last sync
+          if (trackedPoints.isNotEmpty && trackedPoints.length > lastSyncedPointCount) {
+            final clientCacheId = '${orderId}_realtime_${DateTime.now().millisecondsSinceEpoch}';
+            await sendCacheItemToServer({
+              'order_id': orderId,
+              'client_cache_id': clientCacheId,
+              'cached_at': DateTime.now().toIso8601String(),
+              'point_count': trackedPoints.length,
+              'distance_meters': trackedDistanceMeters,
+              'duration_seconds': accumulatedDurationSeconds,
+              'gpx_content': buildTrackedGpx(),
+            }, token);
 
-        if (response.statusCode >= 200 && response.statusCode < 300) {
-          debugPrint('Background tracking auto-sync success.');
+            lastSyncedPointCount = trackedPoints.length;
+            lastCachedPointCount = trackedPoints.length;
+
+            final queue = await readPendingQueue();
+            service.invoke('cacheUpdate', {
+              'count': queue.length,
+              'info': 'Lokasi disinkronkan real-time.',
+            });
+          }
+        } else {
+          // OFFLINE: Cache current track if we have at least 1 point and it changed since last cache
+          if (trackedPoints.isNotEmpty && trackedPoints.length > lastCachedPointCount) {
+            final queue = await readPendingQueue();
+            
+            final clientCacheId = '${orderId}_${DateTime.now().millisecondsSinceEpoch}';
+            queue.add({
+              'cache_id': clientCacheId,
+              'order_id': orderId,
+              'mountain_name': mountainName,
+              'cached_at': DateTime.now().toIso8601String(),
+              'point_count': trackedPoints.length,
+              'distance_meters': trackedDistanceMeters,
+              'duration_seconds': accumulatedDurationSeconds,
+              'gpx_content': buildTrackedGpx(),
+            });
+            await writePendingQueue(queue);
+
+            lastCachedPointCount = trackedPoints.length;
+
+            service.invoke('cacheUpdate', {
+              'count': queue.length,
+              'info': 'Koneksi offline. Track disimpan ke cache lokal (${queue.length} antrean).',
+            });
+          }
         }
+      } on OrderNotSyncableException {
+        forceCheckoutFlow();
       } catch (e) {
-        debugPrint('Background tracking auto-sync failed: $e');
+        debugPrint('Sync cycle exception: $e');
       }
     }
 
@@ -252,13 +453,22 @@ class BackgroundTrackingService {
 
     // Start location and timer listeners
     void startTrackingFlow() async {
-      await positionSubscription?.cancel();
-      durationTimer?.cancel();
-      syncTimer?.cancel();
+      // Cancel previous streams/timers synchronously to prevent race conditions
+      if (positionSubscription != null) {
+        positionSubscription!.cancel();
+        positionSubscription = null;
+      }
+      if (durationTimer != null) {
+        durationTimer!.cancel();
+        durationTimer = null;
+      }
+      if (syncTimer != null) {
+        syncTimer!.cancel();
+        syncTimer = null;
+      }
 
       trackingStartedAt = DateTime.now();
       isTracking = true;
-      await saveActiveTrack();
 
       // GPS Position Listener
       positionSubscription = Geolocator.getPositionStream(
@@ -320,12 +530,15 @@ class BackgroundTrackingService {
         });
       });
 
-      // Auto-Sync Periodik (Setiap 30 detik agar penjaga jalur bisa melihat update realtime)
-      syncTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
-        trySyncWithServer();
+      // Auto-Sync & Cache Periodik setiap 10 detik
+      syncTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
+        processSyncCycle();
       });
 
       updateNotification();
+
+      // Perform file save asynchronously at the end
+      await saveActiveTrack();
     }
 
     // Stop location tracking
@@ -340,6 +553,8 @@ class BackgroundTrackingService {
 
       isTracking = false;
       await saveActiveTrack();
+      
+      await service.stopSelf();
     }
 
     // Listen to UI initialization events
@@ -370,4 +585,11 @@ class BackgroundTrackingService {
       startTrackingFlow();
     }
   }
+}
+
+class OrderNotSyncableException implements Exception {
+  final String message;
+  OrderNotSyncableException([this.message = "Order status is no longer syncable (checkout detected)."]);
+  @override
+  String toString() => message;
 }

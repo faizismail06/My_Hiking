@@ -12,26 +12,26 @@ import 'package:myhiking/presentation/home_screen/models/recommendation_model.da
 import 'package:myhiking/presentation/data_profile_screen/models/res_user.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// const String baseUrl = String.fromEnvironment(
-//   'API_BASE_URL',
-//   defaultValue: 'http://103.93.132.167/api',
-// );
-
-// const String chatbotBaseUrl = String.fromEnvironment(
-//   'CHATBOT_BASE_URL',
-//   defaultValue: 'http://103.93.132.167/chatbot/api',
-// );
-
-// Development
 const String baseUrl = String.fromEnvironment(
   'API_BASE_URL',
-  defaultValue: 'http://127.0.0.1:8000/api',
+  defaultValue: 'http://103.93.132.167/api',
 );
 
 const String chatbotBaseUrl = String.fromEnvironment(
   'CHATBOT_BASE_URL',
-  defaultValue: 'http://127.0.0.1:5000/api',
+  defaultValue: 'http://103.93.132.167/chatbot/api',
 );
+
+// // Development
+// const String baseUrl = String.fromEnvironment(
+//   'API_BASE_URL',
+//   defaultValue: 'http://127.0.0.1:8000/api',
+// );
+
+// const String chatbotBaseUrl = String.fromEnvironment(
+//   'CHATBOT_BASE_URL',
+//   defaultValue: 'http://127.0.0.1:5000/api',
+// );
 
 
 class ApiActionException implements Exception {

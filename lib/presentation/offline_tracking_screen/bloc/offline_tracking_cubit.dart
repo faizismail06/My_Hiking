@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
@@ -103,7 +104,9 @@ class OfflineTrackingCubit extends Cubit<OfflineTrackingState> {
     emit(state.copyWith(
       isTracking: false,
       trackingStoppedAt: now,
-      accumulatedDuration: state.accumulatedDuration + segmentDuration,
+      accumulatedDuration: kIsWeb
+          ? state.accumulatedDuration + segmentDuration
+          : state.accumulatedDuration,
       clearTrackingStartedAt: true,
     ));
   }

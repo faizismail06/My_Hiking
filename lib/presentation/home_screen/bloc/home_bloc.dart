@@ -70,6 +70,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
             cachedFeed,
             hasCompletedExperience ? state.recommendations : const [],
             hasCompletedExperience: hasCompletedExperience,
+            isLoadingRecommended: hasCompletedExperience,
           ));
         }
       } catch (e) {
@@ -305,6 +306,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     List<RecommendationModel> recommendations, {
     required bool hasCompletedExperience,
     String? recommendationError,
+    bool isLoadingRecommended = false,
   }) {
     return state.copyWith(
       recommendedMountain: feed.recommended,
@@ -315,7 +317,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       allMountains: feed.mountains,
       baseAllMountains: feed.mountains,
       selectedProvince: null,
-      isLoadingRecommended: false,
+      isLoadingRecommended: isLoadingRecommended,
       hasCompletedExperience: hasCompletedExperience,
       homeInitialModelObj: state.homeInitialModelObj?.copyWith(
         homelistItemList: feed.mountains,
