@@ -100,7 +100,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: SingleChildScrollView(
               child: Container(
                 width: double.maxFinite,
-                padding: EdgeInsets.symmetric(horizontal: 0, vertical: 24.h),
+                padding: EdgeInsets.only(left: 0, right: 0, top: 30.h, bottom: 24.h),
                 child: Column(
                   mainAxisSize: MainAxisSize.max,
                   children: [
@@ -141,23 +141,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    userName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleLarge,
-                  ),
+                Text(
+                  userName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleLarge,
                 ),
-                Padding(
-                  padding: EdgeInsets.only(left: 0.h),
-                  child: Text(
-                    "ID : ${userId.toString()}",
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: CustomTextStyles.titleMediumOnPrimary_1,
-                  ),
+                Text(
+                  "ID : ${userId.toString()}",
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: CustomTextStyles.titleMediumOnPrimary_1,
                 ),
                 SizedBox(height: 5.h),
                 Container(
