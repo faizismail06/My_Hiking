@@ -4,7 +4,7 @@ class ImageConstant {
   static String imagePath = 'assets/images';
 
   // Landing images
-  static String img37082 = '$imagePath/pendaki_landing2.png';
+  static String img37082 = '$imagePath/pendaki_landing3.png';
 
   // Login images
   static String imgLock = '$imagePath/img_lock.svg';
