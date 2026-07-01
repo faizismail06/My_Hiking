@@ -130,9 +130,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         clipBehavior: Clip.none,
         children: [
           Container(
-            width: 224.h,
+            width: 245.h,
             margin: EdgeInsets.only(bottom: 26.h),
-            padding: EdgeInsets.only(left: 58.h, top: 10.h, bottom: 10.h),
+            padding: EdgeInsets.only(left: 90.h, top: 10.h, bottom: 10.h),
             decoration: BoxDecoration(
               color: theme.colorScheme.primary.withOpacity(0.7),
             ),
