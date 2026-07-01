@@ -108,6 +108,9 @@ class OfflineTrackingCubit extends Cubit<OfflineTrackingState> {
           ? state.accumulatedDuration + segmentDuration
           : state.accumulatedDuration,
       clearTrackingStartedAt: true,
+      gpxRoutePoints: const [],
+      gpxWaypoints: const [],
+      clearSelectedGpxName: true,
     ));
   }
 

@@ -55,7 +55,7 @@ class ResetPageTwoScreen extends StatelessWidget {
                   SizedBox(height: 74.h),
                   CustomImageView(
                     imagePath: ImageConstant.img37081,
-                    height: 192.h,
+                    height: 200.h,
                     width: double.maxFinite,
                     margin: EdgeInsets.only(
                       left: 4.h,

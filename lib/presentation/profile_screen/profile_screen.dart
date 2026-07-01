@@ -96,18 +96,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return SafeArea(
             child: Scaffold(
           backgroundColor: appTheme.gray50,
-          body: SingleChildScrollView(
-            child: Container(
-              width: double.maxFinite,
-              padding: EdgeInsets.symmetric(horizontal: 0, vertical: 24.h),
-              child: Column(
-                mainAxisSize: MainAxisSize.max,
-                children: [
-                  _buildProfileHeader(context),
-                  SizedBox(height: 32.h),
-                  _buildProfileSettings(context),
-                  SizedBox(height: 20.h),
-                ],
+          body: ClipRect(
+            child: SingleChildScrollView(
+              child: Container(
+                width: double.maxFinite,
+                padding: EdgeInsets.symmetric(horizontal: 0, vertical: 24.h),
+                child: Column(
+                  mainAxisSize: MainAxisSize.max,
+                  children: [
+                    _buildProfileHeader(context),
+                    SizedBox(height: 32.h),
+                    _buildProfileSettings(context),
+                    SizedBox(height: 20.h),
+                  ],
+                ),
               ),
             ),
           ),
@@ -125,6 +127,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       width: double.maxFinite,
       child: Stack(
         alignment: Alignment.bottomRight,
+        clipBehavior: Clip.none,
         children: [
           Container(
             width: 224.h,
@@ -197,11 +200,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
           ),
-          CustomImageView(
-            imagePath: ImageConstant.imgAmping91,
-            height: 164.h,
-            width: 228.h,
-            alignment: Alignment.centerLeft,
+          Positioned(
+            left: -73.h,
+            top: -50.h,
+            child: CustomImageView(
+              imagePath: ImageConstant.imgAmping91,
+              height: 230.h,
+              width: 300.h,
+            ),
           ),
         ],
       ),

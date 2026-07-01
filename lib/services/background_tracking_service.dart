@@ -552,6 +552,8 @@ class BackgroundTrackingService {
       syncTimer = null;
 
       isTracking = false;
+      selectedGpxName = null;
+      gpxRoutePoints = [];
       await saveActiveTrack();
       
       await service.stopSelf();

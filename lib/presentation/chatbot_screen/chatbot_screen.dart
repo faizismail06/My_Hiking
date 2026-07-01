@@ -1302,7 +1302,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                   const SizedBox(height: 12),
                   ConstrainedBox(
                     constraints: BoxConstraints(
-                      maxHeight: MediaQuery.of(context).size.height * 0.45,
+                      maxHeight: MediaQuery.sizeOf(context).height * 0.45,
                     ),
                     child: ListView.separated(
                       shrinkWrap: true,
@@ -1502,7 +1502,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     }
 
     return Container(
-      width: MediaQuery.of(context).size.width * 0.82,
+      width: MediaQuery.sizeOf(context).width * 0.82,
       margin: EdgeInsets.only(top: 10.h, bottom: 4.h),
       child: Wrap(
         spacing: 8.h,
@@ -1567,7 +1567,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.9,
+          maxWidth: MediaQuery.sizeOf(context).width * 0.9,
         ),
         margin: EdgeInsets.only(top: 8.h, bottom: 8.h, left: 16.h, right: 16.h),
         child: Row(
@@ -1844,7 +1844,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                 },
                 borderRadius: BorderRadius.circular(16.h),
                 child: Container(
-                  width: MediaQuery.of(context).size.width * 0.4,
+                  width: MediaQuery.sizeOf(context).width * 0.4,
                   padding: EdgeInsets.all(16.h),
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -2046,11 +2046,13 @@ class _ChatbotScreenState extends State<ChatbotScreen>
           SizedBox(
             width: 150.h,
             height: 150.h,
-            child: Lottie.asset(
-              'assets/lottie/Siri.json',
-              fit: BoxFit.contain,
-              repeat: true,
-              animate: true,
+            child: RepaintBoundary(
+              child: Lottie.asset(
+                'assets/lottie/Siri.json',
+                fit: BoxFit.contain,
+                repeat: true,
+                animate: true,
+              ),
             ),
           ),
           SizedBox(height: 16.h),
@@ -2522,7 +2524,7 @@ class MountainCardsCarousel extends StatelessWidget {
               : '';
 
           return Container(
-            width: MediaQuery.of(context).size.width * 0.44,
+            width: MediaQuery.sizeOf(context).width * 0.44,
             margin: EdgeInsets.only(right: 12.h, bottom: 8.h),
             decoration: BoxDecoration(
               color: Colors.white,
@@ -2750,7 +2752,7 @@ class RouteCardsCarousel extends StatelessWidget {
           }
 
           return Container(
-            width: MediaQuery.of(context).size.width * 0.44,
+            width: MediaQuery.sizeOf(context).width * 0.44,
             margin: EdgeInsets.only(right: 12.h, bottom: 8.h),
             decoration: BoxDecoration(
               color: Colors.white,

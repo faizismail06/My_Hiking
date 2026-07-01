@@ -1094,7 +1094,7 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
     }
 
     if (context.mounted) {
-      AppLoadingOverlay.show(context, message: 'Memulai tracking GPS...');
+      AppLoadingOverlay.show(context, message: 'Memulai tracking GPS...', asPopup: true);
     }
 
     try {
@@ -1384,7 +1384,7 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
       return 'Aktifkan Lokasi & Buka Offline Map';
     }
     return state.isTracking
-        ? 'Stop Tracking & Simpan ke Cache'
+        ? 'Stop Tracking'
         : 'Mulai Tracking';
   }
 

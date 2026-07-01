@@ -54,7 +54,7 @@ class ResetKirimEmailScreen extends StatelessWidget {
                 SizedBox(height: 74.h),
                 CustomImageView(
                   imagePath: ImageConstant.img37081,
-                  height: 192.h,
+                  height: 200.h,
                   width: double.maxFinite,
                   margin: EdgeInsets.symmetric(horizontal: 10.h),
                 ),
