@@ -517,6 +517,7 @@ class _TrailScreenState extends State<TrailScreen> {
         final allowed = await _guardBeforeBooking();
         if (!allowed) return;
 
+        bool hasConfirmedRisk = false;
         final dss = trailModel.dss;
         if (dss != null &&
             (dss.riskLevel == 'caution' || dss.riskLevel == 'high_risk')) {
@@ -550,6 +551,7 @@ class _TrailScreenState extends State<TrailScreen> {
                 );
                 // null → user tapped Batal or dismissed → abort navigation
                 if (result == null) return;
+                hasConfirmedRisk = true;
               }
             }
           }
@@ -564,7 +566,7 @@ class _TrailScreenState extends State<TrailScreen> {
               child: BookingScreen(
                 jalurId: widget.jalurId, // Use widget to access jalurId
                 idGunung: widget.idGunung, // Use widget to access idGunung
-                // userId: userId,
+                forceContinue: hasConfirmedRisk,
               ),
             ),
           ),

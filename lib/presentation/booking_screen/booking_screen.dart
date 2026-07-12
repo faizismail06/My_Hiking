@@ -14,8 +14,13 @@ import 'models/booking_model.dart';
 class BookingScreen extends StatefulWidget {
   final int? jalurId;
   final int? idGunung;
-  const BookingScreen(
-      {super.key, required this.jalurId, required this.idGunung});
+  final bool forceContinue;
+  const BookingScreen({
+    super.key,
+    required this.jalurId,
+    required this.idGunung,
+    this.forceContinue = false,
+  });
 
   @override
   State<BookingScreen> createState() => _BookingScreenState();
@@ -1161,7 +1166,7 @@ class _BookingScreenState extends State<BookingScreen> {
         formattedReturnDate,
         biaya.toInt(),
         anggotaIds: anggotaIds?.isNotEmpty == true ? anggotaIds : null,
-        forceContinue: forceContinue,
+        forceContinue: forceContinue || widget.forceContinue,
       );
 
       final booking = decisionResult.booking;
