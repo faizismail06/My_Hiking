@@ -93,14 +93,15 @@ class RiskWarningDialog extends StatelessWidget {
         body: isPemula
             ? 'Jalur $routeName di $mountainName tergolong menantang '
                 'untuk pendaki pemula. Pertimbangkan persiapan lebih matang, '
-                'atau pilih rute yang lebih sesuai dengan pengalamanmu.\n\n'
-                'Apakah kamu yakin ingin melanjutkan?'
+                'atau pilih rute yang lebih sesuai dengan pengalamanmu.'
             : 'Jalur $routeName di $mountainName dinilai berisiko tinggi '
-                'berdasarkan profil kamu dan kondisi saat ini.\n\n'
-                'Pastikan kamu telah mempersiapkan diri dengan baik. '
-                'Apakah kamu ingin tetap melanjutkan?',
-        showDetailButton: true,
-        continueLabel: 'Lanjut Anyway',
+                'berdasarkan profil kamu dan kondisi saat ini. '
+                'Pastikan kamu telah mempersiapkan diri dengan baik.',
+        question: isPemula
+            ? 'Apakah kamu yakin ingin melanjutkan?'
+            : 'Apakah kamu ingin tetap melanjutkan?',
+        showDetailButton: false,
+        continueLabel: 'Lanjut',
       );
     }
 
@@ -121,6 +122,7 @@ class RiskWarningDialog extends StatelessWidget {
                 'Silakan lanjutkan jika kamu merasa siap.'
             : 'Jalur $routeName di $mountainName membutuhkan perhatian '
                 'ekstra. Pastikan kondisi fisik dan perlengkapanmu memadai.',
+        question: 'Apakah kamu yakin ingin melanjutkan?',
         showDetailButton: false,
         continueLabel: 'Lanjut',
       );
@@ -135,6 +137,7 @@ class RiskWarningDialog extends StatelessWidget {
       badgeColor: const Color(0xFF1B8A5A),
       title: 'Informasi Jalur',
       body: 'Perhatikan kondisi cuaca dan fisik sebelum mendaki.',
+      question: 'Apakah kamu yakin ingin melanjutkan?',
       showDetailButton: false,
       continueLabel: 'Lanjut',
     );
@@ -151,6 +154,7 @@ class _RiskConfig {
   final Color badgeColor;
   final String title;
   final String body;
+  final String? question;
   final bool showDetailButton;
   final String continueLabel;
 
@@ -162,6 +166,7 @@ class _RiskConfig {
     required this.badgeColor,
     required this.title,
     required this.body,
+    this.question,
     required this.showDetailButton,
     required this.continueLabel,
   });
@@ -183,87 +188,79 @@ class _DialogContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(24.h),
+      padding: EdgeInsets.symmetric(horizontal: 20.h, vertical: 24.h),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24.h),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
-            blurRadius: 32,
+            color: Colors.black.withOpacity(0.12),
+            blurRadius: 24,
             offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // ── Header row ──────────────────────────────────────────────────
-          Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(10.h),
-                decoration: BoxDecoration(
-                  color: config.iconBgColor,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(config.icon, color: config.iconColor, size: 26.h),
-              ),
-              SizedBox(width: 12.h),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Badge
-                    Container(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 8.h, vertical: 3.h),
-                      decoration: BoxDecoration(
-                        color: config.badgeColor.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(6.h),
-                      ),
-                      child: Text(
-                        config.badgeLabel,
-                        style: TextStyle(
-                          color: config.badgeColor,
-                          fontSize: 10.fSize,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.4,
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 4.h),
-                    // Title
-                    Text(
-                      config.title,
-                      style: TextStyle(
-                        fontSize: 15.fSize,
-                        fontWeight: FontWeight.w800,
-                        color: const Color(0xFF1A1A2E),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          // ── Centered Warning Icon ───────────────────────────────────────
+          Container(
+            padding: EdgeInsets.all(12.h),
+            decoration: BoxDecoration(
+              color: config.iconBgColor,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(config.icon, color: config.iconColor, size: 30.h),
           ),
+          SizedBox(height: 12.h),
 
-          SizedBox(height: 16.h),
+          // ── Centered Badge ──────────────────────────────────────────────
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 10.h, vertical: 4.h),
+            decoration: BoxDecoration(
+              color: config.badgeColor.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(6.h),
+            ),
+            child: Text(
+              config.badgeLabel,
+              style: TextStyle(
+                color: config.badgeColor,
+                fontSize: 11.fSize,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.4,
+              ),
+            ),
+          ),
+          SizedBox(height: 12.h),
 
-          // ── Route info chip ─────────────────────────────────────────────
+          // ── Centered Bold Title ─────────────────────────────────────────
+          Text(
+            config.title,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 18.fSize,
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF1A1A2E),
+              height: 1.3,
+            ),
+          ),
+          SizedBox(height: 14.h),
+
+          // ── Centered Route Info Chip ────────────────────────────────────
           Container(
             width: double.infinity,
-            padding: EdgeInsets.symmetric(horizontal: 12.h, vertical: 8.h),
+            padding: EdgeInsets.symmetric(horizontal: 14.h, vertical: 10.h),
             decoration: BoxDecoration(
-              color: const Color(0xFFF5F5F5),
+              color: const Color(0xFFF5F5F7),
               borderRadius: BorderRadius.circular(10.h),
             ),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.route_rounded, size: 14.h, color: Colors.grey[600]),
+                Icon(Icons.route_rounded, size: 16.h, color: Colors.grey[600]),
                 SizedBox(width: 6.h),
-                Expanded(
+                Flexible(
                   child: Text(
                     '${recommendation.routeName} — ${recommendation.mountainName}',
                     style: TextStyle(
@@ -277,32 +274,53 @@ class _DialogContent extends StatelessWidget {
               ],
             ),
           ),
-
           SizedBox(height: 16.h),
 
-          // ── Body message ────────────────────────────────────────────────
+          // ── Left-aligned Body Message ────────────────────────────────────
           Text(
             config.body,
             style: TextStyle(
-              fontSize: 13.fSize,
+              fontSize: 12.fSize,
               color: Colors.grey[700],
               height: 1.5,
             ),
           ),
+          SizedBox(height: 16.h),
 
-          SizedBox(height: 24.h),
+          // ── Divider ─────────────────────────────────────────────────────
+          Divider(
+            color: Colors.grey[200],
+            thickness: 1.h,
+            height: 1.h,
+          ),
+          SizedBox(height: 16.h),
 
-          // ── Action buttons ──────────────────────────────────────────────
+          // ── Centered Bold Question ──────────────────────────────────────
+          if (config.question != null) ...[
+            Text(
+              config.question!,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12.fSize,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF1A1A2E),
+              ),
+            ),
+            SizedBox(height: 20.h),
+          ],
+
+          // ── Symmetric Action Buttons ────────────────────────────────────
           Row(
             children: [
-              // Cancel button
+              // Batal Button
               Expanded(
                 child: OutlinedButton(
                   onPressed: () => Navigator.of(context).pop(null),
                   style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: Colors.grey.withOpacity(0.4)),
+                    side: BorderSide(color: Colors.grey[300]!, width: 1.5.h),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12.h)),
+                      borderRadius: BorderRadius.circular(12.h),
+                    ),
                     padding: EdgeInsets.symmetric(vertical: 12.h),
                   ),
                   child: Text(
@@ -315,35 +333,9 @@ class _DialogContent extends StatelessWidget {
                   ),
                 ),
               ),
+              SizedBox(width: 10.h),
 
-              // Detail button (high_risk only)
-              if (config.showDetailButton) ...[
-                SizedBox(width: 8.h),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop('detail'),
-                    style: OutlinedButton.styleFrom(
-                      side:
-                          BorderSide(color: config.iconColor.withOpacity(0.6)),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12.h)),
-                      padding: EdgeInsets.symmetric(vertical: 12.h),
-                    ),
-                    child: Text(
-                      'Lihat Risiko',
-                      style: TextStyle(
-                        fontSize: 12.fSize,
-                        fontWeight: FontWeight.w700,
-                        color: config.iconColor,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-
-              SizedBox(width: 8.h),
-
-              // Continue button
+              // Lanjut Button
               Expanded(
                 child: ElevatedButton(
                   onPressed: () => Navigator.of(context).pop('continue'),
@@ -352,7 +344,8 @@ class _DialogContent extends StatelessWidget {
                     foregroundColor: Colors.white,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12.h)),
+                      borderRadius: BorderRadius.circular(12.h),
+                    ),
                     padding: EdgeInsets.symmetric(vertical: 12.h),
                   ),
                   child: Text(
