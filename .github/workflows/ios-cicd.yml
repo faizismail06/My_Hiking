@@ -41,9 +41,17 @@ jobs:
       - name: Build iOS app
         run: flutter build ios --release --no-codesign --dart-define=GOOGLE_CLIENT_ID=861064220732-vcikg3u9lb7l1ub4it3i902nt599lh7n.apps.googleusercontent.com
 
+      - name: Package IPA
+        working-directory: build/ios/iphoneos
+        run: |
+          rm -rf Payload
+          mkdir -p Payload
+          cp -R Runner.app Payload/
+          zip -qq -r -9 MyHiking.ipa Payload
+
       - name: Upload iOS build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: myhiking-ios-release
-          path: build/ios/iphoneos/Runner.app
+          name: myhiking-ios-release-ipa
+          path: build/ios/iphoneos/MyHiking.ipa
           if-no-files-found: error
