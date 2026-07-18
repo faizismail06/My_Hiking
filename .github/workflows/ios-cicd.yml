@@ -1,0 +1,49 @@
+name: iOS CI/CD
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - lib/**
+      - ios/**
+      - pubspec.yaml
+      - .github/workflows/ios-cicd.yml
+
+permissions:
+  contents: read
+
+jobs:
+  build-ios:
+    name: Build iOS Release
+    runs-on: macos-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Get Flutter dependencies
+        run: flutter pub get
+
+      - name: Install iOS pods
+        working-directory: ios
+        run: pod install --repo-update
+
+      - name: Build iOS app
+        run: flutter build ios --release --no-codesign --dart-define=GOOGLE_CLIENT_ID=861064220732-vcikg3u9lb7l1ub4it3i902nt599lh7n.apps.googleusercontent.com
+
+      - name: Upload iOS build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: myhiking-ios-release
+          path: build/ios/iphoneos/Runner.app
+          if-no-files-found: error
