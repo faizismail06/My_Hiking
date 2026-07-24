@@ -54,7 +54,8 @@ class RiwayatTransaksiBloc
         return status == 'selesai' ||
             status == 'expired' ||
             status == 'cancel requested' ||
-            status == 'cancelled';
+            status == 'cancelled' ||
+            status == 'dibatalkan';
       }).toList()
         ..sort((a, b) {
           final aId = int.tryParse(a['id'].toString()) ?? 0;
