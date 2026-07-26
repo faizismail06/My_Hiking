@@ -232,25 +232,34 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
       final currentResponse = results[0];
       final forecastResponse = results[1];
 
-      if (currentResponse['success'] == true &&
-          forecastResponse['success'] == true) {
+      WeatherModel? current;
+      WeatherForecastModel? forecast;
+
+      if (currentResponse['success'] == true && currentResponse['data'] != null) {
+        current = WeatherModel.fromJson(currentResponse['data']);
+      }
+
+      if (forecastResponse['success'] == true && forecastResponse['data'] != null) {
+        forecast = WeatherForecastModel.fromJson(forecastResponse['data']);
+      }
+
+      if (mounted) {
         setState(() {
-          _currentWeather = WeatherModel.fromJson(currentResponse['data']);
-          _forecast = WeatherForecastModel.fromJson(forecastResponse['data']);
+          _currentWeather = current;
+          _forecast = forecast;
           _isLoading = false;
-        });
-      } else {
-        setState(() {
-          _isLoading = false;
-          _error =
-              forecastResponse['message'] ?? 'Gagal memuat prakiraan cuaca';
+          if (_currentWeather == null && _forecast == null) {
+            _error = forecastResponse['message'] ?? 'Gagal memuat data cuaca dari OpenWeather';
+          }
         });
       }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _error = 'Gagal memuat prakiraan cuaca';
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _error = 'Gagal memuat data cuaca ($e)';
+        });
+      }
     }
   }
 
@@ -433,17 +442,15 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
       margin: EdgeInsets.all(16.h),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20.h),
-        child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
-          child: Container(
-            padding: EdgeInsets.all(20.h),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(20.h),
-              border:
-                  Border.all(color: Colors.white.withOpacity(0.2), width: 1),
-            ),
-            child: Column(
+        child: Container(
+          padding: EdgeInsets.all(20.h),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.35),
+            borderRadius: BorderRadius.circular(20.h),
+            border:
+                Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+          ),
+          child: Column(
               children: [
                 Row(
                   children: [
@@ -512,7 +519,6 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
             ),
           ),
         ),
-      ),
     );
   }
 
@@ -568,13 +574,14 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
                   padding: EdgeInsets.symmetric(horizontal: 8.h, vertical: 8.h),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? Colors.white.withOpacity(0.3)
-                        : Colors.white.withOpacity(0.1),
+                        ? Colors.black.withOpacity(0.50)
+                        : Colors.black.withOpacity(0.35),
                     borderRadius: BorderRadius.circular(16.h),
                     border: Border.all(
                       color: isSelected
                           ? Colors.white
-                          : Colors.white.withOpacity(0.2),
+                          : Colors.white.withOpacity(0.3),
+                      width: isSelected ? 2 : 1,
                     ),
                   ),
                   child: Column(
@@ -587,9 +594,15 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
                           day.isToday ? 'Hari Ini' : day.dayName,
                           maxLines: 1,
                           style: TextStyle(
-                            fontSize: 11.fSize,
-                            fontWeight: FontWeight.w600,
+                            fontSize: 12.fSize,
+                            fontWeight: FontWeight.bold,
                             color: Colors.white,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black.withOpacity(0.9),
+                                blurRadius: 4,
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -605,9 +618,15 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
                           '${day.maxTemp.toStringAsFixed(0)}°/${day.minTemp.toStringAsFixed(0)}°',
                           maxLines: 1,
                           style: TextStyle(
-                            fontSize: 10.fSize,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.white.withOpacity(0.9),
+                            fontSize: 12.fSize,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black.withOpacity(0.9),
+                                blurRadius: 4,
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -621,7 +640,8 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
 
         // Selected day details
         if (_forecast!.daily.isNotEmpty)
-          _buildSelectedDayDetails(_forecast!.daily[_selectedDayIndex]),
+          _buildSelectedDayDetails(_forecast!.daily[
+              (_selectedDayIndex < _forecast!.daily.length) ? _selectedDayIndex : 0]),
       ],
     );
   }
@@ -631,18 +651,17 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
       margin: EdgeInsets.all(16.h),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16.h),
-        child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
-          child: Container(
-            padding: EdgeInsets.all(16.h),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(16.h),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.2),
-              ),
+        child: Container(
+          padding: EdgeInsets.all(16.h),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.35),
+            borderRadius: BorderRadius.circular(16.h),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.3),
+              width: 1,
             ),
-            child: Column(
+          ),
+          child: Column(
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -725,7 +744,6 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
             ),
           ),
         ),
-      ),
     );
   }
 
@@ -744,6 +762,12 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
           style: TextStyle(
             fontSize: 11.fSize,
             color: Colors.white70,
+            shadows: [
+              Shadow(
+                color: Colors.black.withOpacity(0.8),
+                blurRadius: 4,
+              ),
+            ],
           ),
         ),
         SizedBox(height: 2.h),
@@ -751,8 +775,14 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
           value,
           style: TextStyle(
             fontSize: 13.fSize,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.bold,
             color: Colors.white,
+            shadows: [
+              Shadow(
+                color: Colors.black.withOpacity(0.9),
+                blurRadius: 4,
+              ),
+            ],
           ),
           textAlign: TextAlign.center,
         ),
@@ -813,11 +843,11 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
                 padding: EdgeInsets.symmetric(horizontal: 8.h, vertical: 8.h),
                 decoration: BoxDecoration(
                   color: isNow
-                      ? Colors.white.withOpacity(0.3)
-                      : Colors.white.withOpacity(0.1),
+                      ? Colors.black.withOpacity(0.55)
+                      : Colors.black.withOpacity(0.35),
                   borderRadius: BorderRadius.circular(12.h),
                   border: Border.all(
-                    color: isNow ? Colors.white : Colors.white.withOpacity(0.2),
+                    color: isNow ? Colors.white : Colors.white.withOpacity(0.3),
                     width: isNow ? 2 : 1,
                   ),
                 ),
@@ -831,9 +861,15 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
                         isNow ? 'Sekarang' : hour.formattedTime,
                         maxLines: 1,
                         style: TextStyle(
-                          fontSize: 10.fSize,
-                          fontWeight: isNow ? FontWeight.bold : FontWeight.w500,
-                          color: isNow ? Colors.white : Colors.white70,
+                          fontSize: 11.fSize,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black.withOpacity(0.9),
+                              blurRadius: 4,
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -849,6 +885,12 @@ class _WeatherForecastPageState extends State<WeatherForecastPage> {
                         fontSize: 14.fSize,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
+                        shadows: [
+                          Shadow(
+                            color: Colors.black.withOpacity(0.9),
+                            blurRadius: 4,
+                          ),
+                        ],
                       ),
                     ),
                     SizedBox(height: 2.h),

@@ -148,9 +148,8 @@ class _WeatherItemWidgetState extends State<WeatherItemWidget> {
                     Text(
                       widget.mountain.namaGunung?.toUpperCase() ?? '-',
                       style: TextStyle(
-                          fontFamily: 'Serif',
                           color: Colors.white,
-                          fontSize: 20.fSize,
+                          fontSize: 18.fSize,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 0.5,
                           shadows: [
@@ -213,22 +212,19 @@ class _WeatherItemWidgetState extends State<WeatherItemWidget> {
       {required Widget child, required double width, required double height}) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(16.h),
-      child: BackdropFilter(
-        filter: ui.ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
-        child: Container(
-          width: width,
-          height: height,
-          padding: EdgeInsets.symmetric(horizontal: 4.h, vertical: 4.h),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(16.h),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.2),
-              width: 1,
-            ),
+      child: Container(
+        width: width,
+        height: height,
+        padding: EdgeInsets.symmetric(horizontal: 4.h, vertical: 4.h),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.35),
+          borderRadius: BorderRadius.circular(16.h),
+          border: Border.all(
+            color: Colors.white.withOpacity(0.3),
+            width: 1,
           ),
-          child: child,
         ),
+        child: child,
       ),
     );
   }
