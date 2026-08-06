@@ -4,6 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:myhiking/api/api_service.dart';
+import 'package:myhiking/core/utils/ktp_ocr_parser.dart';
+import 'package:myhiking/presentation/data_profile_screen/widgets/ktp_frame_border_painter.dart';
+import 'package:myhiking/presentation/face_registration_screen/face_registration_screen.dart';
 import '../../core/app_export.dart';
 import 'bloc/data_profile_bloc.dart';
 import 'package:myhiking/widgets/custom_elevated_button.dart';
@@ -41,6 +44,13 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
   String userEmail = '';
   String userPassword = '';
   bool isLoading = true;
+  bool isPhoneVerified = false;
+  bool isEmergencyPhoneVerified = false;
+  bool isFaceVerified = false;
+  String? facePhotoUrl;
+  String? ktpPhotoUrl;
+  bool _hasPromptedFaceVerification = false;
+
   String? _fileNameIdentity; // Menyimpan nama file yang diunggah
   String? _filePathIdentity;
   Uint8List? _fileBytesIdentity;
@@ -57,36 +67,71 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
   Future<void> _getUser() async {
     final token = await ApiService().getToken();
 
-    // Cek apakah token null atau kosong
     if (token == null || token.isEmpty) {
-      // Jika token tidak tersedia, tampilkan pesan atau ambil tindakan lain
-      // print("Token is null or empty");
       if (mounted) {
         setState(() {
-          isLoading =
-              false; // Menyelesaikan status loading jika token tidak ada
+          isLoading = false;
         });
       }
-      return; // Keluar dari fungsi jika token tidak ada
+      return;
     }
-
-    // print("Token: $token"); // Debugging, pastikan token ada
 
     try {
       final response = await ApiService().getUser(token);
-      if (response['success']) {
+      if (response['success'] == true) {
         if (mounted) {
+          final data = response['data'];
+          final bool verified = data['is_face_verified'] == true || 
+                                 data['is_face_verified'] == 1 || 
+                                 data['is_face_verified'].toString() == '1' || 
+                                 data['is_face_verified'].toString() == 'true';
+          final bool phoneVerified = data['is_phone_verified'] == true ||
+                                     data['is_phone_verified'] == 1 ||
+                                     data['is_phone_verified'].toString() == '1' ||
+                                     data['phone_verified_at'] != null;
+          final bool emergencyVerified = data['is_emergency_phone_verified'] == true ||
+                                      data['is_emergency_phone_verified'] == 1 ||
+                                      data['is_emergency_phone_verified'].toString() == '1';
+
           setState(() {
-            userId1 = response['data']['id'];
-            userName = response['data']['name'];
-            userEmail = response['data']['email'];
-            // userPassword = response['data']['password'];
+            userId1 = data['id'] != null ? (data['id'] is int ? data['id'] : int.tryParse(data['id'].toString()) ?? widget.userId) : widget.userId;
+            userName = data['name'] ?? '';
+            userEmail = data['email'] ?? '';
+            isFaceVerified = verified;
+            isPhoneVerified = phoneVerified;
+            isEmergencyPhoneVerified = emergencyVerified;
+            if (data['face_photo_path'] != null) {
+              facePhotoUrl = '${baseUrl.replaceAll('/api', '')}/storage/${data['face_photo_path']}';
+            }
+            if (data['profile_picture'] != null && data['profile_picture'].toString().isNotEmpty && data['profile_picture'].toString() != 'null') {
+              final String path = data['profile_picture'].toString();
+              ktpPhotoUrl = path.startsWith('http') ? path : '${baseUrl.replaceAll('/api', '')}/storage/$path';
+            }
             isLoading = false;
           });
+
+          // Cek Pop-up Verifikasi Wajib
+          final bool hasEmptyKtp = _fileNameIdentity == null &&
+                                   _filePathIdentity == null &&
+                                   _fileBytesIdentity == null &&
+                                   (data['profile_picture'] == null || data['profile_picture'].toString().isEmpty || data['profile_picture'].toString() == 'null') &&
+                                   (data['nik'] == null || data['nik'].toString().isEmpty || data['nik'].toString() == 'null');
+
+          if (!_hasPromptedFaceVerification) {
+            if (!verified) {
+              _hasPromptedFaceVerification = true;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _showMandatoryFaceVerificationDialog();
+              });
+            } else if (hasEmptyKtp) {
+              _hasPromptedFaceVerification = true;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _showMandatoryKtpUploadDialog();
+              });
+            }
+          }
         }
       } else {
-        // Menangani error jika API gagal
-        // print("Error: ${response['message']}");
         if (mounted) {
           setState(() {
             isLoading = false;
@@ -94,14 +139,220 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
         }
       }
     } catch (e) {
-      // Tangani error jaringan atau kesalahan lainnya
-      // print("Error fetching user: $e");
       if (mounted) {
         setState(() {
           isLoading = false;
         });
       }
     }
+  }
+
+  void _showMandatoryFaceVerificationDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // User wajib memproses atau membatalkan
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Top Centered Icon Container
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.green.shade200, width: 2),
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.face_retouching_natural_rounded,
+                      color: Colors.green,
+                      size: 36,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Verifikasi Wajah (eKYC) Wajib',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2E7D32),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Sebelum melengkapi data diri pendaki, Anda diwajibkan melakukan Verifikasi Wajah (eKYC) terlebih dahulu. Verifikasi ini hanya dilakukan 1 KALI SAJA demi keamanan identitas pendakian Anda.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    height: 1.4,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        onPressed: () {
+                          Navigator.pop(context);
+                          Navigator.pop(context); // Kembali jika tidak ingin verifikasi sekarang
+                        },
+                        child: const Text(
+                          'Batal',
+                          style: TextStyle(
+                            color: Colors.grey,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green.shade700,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        onPressed: () async {
+                          Navigator.pop(context);
+                          final bool? isSuccess = await Navigator.push<bool>(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const FaceRegistrationScreen(),
+                            ),
+                          );
+                          if (isSuccess == true && mounted) {
+                            setState(() {
+                              isFaceVerified = true;
+                              _hasPromptedFaceVerification = false; // Allow checking for KTP empty popup
+                            });
+                            ApiService().clearUserCache();
+                            await _getUser();
+                          }
+                        },
+                        child: const FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            'Verifikasi Wajah Sekarang',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showMandatoryKtpUploadDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.green.shade200, width: 2),
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.credit_card_rounded,
+                      color: Colors.green,
+                      size: 36,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Unggah Foto KTP Wajib',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2E7D32),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Verifikasi wajah telah selesai! ✅\nSilakan unggah foto KTP Anda pada bingkai untuk membaca NIK, Tanggal Lahir, & Alamat secara otomatis oleh AI OCR.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey.shade700,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Nanti', style: TextStyle(color: Colors.grey)),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green.shade700,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _pickKtpFile();
+                        },
+                        child: const Text('Unggah KTP', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Widget build(BuildContext context) {
@@ -138,6 +389,7 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
+                                  _buildEkycStatusBanner(context),
                                   Text(
                                     "lbl_nama_lengkap".tr,
                                     maxLines: 1,
@@ -275,13 +527,66 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
     });
   }
 
+  Widget _buildEkycStatusBanner(BuildContext context) {
+    if (isFaceVerified) {
+      return const SizedBox.shrink();
+    }
+    return Container(
+      margin: EdgeInsets.only(bottom: 16.h),
+      padding: EdgeInsets.all(12.h),
+      decoration: BoxDecoration(
+        color: Colors.amber.shade50,
+        borderRadius: BorderRadius.circular(12.h),
+        border: Border.all(color: Colors.amber.shade700, width: 1.5),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.warning_amber_rounded, color: Colors.amber.shade800, size: 28.h),
+          SizedBox(width: 10.h),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Verifikasi Wajah Diperlukan ⚠️",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.amber.shade900,
+                    fontSize: 12.fSize,
+                  ),
+                ),
+                SizedBox(height: 2.h),
+                Text(
+                  "Wajib sebelum isi data pendaki.",
+                  style: TextStyle(
+                    fontSize: 10.fSize,
+                    color: Colors.amber.shade900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+              padding: EdgeInsets.symmetric(horizontal: 10.h, vertical: 6.h),
+            ),
+            onPressed: _showMandatoryFaceVerificationDialog,
+            child: const Text("Verifikasi", style: TextStyle(fontSize: 11)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> updateProfile(
       BuildContext context, DataProfileState state) async {
     print("Button Simpan ditekan!");
 
     try {
       // Ambil data dari form
-      final userId = userId1; // Ganti dengan ID pengguna yang sesuai
+      final userId = (userId1 != 0) ? userId1 : widget.userId;
       final name = state.fullNameInputController?.text;
       final email = state.emailInputController?.text;
       // final password = state.passwordController.text.isEmpty
@@ -291,7 +596,16 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
       final nik = state.nikInputController?.text;
       final phone = state.phoneNumberInputController?.text;
       final emergencyPhone = state.emergencyContactInputController?.text;
-      final dateOfBirth = state.dateOfBirthController?.text;
+      final dateOfBirthRaw = state.dateOfBirthController?.text;
+      String? dateOfBirth;
+      if (dateOfBirthRaw != null && dateOfBirthRaw.trim().isNotEmpty) {
+        final parts = dateOfBirthRaw.trim().split(RegExp(r'[-/\.]'));
+        if (parts.length == 3 && parts[0].length == 2 && parts[2].length == 4) {
+          dateOfBirth = '${parts[2]}-${parts[1]}-${parts[0]}'; // Convert DD-MM-YYYY to YYYY-MM-DD for backend
+        } else {
+          dateOfBirth = dateOfBirthRaw;
+        }
+      }
       final level = 1; // Contoh level default
       File? profilePicture;
       Uint8List? profilePictureBytes;
@@ -767,8 +1081,8 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
     );
 
     if (pickedDate != null) {
-      // Format tanggal menjadi 'yyyy-MM-dd'
-      String dateOfBirth = DateFormat('yyyy-MM-dd').format(pickedDate);
+      // Format tanggal untuk Tampilan UI menjadi 'dd-MM-yyyy' (misal: 18-02-1986)
+      String dateOfBirth = DateFormat('dd-MM-yyyy').format(pickedDate);
       print('$dateOfBirth');
 
       // Dispatch event ke Bloc untuk memperbarui state
@@ -782,6 +1096,7 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
   Widget _buildNikInput(BuildContext context) {
     return BlocBuilder<DataProfileBloc, DataProfileState>(
       builder: (context, state) {
+        final bool isNikFilled = state.nikInputController?.text.isNotEmpty == true;
         return SizedBox(
           width: 334.h,
           child: Column(
@@ -790,17 +1105,22 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
               SizedBox(height: 8.h),
               TextField(
                 controller: state.nikInputController,
+                readOnly: isNikFilled, // NIK tidak dapat diedit jika sudah terisi dari OCR / database
                 onChanged: (value) {
                   context.read<DataProfileBloc>().add(NikChangedEvent(value));
                 },
                 decoration: InputDecoration(
-                  hintText: 'Masukkan NIK',
-                  hintStyle: CustomTextStyles
-                      .bodySmallGray50003Light, // Sesuai referensi gaya teks
+                  hintText: 'NIK Terisi Otomatis dari KTP',
+                  hintStyle: CustomTextStyles.bodySmallGray50003Light,
+                  fillColor: isNikFilled ? Colors.grey.shade100 : Colors.white,
+                  filled: isNikFilled,
+                  suffixIcon: isNikFilled
+                      ? Icon(Icons.lock_outline, size: 20.h, color: Colors.green.shade700)
+                      : null,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8.h),
                     borderSide: BorderSide(
-                      color: appTheme.gray400, // Warna border dari referensi
+                      color: isNikFilled ? Colors.green.shade300 : appTheme.gray400,
                       width: 1.h,
                     ),
                   ),
@@ -809,21 +1129,23 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
                     horizontal: 12.h,
                   ),
                 ),
-                style:
-                    CustomTextStyles.bodyMediumBlack900Light, // Gaya teks input
-                keyboardType:
-                    TextInputType.number, // Keyboard untuk NIK (angka)
-                textInputAction:
-                    TextInputAction.next, // Aksi next pada keyboard
+                style: TextStyle(
+                  fontSize: 13.fSize,
+                  fontWeight: isNikFilled ? FontWeight.bold : FontWeight.normal,
+                  color: isNikFilled ? Colors.green.shade900 : Colors.black87,
+                ),
+                keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.next,
               ),
-              // Menampilkan pesan status jika ada
-              if (state.statusMessage != null &&
-                  state.statusMessage!.isNotEmpty)
+              if (isNikFilled)
                 Padding(
                   padding: EdgeInsets.only(top: 4.h),
                   child: Text(
-                    state.statusMessage!,
-                    style: CustomTextStyles.bodySmallBlack900,
+                    "🔒 NIK dikunci otomatis dari KTP demi keamanan identitas.",
+                    style: TextStyle(
+                      fontSize: 10.fSize,
+                      color: Colors.green.shade800,
+                    ),
                   ),
                 ),
             ],
@@ -836,54 +1158,316 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
   Widget _buildPhoneNumberInput(BuildContext context) {
     return BlocBuilder<DataProfileBloc, DataProfileState>(
       builder: (context, state) {
+        final phone = state.phoneNumberInputController?.text ?? '';
         return SizedBox(
           width: 334.h,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              SizedBox(height: 8.h),
-              TextField(
-                controller: state.phoneNumberInputController,
-                onChanged: (value) {
-                  context
-                      .read<DataProfileBloc>()
-                      .add(PhoneNumberChangedEvent(value));
-                },
-                decoration: InputDecoration(
-                  hintText: 'Masukkan Nomor Telepon',
-                  hintStyle: CustomTextStyles
-                      .bodySmallGray50003Light, // Sesuai referensi gaya teks
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8.h),
-                    borderSide: BorderSide(
-                      color: appTheme.gray400, // Warna border dari referensi
-                      width: 1.h,
+              // Kolom Input Nomor HP (3/4 Lebar)
+              Expanded(
+                flex: 3,
+                child: TextField(
+                  controller: state.phoneNumberInputController,
+                  onChanged: (value) {
+                    context
+                        .read<DataProfileBloc>()
+                        .add(PhoneNumberChangedEvent(value));
+                  },
+                  decoration: InputDecoration(
+                    hintText: 'Masukkan Nomor Telepon',
+                    hintStyle: CustomTextStyles.bodySmallGray50003Light,
+                    suffixIcon: Tooltip(
+                      message: isPhoneVerified ? 'Nomor Terverifikasi' : 'Belum Diverifikasi',
+                      child: Icon(
+                        isPhoneVerified
+                            ? Icons.verified_rounded
+                            : Icons.warning_amber_rounded,
+                        color: isPhoneVerified ? Colors.green.shade600 : Colors.amber.shade800,
+                        size: 20.h,
+                      ),
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.h),
+                      borderSide: BorderSide(
+                        color: isPhoneVerified ? Colors.green.shade400 : appTheme.gray400,
+                        width: 1.h,
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.h),
+                      borderSide: BorderSide(
+                        color: isPhoneVerified ? Colors.green.shade400 : appTheme.gray400,
+                        width: 1.h,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.h),
+                      borderSide: BorderSide(
+                        color: isPhoneVerified ? Colors.green.shade600 : theme.colorScheme.primary,
+                        width: 1.5.h,
+                      ),
+                    ),
+                    contentPadding: EdgeInsets.symmetric(
+                      vertical: 14.h,
+                      horizontal: 12.h,
                     ),
                   ),
-                  contentPadding: EdgeInsets.symmetric(
-                    vertical: 14.h,
-                    horizontal: 12.h,
+                  style: TextStyle(
+                    fontSize: 13.fSize,
+                    color: Colors.black87,
                   ),
+                  keyboardType: TextInputType.phone,
+                  textInputAction: TextInputAction.next,
                 ),
-                style:
-                    CustomTextStyles.bodyMediumBlack900Light, // Gaya teks input
-                keyboardType:
-                    TextInputType.phone, // Keyboard untuk nomor telepon
-                textInputAction:
-                    TextInputAction.next, // Aksi next pada keyboard
               ),
-              // Menampilkan pesan status jika ada
-              if (state.statusMessage != null &&
-                  state.statusMessage!.isNotEmpty)
-                Padding(
-                  padding: EdgeInsets.only(top: 4.h),
-                  child: Text(
-                    state.statusMessage!,
-                    style: CustomTextStyles.bodySmallBlack900,
+              SizedBox(width: 8.h),
+              // Tombol Verifikasi WA OTP (1/4 Lebar)
+              Expanded(
+                flex: 1,
+                child: SizedBox(
+                  height: 48.h,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isPhoneVerified
+                          ? Colors.green.shade50
+                          : Colors.green.shade700,
+                      foregroundColor: isPhoneVerified
+                          ? Colors.green.shade800
+                          : Colors.white,
+                      elevation: 0,
+                      padding: EdgeInsets.symmetric(horizontal: 2.h),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8.h),
+                        side: BorderSide(
+                          color: isPhoneVerified
+                              ? Colors.green.shade300
+                              : Colors.transparent,
+                        ),
+                      ),
+                    ),
+                    onPressed: isPhoneVerified
+                        ? null
+                        : () {
+                            final currentPhone = state.phoneNumberInputController?.text ?? '';
+                            _startPhoneOtpVerification(context, currentPhone);
+                          },
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            isPhoneVerified
+                                ? Icons.check_circle_rounded
+                                : Icons.chat_rounded,
+                            size: 16.h,
+                          ),
+                          SizedBox(height: 2.h),
+                          Text(
+                            isPhoneVerified ? "Terverif" : "Verif WA",
+                            style: TextStyle(
+                              fontSize: 10.fSize,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
+              ),
             ],
           ),
+        );
+      },
+    );
+  }
+
+  Future<void> _startPhoneOtpVerification(BuildContext context, String phone, {bool isEmergency = false}) async {
+    if (phone.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Silakan masukkan nomor ${isEmergency ? "kontak darurat" : "telepon"} Anda terlebih dahulu.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator(color: Colors.green)),
+    );
+
+    final res = await ApiService().sendPhoneOtp(phone.trim());
+
+    if (mounted && Navigator.canPop(context)) {
+      Navigator.pop(context);
+    }
+
+    if (res['success'] == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('💬 Kode OTP WhatsApp telah dikirimkan ke $phone! Cek pesan WA Anda.'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+
+      _showPhoneOtpDialog(phone.trim(), isEmergency: isEmergency);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(res['message'] ?? 'Gagal mengirimkan OTP.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _showPhoneOtpDialog(String phone, {bool isEmergency = false}) {
+    final TextEditingController otpController = TextEditingController();
+    bool isSubmitting = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.h)),
+              child: Padding(
+                padding: EdgeInsets.all(24.h),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 60.h,
+                      height: 60.h,
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.green.shade300, width: 2),
+                      ),
+                      child: const Center(
+                        child: Icon(Icons.mark_chat_read_rounded, color: Colors.green, size: 32),
+                      ),
+                    ),
+                    SizedBox(height: 14.h),
+                    Text(
+                      isEmergency ? 'Verifikasi WA Nomor Darurat' : 'Verifikasi WA OTP Pendaki',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 16.fSize,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green.shade900,
+                      ),
+                    ),
+                    SizedBox(height: 8.h),
+                    Text(
+                      'Masukkan 4 digit kode OTP yang dikirimkan ke WhatsApp nomor $phone',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 12.fSize, color: Colors.grey.shade600),
+                    ),
+                    SizedBox(height: 16.h),
+                    TextField(
+                      controller: otpController,
+                      keyboardType: TextInputType.number,
+                      maxLength: 4,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 22.fSize,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 10.h,
+                        color: Colors.green.shade900,
+                      ),
+                      decoration: InputDecoration(
+                        counterText: '',
+                        hintText: '• • • •',
+                        hintStyle: TextStyle(letterSpacing: 10.h, color: Colors.grey.shade400),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12.h),
+                          borderSide: BorderSide(color: Colors.green.shade400),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 20.h),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextButton(
+                            onPressed: isSubmitting ? null : () => Navigator.pop(dialogContext),
+                            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+                          ),
+                        ),
+                        SizedBox(width: 8.h),
+                        Expanded(
+                          flex: 2,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green.shade700,
+                              foregroundColor: Colors.white,
+                              padding: EdgeInsets.symmetric(vertical: 12.h),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.h)),
+                            ),
+                            onPressed: isSubmitting
+                                ? null
+                                : () async {
+                                    if (otpController.text.length != 4) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('Masukkan 4 digit kode OTP.')),
+                                      );
+                                      return;
+                                    }
+                                    setDialogState(() => isSubmitting = true);
+                                    final res = await ApiService().verifyPhoneOtp(phone, otpController.text.trim());
+                                    setDialogState(() => isSubmitting = false);
+
+                                    if (res['success'] == true) {
+                                      Navigator.pop(dialogContext);
+                                      setState(() {
+                                        if (isEmergency) {
+                                          isEmergencyPhoneVerified = true;
+                                        } else {
+                                          isPhoneVerified = true;
+                                        }
+                                      });
+                                      ApiService().clearUserCache();
+                                      _getUser();
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text('Nomor ${isEmergency ? "Kontak Darurat" : "Telepon Pendaki"} Berhasil Diverifikasi! ✅'),
+                                          backgroundColor: Colors.green,
+                                        ),
+                                      );
+                                    } else {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(res['message'] ?? 'Kode OTP salah.'),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                    }
+                                  },
+                            child: isSubmitting
+                                ? SizedBox(
+                                    height: 18.h,
+                                    width: 18.h,
+                                    child: const CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                  )
+                                : const Text('Verifikasi OTP', style: TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
         );
       },
     );
@@ -892,52 +1476,125 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
   Widget _buildEmergencyContactInput(BuildContext context) {
     return BlocBuilder<DataProfileBloc, DataProfileState>(
       builder: (context, state) {
+        final emergencyPhone = state.emergencyContactInputController?.text ?? '';
         return SizedBox(
           width: 334.h,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              SizedBox(height: 8.h),
-              TextField(
-                controller: state.emergencyContactInputController,
-                onChanged: (value) {
-                  context
-                      .read<DataProfileBloc>()
-                      .add(EmergencyContactChangedEvent(value));
-                },
-                decoration: InputDecoration(
-                  hintText: 'Masukkan Nomor Kontak Darurat',
-                  hintStyle: CustomTextStyles
-                      .bodySmallGray50003Light, // Sesuai referensi gaya teks
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8.h),
-                    borderSide: BorderSide(
-                      color: appTheme.gray400, // Warna border dari referensi
-                      width: 1.h,
+              // Kolom Input Nomor Darurat (3/4 Lebar)
+              Expanded(
+                flex: 3,
+                child: TextField(
+                  controller: state.emergencyContactInputController,
+                  onChanged: (value) {
+                    context
+                        .read<DataProfileBloc>()
+                        .add(EmergencyContactChangedEvent(value));
+                  },
+                  decoration: InputDecoration(
+                    hintText: 'Masukkan Nomor Kontak Darurat',
+                    hintStyle: CustomTextStyles.bodySmallGray50003Light,
+                    suffixIcon: Tooltip(
+                      message: isEmergencyPhoneVerified ? 'Nomor Darurat Terverifikasi' : 'Belum Diverifikasi',
+                      child: Icon(
+                        isEmergencyPhoneVerified
+                            ? Icons.verified_rounded
+                            : Icons.warning_amber_rounded,
+                        color: isEmergencyPhoneVerified ? Colors.green.shade600 : Colors.amber.shade800,
+                        size: 20.h,
+                      ),
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.h),
+                      borderSide: BorderSide(
+                        color: isEmergencyPhoneVerified ? Colors.green.shade400 : appTheme.gray400,
+                        width: 1.h,
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.h),
+                      borderSide: BorderSide(
+                        color: isEmergencyPhoneVerified ? Colors.green.shade400 : appTheme.gray400,
+                        width: 1.h,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.h),
+                      borderSide: BorderSide(
+                        color: isEmergencyPhoneVerified ? Colors.green.shade600 : theme.colorScheme.primary,
+                        width: 1.5.h,
+                      ),
+                    ),
+                    contentPadding: EdgeInsets.symmetric(
+                      vertical: 14.h,
+                      horizontal: 12.h,
                     ),
                   ),
-                  contentPadding: EdgeInsets.symmetric(
-                    vertical: 14.h,
-                    horizontal: 12.h,
+                  style: TextStyle(
+                    fontSize: 13.fSize,
+                    color: Colors.black87,
                   ),
+                  keyboardType: TextInputType.phone,
+                  textInputAction: TextInputAction.next,
                 ),
-                style:
-                    CustomTextStyles.bodyMediumBlack900Light, // Gaya teks input
-                keyboardType:
-                    TextInputType.phone, // Keyboard untuk nomor telepon
-                textInputAction:
-                    TextInputAction.next, // Aksi next pada keyboard
               ),
-              // Menampilkan pesan status jika ada
-              if (state.statusMessage != null &&
-                  state.statusMessage!.isNotEmpty)
-                Padding(
-                  padding: EdgeInsets.only(top: 4.h),
-                  child: Text(
-                    state.statusMessage!,
-                    style: CustomTextStyles.bodySmallBlack900,
+              SizedBox(width: 8.h),
+              // Tombol Verifikasi WA OTP (1/4 Lebar)
+              Expanded(
+                flex: 1,
+                child: SizedBox(
+                  height: 48.h,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isEmergencyPhoneVerified
+                          ? Colors.green.shade50
+                          : Colors.green.shade700,
+                      foregroundColor: isEmergencyPhoneVerified
+                          ? Colors.green.shade800
+                          : Colors.white,
+                      elevation: 0,
+                      padding: EdgeInsets.symmetric(horizontal: 2.h),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8.h),
+                        side: BorderSide(
+                          color: isEmergencyPhoneVerified
+                              ? Colors.green.shade300
+                              : Colors.transparent,
+                        ),
+                      ),
+                    ),
+                    onPressed: isEmergencyPhoneVerified
+                        ? null
+                        : () {
+                            final currentPhone = state.emergencyContactInputController?.text ?? '';
+                            _startPhoneOtpVerification(context, currentPhone, isEmergency: true);
+                          },
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            isEmergencyPhoneVerified
+                                ? Icons.check_circle_rounded
+                                : Icons.chat_rounded,
+                            size: 16.h,
+                          ),
+                          SizedBox(height: 2.h),
+                          Text(
+                            isEmergencyPhoneVerified ? "Terverif" : "Verif WA",
+                            style: TextStyle(
+                              fontSize: 10.fSize,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
+              ),
             ],
           ),
         );
@@ -1039,15 +1696,13 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
                 textInputAction:
                     TextInputAction.done, // Aksi selesai di keyboard
               ),
-              // Menampilkan pesan status jika ada
               if (state.statusMessage != null &&
                   state.statusMessage!.isNotEmpty)
                 Padding(
                   padding: EdgeInsets.only(top: 4.h),
                   child: Text(
                     state.statusMessage!,
-                    style: CustomTextStyles
-                        .bodySmallBlack900, // Gaya teks error/status
+                    style: CustomTextStyles.bodySmallBlack900,
                   ),
                 ),
             ],
@@ -1057,227 +1712,313 @@ class _DataProfileScreenState extends State<DataProfileScreen> {
     );
   }
 
-  /// Section Widget
+  /// Section Widget - Aesthetic KTP ID Card Frame
   Widget _buildIdentityUploadSection(BuildContext context) {
-    return SizedBox(
-      height: 150.h,
-      width: double.maxFinite,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          SizedBox(
-            width: double.maxFinite,
-            child: Column(
-              mainAxisSize: MainAxisSize.max,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(height: 8.h),
-                Text(
-                  "msg_unggah_kartu_identitas".tr,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: CustomTextStyles.bodyMediumGray50003.copyWith(
-                    height: 1.40,
-                  ),
-                ),
-                SizedBox(height: 10.h),
-                Container(
-                  padding: EdgeInsets.all(6.h),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadiusStyle.roundedBorder6,
-                    border: Border.all(
-                      color: appTheme.gray400,
-                      width: 1.h,
-                    ),
-                  ),
-                  width: double.maxFinite,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Padding(
-                          padding: EdgeInsets.only(left: 4.h),
-                          child: Text(
-                            _fileNameIdentity ?? "msg_upload_file_jpeg".tr,
-                            style: CustomTextStyles.bodySmallGray50003Light,
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () async {
-                          FilePickerResult? result =
-                              await FilePicker.platform.pickFiles(
-                            type: FileType.custom,
-                            allowedExtensions: ['jpg', 'jpeg', 'png'],
-                            withData: true,
-                          );
-
-                          if (result != null) {
-                            PlatformFile file = result.files.first;
-
-                            // Check file size (convert bytes to MB)
-                            double fileSizeInMB = file.size / (1024 * 1024);
-
-                            if (fileSizeInMB > 2) {
-                              // Show popup dialog for file size exceed
-                              await showDialog(
-                                context: context,
-                                barrierDismissible: true,
-                                builder: (BuildContext context) {
-                                  return AlertDialog(
-                                    title: Column(
-                                      children: [
-                                        Icon(
-                                          Icons.error_outline,
-                                          color: Colors.red,
-                                          size: 48,
-                                        ),
-                                        SizedBox(height: 16),
-                                        Text(
-                                          "Ukuran File Terlalu Besar",
-                                          style: TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.black87,
-                                          ),
-                                          textAlign: TextAlign.center,
-                                        ),
-                                      ],
-                                    ),
-                                    content: Text(
-                                      "Ukuran file tidak boleh lebih dari 2MB. Silakan pilih file yang lebih kecil.",
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.black54,
-                                        height: 1.5,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                    actions: [
-                                      Container(
-                                        width: double.infinity,
-                                        child: TextButton(
-                                          onPressed: () {
-                                            Navigator.of(context).pop();
-                                          },
-                                          style: TextButton.styleFrom(
-                                            padding: EdgeInsets.symmetric(
-                                                vertical: 12),
-                                            backgroundColor:
-                                                appTheme.blueGray10001,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(6),
-                                            ),
-                                          ),
-                                          child: Text(
-                                            "OK",
-                                            style: TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w500,
-                                              color: Colors.black87,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    contentPadding: EdgeInsets.symmetric(
-                                      horizontal: 24,
-                                      vertical: 20,
-                                    ),
-                                    actionsPadding: EdgeInsets.all(16),
-                                  );
-                                },
-                              );
-                            } else {
-                              // File size is acceptable, proceed with update
-                              final bytes = file.bytes;
-                              setState(() {
-                                _fileNameIdentity = file.name;
-                                _filePathIdentity = kIsWeb ? null : file.path;
-                                _fileBytesIdentity = bytes;
-                              });
-                              print('File dipilih: ${file.name}');
-                              print('File bytes tersedia: ${bytes != null}');
-                            }
-                          } else {
-                            print('Pemilihan file dibatalkan');
-                          }
-                        },
-                        child: Container(
-                          padding: EdgeInsets.symmetric(horizontal: 8.h),
-                          decoration: BoxDecoration(
-                            color: appTheme.blueGray10001,
-                            borderRadius: BorderRadiusStyle.roundedBorder6,
-                            border: Border.all(
-                              color: appTheme.gray400,
-                              width: 1.h,
-                            ),
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                "lbl_pilih_file".tr,
-                                style: CustomTextStyles.bodySmallBlack900Light,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (_fileNameIdentity != null) SizedBox(height: 8.h),
-                if (_fileNameIdentity != null)
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextButton.icon(
-                          style: TextButton.styleFrom(
-                            alignment: Alignment.centerLeft,
-                            padding: EdgeInsets.zero,
-                            minimumSize: const Size(0, 0),
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                          onPressed: _showIdentityPreview,
-                          icon: const Icon(Icons.image_outlined, size: 18),
-                          label: Text(
-                            _fileNameIdentity!,
-                            overflow: TextOverflow.ellipsis,
-                            style: CustomTextStyles.bodySmallBlack900Light
-                                .copyWith(
-                              decoration: TextDecoration.underline,
-                            ),
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        tooltip: 'Hapus file',
-                        onPressed: () {
-                          setState(() {
-                            _fileNameIdentity = null;
-                            _filePathIdentity = null;
-                            _fileBytesIdentity = null;
-                          });
-                        },
-                        icon:
-                            const Icon(Icons.delete_outline, color: Colors.red),
-                      ),
-                    ],
-                  ),
-              ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(height: 12.h),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              "Foto KTP / Kartu Identitas",
+              style: CustomTextStyles.bodyMediumGray50003.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          )
-        ],
-      ),
+            if (_fileNameIdentity != null)
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8.h, vertical: 2.h),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade100,
+                  borderRadius: BorderRadius.circular(6.h),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.auto_awesome, color: Colors.green, size: 12),
+                    SizedBox(width: 4.h),
+                    Text(
+                      "Terbaca AI OCR ✨",
+                      style: TextStyle(
+                        color: Colors.green.shade900,
+                        fontSize: 10.fSize,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+        SizedBox(height: 8.h),
+        GestureDetector(
+          onTap: _pickKtpFile,
+          child: AspectRatio(
+            aspectRatio: 1.58, // Rasio resmi KTP (85.6mm x 54mm)
+            child: CustomPaint(
+              painter: KtpFrameBorderPainter(
+                color: _fileNameIdentity != null ? Colors.green : Colors.grey.shade400,
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16.h),
+                child: Container(
+                  color: _fileNameIdentity != null ? Colors.black.withOpacity(0.02) : Colors.green.withOpacity(0.03),
+                  child: _buildKtpFrameContent(),
+                ),
+              ),
+            ),
+          ),
+        ),
+        SizedBox(height: 16.h),
+      ],
     );
+  }
+
+  Widget _buildKtpFrameContent() {
+    Widget? imageWidget;
+
+    if (_filePathIdentity != null && File(_filePathIdentity!).existsSync()) {
+      imageWidget = Image.file(
+        File(_filePathIdentity!),
+        fit: BoxFit.cover,
+      );
+    } else if (_fileBytesIdentity != null) {
+      imageWidget = Image.memory(
+        _fileBytesIdentity!,
+        fit: BoxFit.cover,
+      );
+    } else if (ktpPhotoUrl != null && ktpPhotoUrl!.isNotEmpty) {
+      imageWidget = Image.network(
+        ktpPhotoUrl!,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.broken_image_rounded, color: Colors.grey.shade400, size: 40.h),
+            SizedBox(height: 4.h),
+            Text("Gagal memuat foto KTP", style: TextStyle(fontSize: 11.fSize, color: Colors.grey)),
+          ],
+        ),
+      );
+    }
+
+    if (imageWidget != null) {
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          imageWidget,
+          // Tombol Silang (X) di Pojok Kanan Atas
+          Positioned(
+            top: 8.h,
+            right: 8.h,
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _fileNameIdentity = null;
+                  _filePathIdentity = null;
+                  _fileBytesIdentity = null;
+                  ktpPhotoUrl = null;
+                });
+              },
+              child: Container(
+                padding: EdgeInsets.all(6.h),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.65),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white70, width: 1.5),
+                ),
+                child: Icon(
+                  Icons.close_rounded,
+                  color: Colors.white,
+                  size: 16.h,
+                ),
+              ),
+            ),
+          ),
+          // Badge "Ganti Foto KTP" di Pojok Kanan Bawah
+          Positioned(
+            bottom: 8.h,
+            right: 8.h,
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 10.h, vertical: 4.h),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.7),
+                borderRadius: BorderRadius.circular(8.h),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.edit_outlined, color: Colors.white, size: 14.h),
+                  SizedBox(width: 4.h),
+                  Text(
+                    "Ganti Foto KTP",
+                    style: TextStyle(color: Colors.white, fontSize: 11.fSize),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          padding: EdgeInsets.all(12.h),
+          decoration: BoxDecoration(
+            color: Colors.green.shade50,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            Icons.credit_card_rounded,
+            color: Colors.green.shade700,
+            size: 36.h,
+          ),
+        ),
+        SizedBox(height: 10.h),
+        Text(
+          "Posisikan Foto KTP di Dalam Bingkai",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.grey.shade800,
+            fontSize: 13.fSize,
+          ),
+        ),
+        SizedBox(height: 4.h),
+        Text(
+          "Ketuk untuk Unggah & Scan NIK, Tanggal Lahir, & Alamat",
+          style: TextStyle(
+            color: Colors.grey.shade600,
+            fontSize: 11.fSize,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _pickKtpFile() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['jpg', 'jpeg', 'png'],
+      withData: true,
+    );
+
+    if (result != null) {
+      PlatformFile file = result.files.first;
+      double fileSizeInMB = file.size / (1024 * 1024);
+
+      if (fileSizeInMB > 2) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text("Ukuran File Terlalu Besar"),
+            content: const Text("Ukuran file tidak boleh lebih dari 2MB."),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("OK"),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+
+      setState(() {
+        _fileNameIdentity = file.name;
+        _filePathIdentity = kIsWeb ? null : file.path;
+        _fileBytesIdentity = file.bytes;
+        ktpPhotoUrl = null;
+      });
+
+      if (!kIsWeb && file.path != null) {
+        // Show Loading Dialog
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogContext) {
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16.h),
+              ),
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24.h, vertical: 24.h),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const CircularProgressIndicator(color: Colors.green),
+                    SizedBox(height: 16.h),
+                    const Text(
+                      "Membaca & Mengisi Data KTP",
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                    SizedBox(height: 8.h),
+                    Text(
+                      "Memproses AI OCR untuk membaca NIK, Tanggal Lahir, & Alamat...",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey.shade600, fontSize: 12.fSize),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+
+        final ocrResult = await KtpOcrParser.parseKtpImage(File(file.path!));
+
+        // Dismiss Loading Dialog
+        if (mounted && Navigator.canPop(context)) {
+          Navigator.pop(context);
+        }
+
+        if (mounted) {
+          final bloc = context.read<DataProfileBloc>();
+          final state = bloc.state;
+          int filledCount = 0;
+
+          if (ocrResult.nik != null && ocrResult.nik!.isNotEmpty) {
+            state.nikInputController?.text = ocrResult.nik!;
+            bloc.add(NikChangedEvent(ocrResult.nik!));
+            filledCount++;
+          }
+
+          if (ocrResult.dateOfBirth != null && ocrResult.dateOfBirth!.isNotEmpty) {
+            state.dateOfBirthController?.text = ocrResult.dateOfBirth!;
+            bloc.add(DateOfBirthChangedEvent(ocrResult.dateOfBirth!));
+            filledCount++;
+          }
+
+          if (ocrResult.address != null && ocrResult.address!.isNotEmpty) {
+            state.addressInputController?.text = ocrResult.address!;
+            bloc.add(AddressChangedEvent(ocrResult.address!));
+            filledCount++;
+          }
+
+          setState(() {});
+
+          if (filledCount > 0) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Berhasil mengisi otomatis $filledCount data KTP (NIK, Tanggal Lahir, & Alamat)! ✨'),
+                backgroundColor: Colors.green,
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Foto KTP terbaca. Teks raw: ${ocrResult.rawText != null && ocrResult.rawText!.isNotEmpty ? ocrResult.rawText!.replaceAll('\n', ' ') : "Teks KTP kabur, silakan isi manual"}'),
+                backgroundColor: Colors.amber.shade900,
+                duration: const Duration(seconds: 4),
+              ),
+            );
+          }
+        }
+      }
+    }
   }
 
   Future<void> _showIdentityPreview() async {

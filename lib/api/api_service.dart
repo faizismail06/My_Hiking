@@ -348,6 +348,63 @@ class ApiService {
     }
   }
 
+  void clearUserCache() {
+    _userMemoryCache.clear();
+    _userMemoryCacheAt.clear();
+  }
+
+  Future<Map<String, dynamic>> sendPhoneOtp(String phone) async {
+    final token = await getToken();
+    final url = Uri.parse('$baseUrl/send-phone-otp');
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'phone': phone}),
+      );
+      final responseData = jsonDecode(response.body);
+      return {
+        'success': response.statusCode == 200,
+        'message': responseData['message'] ?? 'Proses OTP selesai.',
+        'data': responseData,
+      };
+    } catch (e) {
+      return {'success': false, 'message': 'Gagal terhubung ke server: $e'};
+    }
+  }
+
+  Future<Map<String, dynamic>> verifyPhoneOtp(String phone, String otpCode) async {
+    final token = await getToken();
+    final url = Uri.parse('$baseUrl/verify-phone-otp');
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'phone': phone,
+          'otp_code': otpCode,
+        }),
+      );
+      final responseData = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        clearUserCache();
+      }
+      return {
+        'success': response.statusCode == 200,
+        'message': responseData['message'] ?? 'Verifikasi OTP selesai.',
+        'data': responseData,
+      };
+    } catch (e) {
+      return {'success': false, 'message': 'Gagal terhubung ke server: $e'};
+    }
+  }
+
   Future<List<Gunung>> fetchGunung() async {
     final response = await http.get(Uri.parse('$baseUrl/mountains'));
 
@@ -1968,6 +2025,10 @@ class ApiService {
 
       final data = jsonDecode(response.body);
       if (response.statusCode == 200 && data['success'] == true) {
+        if (token != null) {
+          _userMemoryCache.remove(token);
+          _userMemoryCacheAt.remove(token);
+        }
         return {
           'success': true,
           'message': data['message'] ?? 'Verifikasi wajah berhasil disimpan di server!',
@@ -1983,6 +2044,69 @@ class ApiService {
       return {
         'success': false,
         'message': 'Kesalahan jaringan: $e',
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> verifyOtp({required String email, required String otpCode}) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/verify-otp'),
+        headers: {'Content-Type': 'application/json; charset=UTF-8'},
+        body: jsonEncode({
+          'email': email,
+          'otp_code': otpCode,
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['success'] == true) {
+        return {
+          'success': true,
+          'message': data['message'] ?? 'Verifikasi OTP berhasil!',
+          'token': data['token'],
+          'user': data['user'],
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Kode OTP salah atau kadaluwarsa.',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Gagal terhubung ke server: $e',
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> resendOtp({required String email}) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/resend-otp'),
+        headers: {'Content-Type': 'application/json; charset=UTF-8'},
+        body: jsonEncode({
+          'email': email,
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['success'] == true) {
+        return {
+          'success': true,
+          'message': data['message'] ?? 'Kode OTP baru telah dikirimkan ke email Anda.',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Gagal mengirimkan ulang OTP.',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Gagal terhubung ke server: $e',
       };
     }
   }

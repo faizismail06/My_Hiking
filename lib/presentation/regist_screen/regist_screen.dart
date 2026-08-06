@@ -286,10 +286,22 @@ class RegistScreen extends StatelessWidget {
         }),
       );
 
-      if (response.statusCode == 201) {
-        NavigatorService.pushNamed(AppRoutes.loginScreen);
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Registrasi berhasil! Silakan masukkan kode OTP yang telah dikirim ke $email'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        NavigatorService.pushNamed(
+          AppRoutes.kodeVerifikasiScreen,
+          arguments: {
+            'email': email,
+          },
+        );
       } else {
-        _showErrorDialog(context, 'Registrasi gagal: ${response.body}');
+        final data = jsonDecode(response.body);
+        _showErrorDialog(context, data['message'] ?? 'Registrasi gagal.');
       }
     } on SocketException {
       _showErrorDialog(
