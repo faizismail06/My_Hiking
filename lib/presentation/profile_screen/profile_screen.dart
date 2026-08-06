@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:myhiking/api/api_service.dart';
@@ -5,6 +6,7 @@ import 'package:myhiking/presentation/data_profile_screen/bloc/data_profile_bloc
 import 'package:myhiking/presentation/data_profile_screen/data_profile_screen.dart';
 import 'package:myhiking/presentation/landing_screen/landing_screen.dart';
 import 'package:myhiking/presentation/profile_screen/bloc/profile_bloc.dart';
+import 'package:myhiking/presentation/face_registration_screen/face_registration_screen.dart';
 import '../../core/app_export.dart';
 import '../../widgets/custom_icon_button.dart';
 
@@ -321,6 +323,116 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         style: theme.textTheme.bodyLarge?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
+                      ),
+                    ],
+                  ),
+                  CustomImageView(
+                    imagePath: ImageConstant.imgArrowRight,
+                    height: 24.h,
+                    width: 24.h,
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          SizedBox(height: 14.h),
+
+          // Face Verification Option (Verifikasi Wajah & eKYC)
+          GestureDetector(
+            onTap: () async {
+              final resultPath = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const FaceRegistrationScreen(),
+                ),
+              );
+              if (resultPath != null && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Mengunggah data verifikasi wajah ke server...'),
+                    backgroundColor: Colors.blue,
+                  ),
+                );
+
+                final apiResult = await ApiService().uploadFaceVerification(File(resultPath));
+                if (context.mounted) {
+                  if (apiResult['success'] == true) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(apiResult['message'] ?? 'Verifikasi Wajah Berhasil Disimpan ke MySQL!'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                    _getUser(); // Refresh data user
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(apiResult['message'] ?? 'Gagal mengunggah foto verifikasi'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              }
+            },
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 16.h, vertical: 16.h),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.onPrimary,
+                borderRadius: BorderRadius.circular(16.h),
+                border: Border.all(
+                  color: Colors.green.withOpacity(0.3),
+                  width: 1.h,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: appTheme.blueGray40019.withOpacity(0.08),
+                    spreadRadius: 2.h,
+                    blurRadius: 8.h,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        height: 28.h,
+                        width: 28.h,
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8.h),
+                        ),
+                        child: const Center(
+                          child: Icon(
+                            Icons.face_retouching_natural,
+                            color: Colors.green,
+                            size: 18,
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 16.h),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Verifikasi Wajah (eKYC)",
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          SizedBox(height: 2.h),
+                          Text(
+                            "Syarat Pendakian & Booking Tiket",
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: Colors.grey.shade600,
+                              fontSize: 11.fSize,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),

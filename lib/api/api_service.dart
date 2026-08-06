@@ -1952,4 +1952,38 @@ class ApiService {
       throw Exception('Gagal menyimpan preferensi DSS');
     }
   }
+
+  Future<Map<String, dynamic>> uploadFaceVerification(File imageFile) async {
+    try {
+      final token = await getToken();
+      final uri = Uri.parse('$baseUrl/user/verify-face');
+
+      final request = http.MultipartRequest('POST', uri)
+        ..headers['Authorization'] = 'Bearer $token'
+        ..headers['Accept'] = 'application/json'
+        ..files.add(await http.MultipartFile.fromPath('face_photo', imageFile.path));
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['success'] == true) {
+        return {
+          'success': true,
+          'message': data['message'] ?? 'Verifikasi wajah berhasil disimpan di server!',
+          'data': data['data'],
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Gagal mengunggah foto verifikasi wajah',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Kesalahan jaringan: $e',
+      };
+    }
+  }
 }
