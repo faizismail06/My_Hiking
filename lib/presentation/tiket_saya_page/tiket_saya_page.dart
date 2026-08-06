@@ -542,6 +542,8 @@ class _TiketSayaPageState extends State<TiketSayaPage> {
   ) {
     final candidates = [
       tx?.waktuPembayaran,
+      tx?.createdAt,
+      model.createdAt,
       model.updatedAt,
     ];
 
@@ -557,7 +559,7 @@ class _TiketSayaPageState extends State<TiketSayaPage> {
       }
     }
 
-    return null;
+    return DateTime.now();
   }
 
   void _syncPendingTracking(Set<int> orderIds) {

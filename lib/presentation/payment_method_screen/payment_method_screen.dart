@@ -218,8 +218,17 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
     final trail = order?['trail'];
     final members = order?['members'] as List? ?? [];
     final totalMembers = members.length + 1;
-    final pricePerPerson = order?['total_harga_tiket'] ?? 0;
-    final totalPrice = totalMembers * pricePerPerson;
+    final totalPrice = order?['total_harga_tiket'] ?? 0;
+    
+    int totalDays = 1;
+    try {
+      final tNaik = DateTime.parse(order?['tanggal_naik']);
+      final tTurun = DateTime.parse(order?['tanggal_turun']);
+      totalDays = tTurun.difference(tNaik).inDays;
+      if (totalDays < 1) totalDays = 1;
+    } catch (_) {}
+
+    final pricePerPerson = (trail?['biaya'] ?? (totalPrice / (totalMembers * totalDays))).toInt();
 
     return Card(
       elevation: 2,
@@ -249,8 +258,8 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
             _buildSummaryRow('Jalur', trail?['nama'] ?? '-'),
             _buildSummaryRow('Tanggal Naik', order?['tanggal_naik'] ?? '-'),
             _buildSummaryRow('Tanggal Turun', order?['tanggal_turun'] ?? '-'),
-            _buildSummaryRow('Jumlah Pendaki', '$totalMembers orang'),
-            _buildSummaryRow('Harga/Orang', _formatCurrency(pricePerPerson)),
+            _buildSummaryRow('Jumlah Pendaki', '$totalMembers orang ($totalDays hari)'),
+            _buildSummaryRow('Harga/Orang/Hari', _formatCurrency(pricePerPerson)),
             Divider(height: 24),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
