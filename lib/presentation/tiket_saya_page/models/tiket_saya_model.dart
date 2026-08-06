@@ -11,6 +11,7 @@ class TiketItemModel extends Equatable {
   final String? jalur;
   final String? status;
   final int? totalHarga;
+  final String? createdAt;
   final String? updatedAt;
 
   const TiketItemModel({
@@ -21,6 +22,7 @@ class TiketItemModel extends Equatable {
     this.jalur,
     this.status,
     this.totalHarga,
+    this.createdAt,
     this.updatedAt,
   });
 
@@ -35,6 +37,7 @@ class TiketItemModel extends Equatable {
       totalHarga: json['total_harga_tiket'] is int
           ? json['total_harga_tiket']
           : int.tryParse((json['total_harga_tiket'] ?? '').toString()),
+      createdAt: json['created_at'],
       updatedAt: json['updated_at'],
     );
   }
@@ -48,6 +51,7 @@ class TiketItemModel extends Equatable {
         jalur,
         status,
         totalHarga,
+        createdAt,
         updatedAt
       ];
 }
@@ -58,6 +62,7 @@ class TransaksiItemModel extends Equatable {
   final int? pesananId;
   final String? status;
   final String? waktuPembayaran;
+  final String? createdAt;
   final String? gunung;
   final String? jalur;
   final String? paymentType;
@@ -67,6 +72,7 @@ class TransaksiItemModel extends Equatable {
     this.pesananId,
     this.status,
     this.waktuPembayaran,
+    this.createdAt,
     this.gunung,
     this.jalur,
     this.paymentType,
@@ -80,6 +86,7 @@ class TransaksiItemModel extends Equatable {
           : json['id_pesanan'],
       status: json['status'],
       waktuPembayaran: json['waktu_pembayaran'],
+      createdAt: json['created_at'] ?? json['transaction_time'],
       gunung: json['gunung'],
       jalur: json['jalur'],
       paymentType: json['payment_type'],
@@ -88,7 +95,7 @@ class TransaksiItemModel extends Equatable {
 
   @override
   List<Object?> get props =>
-      [id, pesananId, status, waktuPembayaran, gunung, jalur, paymentType];
+      [id, pesananId, status, waktuPembayaran, createdAt, gunung, jalur, paymentType];
 }
 
 /// Aggregate model holding both lists

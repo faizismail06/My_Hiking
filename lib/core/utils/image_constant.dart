@@ -4,7 +4,7 @@ class ImageConstant {
   static String imagePath = 'assets/images';
 
   // Landing images
-  static String img37082 = '$imagePath/img_3708_2.png';
+  static String img37082 = '$imagePath/pendaki_landing3.png';
 
   // Login images
   static String imgLock = '$imagePath/img_lock.svg';
@@ -66,7 +66,7 @@ class ImageConstant {
   static String imgVideocamera = '$imagePath/img_videocamera.svg';
 
   // PROFILE images
-  static String imgAmping91 = '$imagePath/img_amping_9_1.png';
+  static String imgAmping91 = '$imagePath/pendaki_profile.png';
   static String imgOutlineUsers = '$imagePath/img_outline_users.svg';
   static String imgClock = '$imagePath/img_clock.svg';
 
@@ -88,7 +88,7 @@ class ImageConstant {
 
   // Common images
   static String imgNn = '$imagePath/img_nn.png';
-  static String img37081 = '$imagePath/img_3708_1.png';
+  static String img37081 = '$imagePath/gambar_pendaki.png';
   static String imgriwayat = '$imagePath/backpack.png';
   static String imgCheckmark = '$imagePath/img_checkmark.svg';
   static String imgArrowDown = '$imagePath/img_arrow_down.svg';

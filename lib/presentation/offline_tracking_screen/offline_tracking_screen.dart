@@ -20,6 +20,7 @@ import '../../core/utils/web_file_downloader_stub.dart'
     if (dart.library.html) '../../core/utils/web_file_downloader_web.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import '../../services/background_tracking_service.dart';
+import '../../widgets/app_loading_overlay.dart';
 import 'bloc/offline_tracking_cubit.dart';
 import 'bloc/offline_tracking_state.dart';
 
@@ -57,6 +58,8 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
   StreamSubscription<OfflineTrackingState>? _cubitSubscription;
   StreamSubscription? _bgUpdateSubscription;
   StreamSubscription? _bgDurationSubscription;
+  StreamSubscription? _bgCacheSubscription;
+  StreamSubscription? _bgCheckoutSubscription;
   Timer? _durationTimer;
 
   bool _isPreparingLocation = false;
@@ -144,6 +147,33 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
       }
     });
 
+    _bgCacheSubscription = service.on('cacheUpdate').listen((event) {
+      if (event != null && mounted) {
+        setState(() {
+          if (event['count'] != null) {
+            _pendingCacheCount = event['count'];
+          }
+          if (event['info'] != null) {
+            _syncInfo = event['info'];
+          }
+        });
+      }
+    });
+
+    _bgCheckoutSubscription = service.on('forceCheckout').listen((event) {
+      if (event != null && mounted) {
+        final msg = event['message'] ?? 'Checkout terdeteksi. Tracking dihentikan.';
+        _showSnack(msg, backgroundColor: Colors.orange);
+        
+        _cubit.resetTracking();
+        _refreshPendingCacheCount();
+        
+        setState(() {
+          _syncInfo = 'Pendaki telah checkout. Tracking dihentikan.';
+        });
+      }
+    });
+
     unawaited(_restoreStateFromBackground());
   }
 
@@ -219,6 +249,8 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
     _connectivitySubscription?.cancel();
     _bgUpdateSubscription?.cancel();
     _bgDurationSubscription?.cancel();
+    _bgCacheSubscription?.cancel();
+    _bgCheckoutSubscription?.cancel();
     _cubit.close();
     super.dispose();
   }
@@ -1061,6 +1093,10 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
       return;
     }
 
+    if (context.mounted) {
+      AppLoadingOverlay.show(context, message: 'Memulai tracking GPS...', asPopup: true);
+    }
+
     try {
       final current = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.bestForNavigation,
@@ -1123,7 +1159,7 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
 
       if (mounted) {
         setState(() {
-          _syncInfo = 'Tracking aktif. Data akan dicache saat stop.';
+          _syncInfo = 'Tracking aktif. Lokasi akan otomatis disinkronkan atau dicache.';
         });
       }
 
@@ -1131,16 +1167,18 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
         _fitMapToAllPoints();
       });
     } catch (e) {
-      if (!mounted) {
-        return;
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal memulai tracking: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Gagal memulai tracking: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+    } finally {
+      if (context.mounted) {
+        AppLoadingOverlay.hide(context);
+      }
     }
   }
 
@@ -1156,7 +1194,6 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
       _cubit.stopTracking();
     }
 
-    await _cacheCurrentTrackForSync(showSnackBar: true);
     await _clearActiveTrackFile();
   }
 
@@ -1167,10 +1204,6 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
     } else {
       await _positionSubscription?.cancel();
       _positionSubscription = null;
-    }
-
-    if (_state.trackedPoints.length >= 2) {
-      await _cacheCurrentTrackForSync(showSnackBar: false);
     }
 
     _cubit.resetTracking();
@@ -1351,7 +1384,7 @@ class _OfflineTrackingScreenState extends State<OfflineTrackingScreen> {
       return 'Aktifkan Lokasi & Buka Offline Map';
     }
     return state.isTracking
-        ? 'Stop Tracking & Simpan ke Cache'
+        ? 'Stop Tracking'
         : 'Mulai Tracking';
   }
 

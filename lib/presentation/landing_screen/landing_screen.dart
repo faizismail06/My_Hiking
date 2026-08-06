@@ -33,13 +33,13 @@ class LandingScreen extends StatelessWidget {
                   child: Column(
                     children: [
                       _buildWelcomeTextSection(context),
-                      SizedBox(height: 80.h),
+                      SizedBox(height: 60.h),
                       CustomImageView(
                         imagePath: ImageConstant.img37082,
-                        height: 384.h,
+                        height: 400.h,
                         width: double.maxFinite,
                       ),
-                      SizedBox(height: 80.h),
+                      SizedBox(height: 60.h),
                       _buildStartButtonSection(context),
                       SizedBox(height: 30.h),
                     ],

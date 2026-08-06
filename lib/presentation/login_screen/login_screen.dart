@@ -94,7 +94,7 @@ class LoginScreen extends StatelessWidget {
                   SizedBox(height: 34.h),
                   CustomImageView(
                     imagePath: ImageConstant.img37081,
-                    height: 172.h,
+                    height: 200.h,
                     width: double.maxFinite,
                     margin: EdgeInsets.only(
                       left: 4.h,

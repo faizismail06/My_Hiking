@@ -14,8 +14,13 @@ import 'models/booking_model.dart';
 class BookingScreen extends StatefulWidget {
   final int? jalurId;
   final int? idGunung;
-  const BookingScreen(
-      {super.key, required this.jalurId, required this.idGunung});
+  final bool forceContinue;
+  const BookingScreen({
+    super.key,
+    required this.jalurId,
+    required this.idGunung,
+    this.forceContinue = false,
+  });
 
   @override
   State<BookingScreen> createState() => _BookingScreenState();
@@ -401,7 +406,18 @@ class _BookingScreenState extends State<BookingScreen> {
       BuildContext context, BookingModel trailModel, BookingState state) {
     int totalMembers =
         (state.selectedMembers?.length ?? 0) + 1; // 1 represents the main user
-    int totalCost = (trailModel.biaya ?? 0).toInt() * totalMembers;
+    int totalDays = 1;
+    final naikText = state.bookingDateFieldController?.text ?? '';
+    final turunText = state.returnDateFieldController?.text ?? '';
+    if (naikText.isNotEmpty && turunText.isNotEmpty) {
+      try {
+        final d1 = DateTime.parse(naikText);
+        final d2 = DateTime.parse(turunText);
+        totalDays = d2.difference(d1).inDays + 1;
+        if (totalDays < 1) totalDays = 1;
+      } catch (_) {}
+    }
+    int totalCost = (trailModel.biaya ?? 0).toInt() * totalMembers * totalDays;
 
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 20.h, vertical: 16.h),
@@ -428,7 +444,7 @@ class _BookingScreenState extends State<BookingScreen> {
           Row(
             children: [
               Text(
-                "Total ($totalMembers Orang): ",
+                "Total ($totalMembers Orang, $totalDays Hari): ",
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
@@ -1153,15 +1169,20 @@ class _BookingScreenState extends State<BookingScreen> {
         return;
       }
 
+      int totalDays = dtTurun.difference(dtNaik).inDays + 1;
+      if (totalDays < 1) totalDays = 1;
+      int totalMembers = (anggotaIds?.length ?? 0) + 1;
+      int totalHargaTiket = biaya.toInt() * totalMembers * totalDays;
+
       final decisionResult = await ApiService().createBookingWithDecision(
         idGunung,
         jalurId,
         userIdInt,
         formattedDate,
         formattedReturnDate,
-        biaya.toInt(),
+        totalHargaTiket,
         anggotaIds: anggotaIds?.isNotEmpty == true ? anggotaIds : null,
-        forceContinue: forceContinue,
+        forceContinue: forceContinue || widget.forceContinue,
       );
 
       final booking = decisionResult.booking;

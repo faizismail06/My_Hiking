@@ -15,12 +15,30 @@ class WeatherModel {
     required this.weatherIcon,
   });
 
+  static int _toInt(dynamic value, [int defaultValue = 0]) {
+    if (value == null) return defaultValue;
+    if (value is int) return value;
+    if (value is double) return value.round();
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? (double.tryParse(value)?.round() ?? defaultValue);
+    return defaultValue;
+  }
+
+  static double _toDouble(dynamic value, [double defaultValue = 0.0]) {
+    if (value == null) return defaultValue;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? defaultValue;
+    return defaultValue;
+  }
+
   factory WeatherModel.fromJson(Map<String, dynamic> json) {
-    final current = json['current'];
-    final weatherCode = current['weather_code'] ?? 0;
+    final current = json['current'] as Map<String, dynamic>? ?? {};
+    final weatherCode = _toInt(current['weather_code']);
     
     return WeatherModel(
-      temperature: (current['temperature_2m'] ?? 0).toDouble(),
+      temperature: _toDouble(current['temperature_2m'], 15.0),
       weatherCode: weatherCode,
       weatherDescription: getWeatherDescription(weatherCode),
       weatherIcon: getWeatherIcon(weatherCode),
@@ -257,6 +275,13 @@ class WeatherForecastModel {
     required this.hourly,
   });
 
+  static DateTime? _parseDate(dynamic val) {
+    if (val == null) return null;
+    final str = val.toString().trim();
+    if (str.isEmpty) return null;
+    return DateTime.tryParse(str) ?? DateTime.tryParse(str.replaceAll(' ', 'T'));
+  }
+
   factory WeatherForecastModel.fromJson(Map<String, dynamic> json) {
     final dailyData = json['daily'];
     final hourlyData = json['hourly'];
@@ -265,7 +290,7 @@ class WeatherForecastModel {
     final List<HourlyForecast> hourlyForecasts = [];
     
     // Parse daily data
-    if (dailyData != null) {
+    if (dailyData != null && dailyData is Map<String, dynamic>) {
       final times = dailyData['time'] as List? ?? [];
       final maxTemps = dailyData['temperature_2m_max'] as List? ?? [];
       final minTemps = dailyData['temperature_2m_min'] as List? ?? [];
@@ -275,26 +300,25 @@ class WeatherForecastModel {
       final sunset = dailyData['sunset'] as List?;
 
       for (int i = 0; i < times.length; i++) {
-        dailyForecasts.add(DailyForecast(
-          date: DateTime.parse(times[i]),
-          maxTemp: (maxTemps.length > i ? maxTemps[i] : 0)?.toDouble() ?? 0.0,
-          minTemp: (minTemps.length > i ? minTemps[i] : 0)?.toDouble() ?? 0.0,
-          weatherCode: weatherCodes.length > i ? weatherCodes[i] ?? 0 : 0,
-          precipitationProbability: precipProb != null && precipProb.length > i 
-              ? precipProb[i] ?? 0 
-              : 0,
-          sunrise: sunrise != null && sunrise.length > i 
-              ? DateTime.tryParse(sunrise[i] ?? '') 
-              : null,
-          sunset: sunset != null && sunset.length > i 
-              ? DateTime.tryParse(sunset[i] ?? '') 
-              : null,
-        ));
+        try {
+          final date = _parseDate(times[i]);
+          if (date == null) continue;
+
+          dailyForecasts.add(DailyForecast(
+            date: date,
+            maxTemp: WeatherModel._toDouble(maxTemps.length > i ? maxTemps[i] : null),
+            minTemp: WeatherModel._toDouble(minTemps.length > i ? minTemps[i] : null),
+            weatherCode: WeatherModel._toInt(weatherCodes.length > i ? weatherCodes[i] : null),
+            precipitationProbability: WeatherModel._toInt(precipProb != null && precipProb.length > i ? precipProb[i] : null),
+            sunrise: (sunrise != null && sunrise.length > i) ? _parseDate(sunrise[i]) : null,
+            sunset: (sunset != null && sunset.length > i) ? _parseDate(sunset[i]) : null,
+          ));
+        } catch (_) {}
       }
     }
     
     // Parse hourly data
-    if (hourlyData != null) {
+    if (hourlyData != null && hourlyData is Map<String, dynamic>) {
       final times = hourlyData['time'] as List? ?? [];
       final temps = hourlyData['temperature_2m'] as List? ?? [];
       final weatherCodes = hourlyData['weather_code'] as List? ?? [];
@@ -303,20 +327,19 @@ class WeatherForecastModel {
       final windSpeed = hourlyData['wind_speed_10m'] as List?;
 
       for (int i = 0; i < times.length; i++) {
-        hourlyForecasts.add(HourlyForecast(
-          dateTime: DateTime.parse(times[i]),
-          temperature: (temps.length > i ? temps[i] : 0)?.toDouble() ?? 0.0,
-          weatherCode: weatherCodes.length > i ? weatherCodes[i] ?? 0 : 0,
-          humidity: humidity != null && humidity.length > i 
-              ? humidity[i] ?? 0 
-              : 0,
-          precipitationProbability: precipProb != null && precipProb.length > i 
-              ? precipProb[i] ?? 0 
-              : 0,
-          windSpeed: windSpeed != null && windSpeed.length > i 
-              ? (windSpeed[i] ?? 0).toDouble() 
-              : 0.0,
-        ));
+        try {
+          final dateTime = _parseDate(times[i]);
+          if (dateTime == null) continue;
+
+          hourlyForecasts.add(HourlyForecast(
+            dateTime: dateTime,
+            temperature: WeatherModel._toDouble(temps.length > i ? temps[i] : null),
+            weatherCode: WeatherModel._toInt(weatherCodes.length > i ? weatherCodes[i] : null),
+            humidity: WeatherModel._toInt(humidity != null && humidity.length > i ? humidity[i] : null),
+            precipitationProbability: WeatherModel._toInt(precipProb != null && precipProb.length > i ? precipProb[i] : null),
+            windSpeed: WeatherModel._toDouble(windSpeed != null && windSpeed.length > i ? windSpeed[i] : null),
+          ));
+        } catch (_) {}
       }
     }
 
@@ -326,13 +349,32 @@ class WeatherForecastModel {
     );
   }
 
-  /// Get hourly forecasts for a specific date
+  /// Get hourly forecasts for a specific date (shows upcoming hours starting from current time)
   List<HourlyForecast> getHourlyForDate(DateTime date) {
-    return hourly.where((h) => 
+    final now = DateTime.now();
+
+    final isToday = date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day;
+
+    if (isToday) {
+      // For today, show upcoming hours starting from current time into the next 24 hours
+      final cutoff = now.subtract(const Duration(minutes: 90));
+      final upcoming = hourly.where((h) => h.dateTime.isAfter(cutoff)).toList();
+
+      if (upcoming.isNotEmpty) {
+        return upcoming.take(16).toList();
+      }
+    }
+
+    final matches = hourly.where((h) => 
       h.dateTime.year == date.year && 
       h.dateTime.month == date.month && 
       h.dateTime.day == date.day
     ).toList();
+
+    if (matches.isNotEmpty) return matches;
+    return hourly.take(16).toList();
   }
 }
 

@@ -5,19 +5,21 @@ import 'core/app_export.dart';
 
 var globalMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  Future.wait([
-    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp])
-  ]).then((value) {
-    PrefUtils().init();
-    runApp(const MyApp());
-  });
+  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  await PrefUtils().init();
+
+  final token = PrefUtils().getToken();
+  final bool isLoggedIn = token != null && token.isNotEmpty;
+
+  runApp(MyApp(isLoggedIn: isLoggedIn));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final bool isLoggedIn;
+  const MyApp({super.key, this.isLoggedIn = false});
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +45,7 @@ class MyApp extends StatelessWidget {
                 supportedLocales: const [
                   Locale('en', ''),
                 ],
-                initialRoute: AppRoutes.initialRoute,
+                initialRoute: isLoggedIn ? AppRoutes.homeScreen : AppRoutes.initialRoute,
                 routes: AppRoutes.routes,
                 onGenerateRoute: (settings) {
                   final routeBuilder = AppRoutes.routes[settings.name];

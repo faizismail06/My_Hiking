@@ -98,18 +98,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return SafeArea(
             child: Scaffold(
           backgroundColor: appTheme.gray50,
-          body: SingleChildScrollView(
-            child: Container(
-              width: double.maxFinite,
-              padding: EdgeInsets.symmetric(horizontal: 0, vertical: 24.h),
-              child: Column(
-                mainAxisSize: MainAxisSize.max,
-                children: [
-                  _buildProfileHeader(context),
-                  SizedBox(height: 32.h),
-                  _buildProfileSettings(context),
-                  SizedBox(height: 20.h),
-                ],
+          body: ClipRect(
+            child: SingleChildScrollView(
+              child: Container(
+                width: double.maxFinite,
+                padding: EdgeInsets.only(left: 0, right: 0, top: 30.h, bottom: 24.h),
+                child: Column(
+                  mainAxisSize: MainAxisSize.max,
+                  children: [
+                    _buildProfileHeader(context),
+                    SizedBox(height: 32.h),
+                    _buildProfileSettings(context),
+                    SizedBox(height: 20.h),
+                  ],
+                ),
               ),
             ),
           ),
@@ -127,11 +129,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       width: double.maxFinite,
       child: Stack(
         alignment: Alignment.bottomRight,
+        clipBehavior: Clip.none,
         children: [
           Container(
-            width: 224.h,
+            width: 245.h,
             margin: EdgeInsets.only(bottom: 26.h),
-            padding: EdgeInsets.only(left: 58.h, top: 10.h, bottom: 10.h),
+            padding: EdgeInsets.only(left: 90.h, top: 10.h, bottom: 10.h),
             decoration: BoxDecoration(
               color: theme.colorScheme.primary.withOpacity(0.7),
             ),
@@ -140,23 +143,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    userName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleLarge,
-                  ),
+                Text(
+                  userName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleLarge,
                 ),
-                Padding(
-                  padding: EdgeInsets.only(left: 0.h),
-                  child: Text(
-                    "ID : ${userId.toString()}",
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: CustomTextStyles.titleMediumOnPrimary_1,
-                  ),
+                Text(
+                  "ID : ${userId.toString()}",
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: CustomTextStyles.titleMediumOnPrimary_1,
                 ),
                 SizedBox(height: 5.h),
                 Container(
@@ -199,11 +196,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
           ),
-          CustomImageView(
-            imagePath: ImageConstant.imgAmping91,
-            height: 164.h,
-            width: 228.h,
-            alignment: Alignment.centerLeft,
+          Positioned(
+            left: -73.h,
+            top: -50.h,
+            child: CustomImageView(
+              imagePath: ImageConstant.imgAmping91,
+              height: 230.h,
+              width: 300.h,
+            ),
           ),
         ],
       ),

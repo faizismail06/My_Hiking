@@ -8,6 +8,8 @@ import 'package:myhiking/presentation/data_profile_screen/bloc/data_profile_bloc
 import 'package:myhiking/presentation/data_profile_screen/data_profile_screen.dart';
 import 'package:myhiking/presentation/experience_onboarding_screen/experience_onboarding_screen.dart';
 import 'package:myhiking/presentation/rules_screen/bloc/rules_bloc.dart';
+import 'package:myhiking/presentation/home_screen/models/recommendation_model.dart';
+import 'package:myhiking/presentation/shared/widgets/risk_warning_dialog.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/app_export.dart';
 import '../../theme/custom_button_style.dart';
@@ -236,10 +238,6 @@ class _TrailScreenState extends State<TrailScreen> {
 
                             SizedBox(height: 12.h),
 
-                            _buildDssRecommendationCard(context, trailModel),
-
-                            SizedBox(height: 12.h),
-
                             // Trail Actions Section
                             _buildTrailActions(context, trailModel),
 
@@ -252,7 +250,7 @@ class _TrailScreenState extends State<TrailScreen> {
                             // Buttons: Rules & Order Now
                             _buildRulesButton(context),
                             SizedBox(height: 8.h),
-                            _buildPesanSekarangButton(context),
+                            _buildPesanSekarangButton(context, trailModel),
                           ],
                         ),
                       ),
@@ -379,106 +377,7 @@ class _TrailScreenState extends State<TrailScreen> {
         ));
   }
 
-  Widget _buildDssRecommendationCard(
-      BuildContext context, TrailScreenModel trailModel) {
-    final dss = trailModel.dss;
-    if (dss == null) {
-      return SizedBox.shrink();
-    }
-
-    Color badgeColor;
-    String badgeText;
-
-    switch (dss.riskLevel) {
-      case 'high_risk':
-        badgeColor = Colors.red.shade600;
-        badgeText = 'Risiko tinggi';
-        break;
-      case 'caution':
-        badgeColor = Colors.amber.shade700;
-        badgeText = 'Perlu pertimbangan';
-        break;
-      default:
-        badgeColor = Colors.green.shade600;
-        badgeText = 'Aman';
-    }
-
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(14.h),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12.h),
-        border: Border.all(color: badgeColor.withOpacity(0.35), width: 1.4),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 10.h, vertical: 4.h),
-                decoration: BoxDecoration(
-                  color: badgeColor.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(999.h),
-                ),
-                child: Text(
-                  badgeText,
-                  style: TextStyle(
-                    color: badgeColor,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12.fSize,
-                  ),
-                ),
-              ),
-              SizedBox(width: 10.h),
-              Text(
-                'Skor DSS: ${dss.finalScore.toStringAsFixed(2)}',
-                style: TextStyle(
-                  color: theme.colorScheme.primary,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12.fSize,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 10.h),
-          if (dss.weather != null)
-            Text(
-              'Cuaca: ${dss.weather!.condition} | '
-              'Kode ${dss.weather!.code} | '
-              'Suhu ${dss.weather!.temperature?.toStringAsFixed(0) ?? '-'}°C | '
-              'Angin ${dss.weather!.windSpeed?.toStringAsFixed(1) ?? '-'} km/h',
-              style: CustomTextStyles.bodyMediumGray500,
-            ),
-          if (dss.weather != null) SizedBox(height: 8.h),
-          Text(
-            dss.message,
-            style: CustomTextStyles.bodyMediumGray500,
-          ),
-          if (dss.reasoning.isNotEmpty) SizedBox(height: 10.h),
-          if (dss.reasoning.isNotEmpty)
-            ...dss.reasoning.map(
-              (item) => Padding(
-                padding: EdgeInsets.only(bottom: 4.h),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('• ', style: CustomTextStyles.bodyMediumGray500),
-                    Expanded(
-                      child: Text(
-                        item,
-                        style: CustomTextStyles.bodyMediumGray500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
+ 
 
   Widget _buildTrailActions(BuildContext context, TrailScreenModel trailModel) {
     return Row(
@@ -607,7 +506,8 @@ class _TrailScreenState extends State<TrailScreen> {
   }
 
   // **Pesan Sekarang Button**
-  Widget _buildPesanSekarangButton(BuildContext context) {
+  Widget _buildPesanSekarangButton(
+      BuildContext context, TrailScreenModel trailModel) {
     return CustomElevatedButton(
       height: 56.h,
       text: "Pesan Sekarang",
@@ -617,6 +517,48 @@ class _TrailScreenState extends State<TrailScreen> {
         final allowed = await _guardBeforeBooking();
         if (!allowed) return;
 
+        bool hasConfirmedRisk = false;
+        final dss = trailModel.dss;
+        if (dss != null &&
+            (dss.riskLevel == 'caution' || dss.riskLevel == 'high_risk')) {
+          final token = await ApiService().getToken();
+          if (token != null) {
+            final userResponse = await ApiService().getUser(token);
+            if (userResponse['success'] == true) {
+              final userData = userResponse['data'] as Map<String, dynamic>;
+              final userTierStr = (userData['tier'] ?? '').toString();
+
+              final recModel = RecommendationModel(
+                rank: 0,
+                routeId: widget.jalurId ?? 0,
+                routeName: trailModel.name,
+                mountainName: trailModel.gunung.nama,
+                score: dss.finalScore,
+                risk: dss.riskLevel == 'high_risk'
+                    ? 'HIGH'
+                    : (dss.riskLevel == 'caution' ? 'MEDIUM' : 'SAFE'),
+                rawRisk: dss.riskLevel,
+                warning: dss.riskLevel == 'high_risk' ||
+                    dss.riskLevel == 'caution',
+                shortReason: dss.message,
+              );
+
+              if (context.mounted) {
+                final result = await RiskWarningDialog.show(
+                  context,
+                  recommendation: recModel,
+                  userTier: userTierStr,
+                );
+                // null → user tapped Batal or dismissed → abort navigation
+                if (result == null) return;
+                hasConfirmedRisk = true;
+              }
+            }
+          }
+        }
+
+        if (!context.mounted) return;
+
         Navigator.of(context, rootNavigator: true).push(
           MaterialPageRoute(
             builder: (context) => BlocProvider(
@@ -624,7 +566,7 @@ class _TrailScreenState extends State<TrailScreen> {
               child: BookingScreen(
                 jalurId: widget.jalurId, // Use widget to access jalurId
                 idGunung: widget.idGunung, // Use widget to access idGunung
-                // userId: userId,
+                forceContinue: hasConfirmedRisk,
               ),
             ),
           ),

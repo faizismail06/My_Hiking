@@ -70,6 +70,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
             cachedFeed,
             hasCompletedExperience ? state.recommendations : const [],
             hasCompletedExperience: hasCompletedExperience,
+            isLoadingRecommended: hasCompletedExperience,
           ));
         }
       } catch (e) {
@@ -126,6 +127,11 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
           weights: customWeights,
         );
         topRecommendations = _sortAndRankRecommendations(topRecommendations);
+
+        print('=== DSS INITIAL RECOMMENDATIONS RANKING ===');
+        for (var i = 0; i < topRecommendations.length && i < 5; i++) {
+          print('#${topRecommendations[i].rank}: ${topRecommendations[i].routeName} (Gunung ${topRecommendations[i].mountainName}) - Score: ${topRecommendations[i].score}');
+        }
       } catch (e) {
         recommendationError = 'Gagal memuat rekomendasi TOPSIS.';
         print('Error fetching recommendations: $e');
@@ -305,6 +311,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     List<RecommendationModel> recommendations, {
     required bool hasCompletedExperience,
     String? recommendationError,
+    bool isLoadingRecommended = false,
   }) {
     return state.copyWith(
       recommendedMountain: feed.recommended,
@@ -315,7 +322,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       allMountains: feed.mountains,
       baseAllMountains: feed.mountains,
       selectedProvince: null,
-      isLoadingRecommended: false,
+      isLoadingRecommended: isLoadingRecommended,
       hasCompletedExperience: hasCompletedExperience,
       homeInitialModelObj: state.homeInitialModelObj?.copyWith(
         homelistItemList: feed.mountains,
@@ -326,33 +333,9 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   List<RecommendationModel> _sortAndRankRecommendations(
     List<RecommendationModel> items,
   ) {
-    final sorted = [...items]..sort((a, b) {
-        final riskCompare =
-            _riskPriority(a.risk).compareTo(_riskPriority(b.risk));
-        if (riskCompare != 0) {
-          return riskCompare;
-        }
-        return b.score.compareTo(a.score);
-      });
-    final uniqueByMountain = <RecommendationModel>[];
-    final seenMountains = <String>{};
+    final sorted = [...items]..sort((a, b) => b.score.compareTo(a.score));
 
-    for (final item in sorted) {
-      final key = item.mountainName
-          .toLowerCase()
-          .replaceAll('gunung', '')
-          .replaceAll(RegExp(r'\s+'), ' ')
-          .trim();
-
-      if (key.isEmpty || seenMountains.contains(key)) {
-        continue;
-      }
-
-      seenMountains.add(key);
-      uniqueByMountain.add(item);
-    }
-
-    return uniqueByMountain.asMap().entries.map((entry) {
+    return sorted.asMap().entries.map((entry) {
       final index = entry.key;
       final item = entry.value;
 

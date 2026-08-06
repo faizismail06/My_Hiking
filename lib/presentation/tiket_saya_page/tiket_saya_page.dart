@@ -36,6 +36,23 @@ class _TiketSayaPageState extends State<TiketSayaPage> {
   final Set<int> _trackedPendingOrderIds = <int>{};
   final Map<int, _PendingPaymentMeta> _pendingPaymentMetaMap =
       <int, _PendingPaymentMeta>{};
+  final Set<int> _expiredOrderIdsSyncing = <int>{};
+
+  void _triggerExpiredTicketSync(int? orderId) {
+    if (orderId == null || _expiredOrderIdsSyncing.contains(orderId)) {
+      return;
+    }
+
+    _expiredOrderIdsSyncing.add(orderId);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        await ApiService().getPaymentStatus(orderId.toString());
+      } catch (_) {}
+      if (mounted && userId.isNotEmpty) {
+        context.read<TiketSayaBloc>().add(TiketSayaUserIdEvent(userId));
+      }
+    });
+  }
 
   Timer? _countdownTicker;
   Timer? _pendingStatusPollingTimer;
@@ -263,17 +280,24 @@ class _TiketSayaPageState extends State<TiketSayaPage> {
           for (final ticket in activeTickets) {
             final orderId = int.tryParse(ticket.id ?? '');
             final tx = _findTransactionForOrder(state, orderId);
+            final remainingTime = _resolveRemainingTime(
+              ticket,
+              tx,
+              orderId: orderId,
+            );
+
             if (_isPendingPaymentTicket(ticket, tx, orderId: orderId)) {
+              if (remainingTime != null && remainingTime <= Duration.zero) {
+                _triggerExpiredTicketSync(orderId);
+                continue;
+              }
+
               pendingTickets.add(
                 _PendingTicketViewData(
                   model: ticket,
                   orderId: orderId,
                   transaction: tx,
-                  remainingTime: _resolveRemainingTime(
-                    ticket,
-                    tx,
-                    orderId: orderId,
-                  ),
+                  remainingTime: remainingTime,
                 ),
               );
             } else {
@@ -518,6 +542,8 @@ class _TiketSayaPageState extends State<TiketSayaPage> {
   ) {
     final candidates = [
       tx?.waktuPembayaran,
+      tx?.createdAt,
+      model.createdAt,
       model.updatedAt,
     ];
 
@@ -533,7 +559,7 @@ class _TiketSayaPageState extends State<TiketSayaPage> {
       }
     }
 
-    return null;
+    return DateTime.now();
   }
 
   void _syncPendingTracking(Set<int> orderIds) {

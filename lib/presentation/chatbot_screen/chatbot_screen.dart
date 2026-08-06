@@ -181,7 +181,10 @@ class _ChatbotScreenState extends State<ChatbotScreen>
           }
 
           if (histories.isNotEmpty) {
-            await _loadChatHistory(histories.first['id']);
+            final firstId = _toInt(histories.first['id']);
+            if (firstId != null) {
+              await _loadChatHistory(firstId);
+            }
           }
         }
       }
@@ -236,19 +239,23 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     final userMessages = _messages.where((m) => m.isUser).toList();
     if (userMessages.isEmpty) return;
 
+    final initialHistoryId = _currentHistoryId;
+    final messagesJson = _messages.map((m) => m.toJson()).toList();
+
     try {
-      final messagesJson = _messages.map((m) => m.toJson()).toList();
       final result = await _apiService.saveChatHistory(
         userId: _userId!,
         role: widget.role,
         messages: messagesJson,
-        historyId: _currentHistoryId,
+        historyId: initialHistoryId,
       );
 
       if (!mounted) return;
       if (result['success'] == true && result['history_id'] != null) {
-        final historyId = result['history_id'];
-        if (historyId is int && _currentHistoryId != historyId) {
+        final historyId = _toInt(result['history_id']);
+        if (historyId != null &&
+            _currentHistoryId == initialHistoryId &&
+            _currentHistoryId != historyId) {
           _cubit.setCurrentHistoryId(historyId);
         }
       }
@@ -274,13 +281,15 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   }
 
   /// Mulai chat baru
-  void _startNewChat() {
-    _autoSaveHistory();
+  Future<void> _startNewChat() async {
+    await _autoSaveHistory();
     _cubit.setCurrentHistoryId(null);
     _cubit.clearMessages();
     _addWelcomeMessage();
     _setPreferFreshChatOnNextOpen(true);
-    Navigator.pop(context); // Close drawer
+    if (mounted) {
+      Navigator.pop(context); // Close drawer
+    }
   }
 
   /// Cek koneksi ke server chatbot
@@ -474,17 +483,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     }
   }
 
-  /// Icon berdasarkan role
-  IconData get _roleIcon {
-    switch (widget.role) {
-      case 'admin':
-        return Icons.admin_panel_settings;
-      case 'penjaga':
-        return Icons.shield;
-      default:
-        return Icons.smart_toy_outlined;
-    }
-  }
+
 
   /// Tambahkan pesan selamat datang berdasarkan role
   void _addWelcomeMessage() {
@@ -534,6 +533,21 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         isUser: false,
       ));
     }
+  }
+
+  bool _isMountainListParagraph(String paragraph) {
+    final lines = paragraph.split('\n').map((l) => l.trim()).where((l) => l.isNotEmpty);
+    if (lines.isEmpty) return false;
+    
+    int mountainLinesCount = 0;
+    for (final line in lines) {
+      final lower = line.toLowerCase();
+      if ((lower.startsWith('-') || lower.startsWith('*') || RegExp(r'^\d+\.').hasMatch(lower)) && 
+          (lower.contains('gunung') || lower.contains('mdpl'))) {
+        mountainLinesCount++;
+      }
+    }
+    return mountainLinesCount > 0 && mountainLinesCount >= lines.length * 0.5;
   }
 
   /// Kirim pesan ke chatbot
@@ -643,6 +657,24 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                 rawMountains.map((e) => Map<String, dynamic>.from(e as Map)))
             : null;
 
+        int mountainAttachmentIndex = paragraphs.length - 1;
+        if (mountainsList != null && mountainsList.isNotEmpty) {
+          int listIndex = -1;
+          for (int i = 0; i < paragraphs.length; i++) {
+            if (_isMountainListParagraph(paragraphs[i])) {
+              listIndex = i;
+              break;
+            }
+          }
+          if (listIndex != -1) {
+            paragraphs.removeAt(listIndex);
+            mountainAttachmentIndex = listIndex - 1;
+            if (mountainAttachmentIndex < 0) {
+              mountainAttachmentIndex = 0;
+            }
+          }
+        }
+
         for (int i = 0; i < paragraphs.length; i++) {
           final isLast = i == paragraphs.length - 1;
           _cubit.addMessage(ChatMessage(
@@ -665,7 +697,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
             deeplinkUrl: isLast ? response['deeplink_url']?.toString() : null,
             qrCodeUrl: isLast ? response['qr_code_url']?.toString() : null,
             qrString: isLast ? response['qr_string']?.toString() : null,
-            mountains: isLast ? mountainsList : null,
+            mountains: (i == mountainAttachmentIndex) ? mountainsList : null,
             source: isLast ? responseSource : null,
             intent: isLast ? responseIntent : null,
             responseType: isLast ? responseType : null,
@@ -1080,7 +1112,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   /// Download file Excel
   Future<void> _downloadFile(String downloadUrl) async {
     try {
-      final fullUrl = 'http://127.0.0.1:5000/$downloadUrl';
+      final fullUrl = 'http://103.93.132.167/chatbot/api/$downloadUrl';
       final uri = Uri.parse(fullUrl);
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -1270,7 +1302,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                   const SizedBox(height: 12),
                   ConstrainedBox(
                     constraints: BoxConstraints(
-                      maxHeight: MediaQuery.of(context).size.height * 0.45,
+                      maxHeight: MediaQuery.sizeOf(context).height * 0.45,
                     ),
                     child: ListView.separated(
                       shrinkWrap: true,
@@ -1470,7 +1502,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
     }
 
     return Container(
-      width: MediaQuery.of(context).size.width * 0.82,
+      width: MediaQuery.sizeOf(context).width * 0.82,
       margin: EdgeInsets.only(top: 10.h, bottom: 4.h),
       child: Wrap(
         spacing: 8.h,
@@ -1535,7 +1567,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.9,
+          maxWidth: MediaQuery.sizeOf(context).width * 0.9,
         ),
         margin: EdgeInsets.only(top: 8.h, bottom: 8.h, left: 16.h, right: 16.h),
         child: Row(
@@ -1812,7 +1844,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                 },
                 borderRadius: BorderRadius.circular(16.h),
                 child: Container(
-                  width: MediaQuery.of(context).size.width * 0.4,
+                  width: MediaQuery.sizeOf(context).width * 0.4,
                   padding: EdgeInsets.all(16.h),
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -1928,7 +1960,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                     separatorBuilder: (_, __) => const Divider(height: 1),
                     itemBuilder: (context, index) {
                       final history = _chatHistories[index];
-                      final isActive = _currentHistoryId == history['id'];
+                      final isActive = _currentHistoryId == _toInt(history['id']);
                       return ListTile(
                         selected: isActive,
                         selectedTileColor: _rolePrimaryColor.withOpacity(0.08),
@@ -1976,7 +2008,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                                   TextButton(
                                     onPressed: () {
                                       Navigator.pop(ctx);
-                                      _deleteHistory(history['id']);
+                                      _deleteHistory(_toInt(history['id']) ?? 0);
                                     },
                                     child: const Text('Hapus',
                                         style: TextStyle(color: Colors.red)),
@@ -1986,10 +2018,15 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                             );
                           },
                         ),
-                        onTap: () {
-                          _autoSaveHistory();
-                          _loadChatHistory(history['id']);
-                          Navigator.pop(context); // Close drawer
+                        onTap: () async {
+                          await _autoSaveHistory();
+                          final historyId = _toInt(history['id']);
+                          if (historyId != null) {
+                            await _loadChatHistory(historyId);
+                          }
+                          if (context.mounted) {
+                            Navigator.pop(context); // Close drawer
+                          }
                         },
                       );
                     },
@@ -2009,11 +2046,13 @@ class _ChatbotScreenState extends State<ChatbotScreen>
           SizedBox(
             width: 150.h,
             height: 150.h,
-            child: Lottie.asset(
-              'assets/lottie/Siri.json',
-              fit: BoxFit.contain,
-              repeat: true,
-              animate: true,
+            child: RepaintBoundary(
+              child: Lottie.asset(
+                'assets/lottie/Siri.json',
+                fit: BoxFit.contain,
+                repeat: true,
+                animate: true,
+              ),
             ),
           ),
           SizedBox(height: 16.h),
@@ -2154,8 +2193,6 @@ class _ChatbotScreenState extends State<ChatbotScreen>
               title: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(_roleIcon, color: _rolePrimaryColor, size: 24.h),
-                  SizedBox(width: 8.h),
                   Text(
                     _roleTitle,
                     style: TextStyle(
@@ -2453,7 +2490,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
 }
 }
 
-class MountainCardsCarousel extends StatefulWidget {
+class MountainCardsCarousel extends StatelessWidget {
   final List<Map<String, dynamic>> mountains;
   final String baseUrl;
   final Function(String) onQuickReply;
@@ -2466,294 +2503,180 @@ class MountainCardsCarousel extends StatefulWidget {
   });
 
   @override
-  State<MountainCardsCarousel> createState() => _MountainCardsCarouselState();
-}
-
-class _MountainCardsCarouselState extends State<MountainCardsCarousel> {
-  int _currentPage = 0;
-  late PageController _pageController;
-
-  @override
-  void initState() {
-    super.initState();
-    _pageController = PageController();
-  }
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final mountains = widget.mountains;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          height: 280.h,
-          width: double.infinity,
-          child: PageView.builder(
-            controller: _pageController,
-            pageSnapping: true,
-            physics: const PageScrollPhysics(),
-            onPageChanged: (index) {
-              setState(() {
-                _currentPage = index;
-              });
-            },
-            itemCount: mountains.length,
-            itemBuilder: (context, index) {
-              final m = mountains[index];
-              final String nama = m['nama'] ?? 'Gunung';
-              final String ketinggian = '${m['ketinggian'] ?? 0} mdpl';
-              final String provinsi = m['provinsi'] ?? 'Indonesia';
-              final int? id = m['id'];
-              final String gambarGunung = m['gambar_gunung'] ?? '';
-              final String deskripsi = m['deskripsi'] ?? '';
+    return SizedBox(
+      height: 230.h,
+      width: double.infinity,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        itemCount: mountains.length,
+        itemBuilder: (context, index) {
+          final m = mountains[index];
+          final String nama = m['nama'] ?? 'Gunung';
+          final String ketinggian = '${m['ketinggian'] ?? 0} mdpl';
+          final String provinsi = m['provinsi'] ?? 'Indonesia';
+          final int? id = m['id'];
+          final String gambarGunung = m['gambar_gunung'] ?? '';
 
-              final String fullImageUrl = gambarGunung.isNotEmpty
-                  ? '${widget.baseUrl}/images/$gambarGunung'
-                  : '';
+          final String fullImageUrl = gambarGunung.isNotEmpty
+              ? '$baseUrl/images/$gambarGunung'
+              : '';
 
-              return Container(
-                margin: EdgeInsets.only(bottom: 8.h),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16.h),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.06),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                  border: Border.all(color: appTheme.gray200.withOpacity(0.8)),
+          return Container(
+            width: MediaQuery.sizeOf(context).width * 0.44,
+            margin: EdgeInsets.only(right: 12.h, bottom: 8.h),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12.h),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.06),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
                 ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16.h),
-                  child: InkWell(
-                    onTap: () {
-                      if (id != null) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => BlocProvider(
-                              create: (context) => DetailMountainBloc(
-                                  apiService: ApiService())
-                                ..add(DetailMountainInitialEvent(id)),
-                              child: DetailMountainScreen(idGunung: id),
+              ],
+              border: Border.all(color: appTheme.gray200.withOpacity(0.8)),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12.h),
+              child: InkWell(
+                onTap: () {
+                  if (id != null) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => BlocProvider(
+                          create: (context) => DetailMountainBloc(
+                              apiService: ApiService())
+                            ..add(DetailMountainInitialEvent(id)),
+                          child: DetailMountainScreen(idGunung: id),
+                        ),
+                      ),
+                    );
+                  }
+                },
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      height: 130.h,
+                      width: double.infinity,
+                      child: Stack(
+                        children: [
+                          Positioned.fill(
+                            child: fullImageUrl.isNotEmpty
+                                ? Image.network(
+                                    fullImageUrl,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) =>
+                                        Container(
+                                      color: Colors.grey[100],
+                                      child: Icon(Icons.terrain,
+                                          color: Colors.grey[400], size: 24.h),
+                                    ),
+                                  )
+                                : Container(
+                                    color: Colors.grey[100],
+                                    child: Icon(Icons.terrain,
+                                        color: Colors.grey[400], size: 24.h),
+                                  ),
+                          ),
+                          Positioned(
+                            top: 6.h,
+                            right: 6.h,
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 8.h, vertical: 3.h),
+                              decoration: BoxDecoration(
+                                  color: const Color(0xFF1B8A5A),
+                                  borderRadius: BorderRadius.circular(8.h)),
+                              child: Text(
+                                ketinggian,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 8.fSize,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
                           ),
-                        );
-                      }
-                    },
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(
-                          height: 120.h,
-                          width: double.infinity,
-                          child: Stack(
-                            children: [
-                              Positioned.fill(
-                                child: fullImageUrl.isNotEmpty
-                                    ? Image.network(
-                                        fullImageUrl,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) =>
-                                            Container(
-                                          color: Colors.grey[100],
-                                          child: Icon(Icons.terrain,
-                                              color: Colors.grey[400], size: 32.h),
-                                        ),
-                                      )
-                                    : Container(
-                                        color: Colors.grey[100],
-                                        child: Icon(Icons.terrain,
-                                            color: Colors.grey[400], size: 32.h),
-                                      ),
-                              ),
-                              Positioned(
-                                top: 8.h,
-                                right: 8.h,
-                                child: Container(
-                                  padding: EdgeInsets.symmetric(
-                                      horizontal: 10.h, vertical: 4.h),
-                                  decoration: BoxDecoration(
-                                      color: const Color(0xFF1B8A5A),
-                                      borderRadius: BorderRadius.circular(12.h)),
-                                  child: Text(
-                                    ketinggian,
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 10.fSize,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8.h, vertical: 6.h),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            nama,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12.fSize,
+                              color: appTheme.blueGray900,
+                            ),
                           ),
-                        ),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 12.h, vertical: 8.h),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          SizedBox(height: 2.h),
+                          Row(
                             children: [
-                              Text(
-                                nama,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14.fSize,
-                                  color: appTheme.blueGray900,
-                                ),
-                              ),
-                              SizedBox(height: 4.h),
-                              Row(
-                                children: [
-                                  Icon(Icons.location_on_rounded,
-                                      size: 12.h, color: const Color(0xFF1B8A5A)),
-                                  SizedBox(width: 4.h),
-                                  Expanded(
-                                    child: Text(
-                                      provinsi,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        color: Colors.grey[600],
-                                        fontSize: 11.fSize,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              if (deskripsi.isNotEmpty) ...[
-                                SizedBox(height: 4.h),
-                                Text(
-                                  deskripsi,
-                                  maxLines: 2,
+                              Icon(Icons.location_on_rounded,
+                                  size: 10.h, color: const Color(0xFF1B8A5A)),
+                              SizedBox(width: 2.h),
+                              Expanded(
+                                child: Text(
+                                  provinsi,
+                                  maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
-                                    color: Colors.grey[700],
-                                    fontSize: 11.fSize,
-                                    height: 1.4,
-                                  ),
-                                ),
-                              ] else
-                                SizedBox(height: 30.h),
-                              SizedBox(height: 8.h),
-                              Container(
-                                width: double.infinity,
-                                height: 34.h,
-                                child: ElevatedButton(
-                                  onPressed: () => widget.onQuickReply('pesan tiket $nama'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF1B8A5A),
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(10.h)),
-                                    elevation: 0,
-                                  ),
-                                  child: Text(
-                                    'Pesan Tiket',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12.fSize,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                    color: Colors.grey[600],
+                                    fontSize: 10.fSize,
                                   ),
                                 ),
                               ),
                             ],
                           ),
-                        ),
-                      ],
+                          SizedBox(height: 6.h),
+                          Container(
+                            width: double.infinity,
+                            height: 28.h,
+                            child: ElevatedButton(
+                              onPressed: () => onQuickReply('pesan tiket $nama'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF1B8A5A),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius:
+                                        BorderRadius.circular(8.h)),
+                                elevation: 0,
+                                padding: EdgeInsets.zero,
+                              ),
+                              child: Text(
+                                'Pesan Tiket',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11.fSize,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-              );
-            },
-          ),
-        ),
-        if (mountains.length > 1) ...[
-          SizedBox(height: 6.h),
-          Center(
-            child: _buildPageIndicator(mountains.length, _currentPage),
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildPageIndicator(int itemCount, int currentPage) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: List.generate(itemCount, (dotIndex) {
-            final distance = (dotIndex - currentPage).abs();
-            double width = 0;
-            double height = 0;
-            double margin = 0;
-            Color color = Colors.grey[300]!;
-
-            if (distance == 0) {
-              width = 16.h;
-              height = 6.h;
-              margin = 4.h;
-              color = const Color(0xFF1B8A5A);
-            } else if (distance == 1) {
-              width = 6.h;
-              height = 6.h;
-              margin = 4.h;
-              color = Colors.grey[400]!;
-            } else if (distance == 2) {
-              width = 4.h;
-              height = 4.h;
-              margin = 4.h;
-              color = Colors.grey[300]!;
-            } else {
-              width = 0;
-              height = 0;
-              margin = 0;
-            }
-
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              margin: EdgeInsets.symmetric(horizontal: margin),
-              width: width,
-              height: height,
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(3.h),
               ),
-            );
-          }),
-        ),
-        if (itemCount > 5) ...[
-          SizedBox(width: 8.h),
-          Text(
-            '(${currentPage + 1} dari $itemCount)',
-            style: TextStyle(
-              fontSize: 10.fSize,
-              color: Colors.grey[600],
-              fontWeight: FontWeight.w600,
             ),
-          ),
-        ],
-      ],
+          );
+        },
+      ),
     );
   }
 }
 
-class RouteCardsCarousel extends StatefulWidget {
+class RouteCardsCarousel extends StatelessWidget {
   final Map<String, dynamic> data;
   final String baseUrl;
   final Function(String) onQuickReply;
@@ -2766,28 +2689,8 @@ class RouteCardsCarousel extends StatefulWidget {
   });
 
   @override
-  State<RouteCardsCarousel> createState() => _RouteCardsCarouselState();
-}
-
-class _RouteCardsCarouselState extends State<RouteCardsCarousel> {
-  int _currentPage = 0;
-  late PageController _pageController;
-
-  @override
-  void initState() {
-    super.initState();
-    _pageController = PageController();
-  }
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final routes = widget.data['routes'];
+    final routes = data['routes'];
     if (routes == null || routes is! List || routes.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -2809,363 +2712,224 @@ class _RouteCardsCarouselState extends State<RouteCardsCarousel> {
       }
     }
 
-    final double carouselHeight = hasBookingButtons ? 290.h : 240.h;
+    final double carouselHeight = hasBookingButtons ? 230.h : 190.h;
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          height: carouselHeight,
-          width: double.infinity,
-          child: PageView.builder(
-            controller: _pageController,
-            pageSnapping: true,
-            physics: const PageScrollPhysics(),
-            onPageChanged: (index) {
-              setState(() {
-                _currentPage = index;
-              });
-            },
-            itemCount: routes.length,
-            itemBuilder: (context, index) {
-              final route = routes[index];
-              final r = route as Map<String, dynamic>;
-              final String namaJalur = r['nama_jalur'] ?? 'Jalur';
-              final double jarak = (r['jarak'] is num) ? (r['jarak'] as num).toDouble() : 0;
-              final int biaya = (r['biaya'] is num) ? (r['biaya'] as num).toInt() : 0;
-              final String estimasi = r['estimasi_waktu'] ?? '-';
-              final String kesulitan = r['tingkat_kesulitan'] ?? '-';
-              final String basecamp = r['basecamp'] ?? '';
-              final String deskripsi = r['deskripsi'] ?? '';
-              final String gambarJalur = r['gambar_jalur'] ?? '';
-              final List buttons = r['buttons'] ?? [];
+    return SizedBox(
+      height: carouselHeight,
+      width: double.infinity,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        itemCount: routes.length,
+        itemBuilder: (context, index) {
+          final route = routes[index];
+          final r = route as Map<String, dynamic>;
+          final String namaJalur = r['nama_jalur'] ?? 'Jalur';
+          final String kesulitan = r['tingkat_kesulitan'] ?? '-';
+          final String provinsi = r['provinsi'] ?? 'Jawa Tengah';
+          final String gambarJalur = r['gambar_jalur'] ?? '';
+          final List buttons = r['buttons'] ?? [];
 
-              final String fullImageUrl = gambarJalur.isNotEmpty &&
-                      !gambarJalur.startsWith('assets/')
-                  ? '${widget.baseUrl}/images/$gambarJalur'
-                  : '';
+          final String fullImageUrl = gambarJalur.isNotEmpty &&
+                  !gambarJalur.startsWith('assets/')
+              ? '$baseUrl/images/$gambarJalur'
+              : '';
 
-              final biayaStr = NumberFormat.currency(
-                locale: 'id_ID',
-                symbol: 'Rp ',
-                decimalDigits: 0,
-              ).format(biaya);
+          String difficultyLabel = kesulitan;
+          Color difficultyColor = const Color(0xFF1B8A5A);
+          if (kesulitan == 'mudah') {
+            difficultyLabel = 'Mudah';
+            difficultyColor = const Color(0xFF4CAF50);
+          } else if (kesulitan == 'sedang') {
+            difficultyLabel = 'Sedang';
+            difficultyColor = const Color(0xFFFFA726);
+          } else if (kesulitan == 'sulit') {
+            difficultyLabel = 'Sulit';
+            difficultyColor = const Color(0xFFEF5350);
+          } else if (kesulitan == 'sangat_sulit') {
+            difficultyLabel = 'Sangat Sulit';
+            difficultyColor = const Color(0xFFB71C1C);
+          }
 
-              String difficultyLabel = kesulitan;
-              Color difficultyColor = const Color(0xFF1B8A5A);
-              if (kesulitan == 'mudah') {
-                difficultyLabel = 'Mudah';
-                difficultyColor = const Color(0xFF4CAF50);
-              } else if (kesulitan == 'sedang') {
-                difficultyLabel = 'Sedang';
-                difficultyColor = const Color(0xFFFFA726);
-              } else if (kesulitan == 'sulit') {
-                difficultyLabel = 'Sulit';
-                difficultyColor = const Color(0xFFEF5350);
-              } else if (kesulitan == 'sangat_sulit') {
-                difficultyLabel = 'Sangat Sulit';
-                difficultyColor = const Color(0xFFB71C1C);
-              }
-
-              return Container(
-                margin: EdgeInsets.only(bottom: 8.h),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16.h),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.06),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                  border: Border.all(color: appTheme.gray200.withOpacity(0.8)),
+          return Container(
+            width: MediaQuery.sizeOf(context).width * 0.44,
+            margin: EdgeInsets.only(right: 12.h, bottom: 8.h),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12.h),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.06),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
                 ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16.h),
-                  child: InkWell(
-                    onTap: () {
-                      final int? id = r['id'] is num ? (r['id'] as num).toInt() : null;
-                      final int? idGunung = r['id_gunung'] is num ? (r['id_gunung'] as num).toInt() : null;
-                      if (id != null && idGunung != null) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => BlocProvider(
-                              create: (context) => TrailBloc(apiService: ApiService()),
-                              child: TrailScreen(
-                                jalurId: id,
-                                idGunung: idGunung,
+              ],
+              border: Border.all(color: appTheme.gray200.withOpacity(0.8)),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12.h),
+              child: InkWell(
+                onTap: () {
+                  final int? id = r['id'] is num ? (r['id'] as num).toInt() : null;
+                  final int? idGunung = r['id_gunung'] is num ? (r['id_gunung'] as num).toInt() : null;
+                  if (id != null && idGunung != null) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => BlocProvider(
+                          create: (context) => TrailBloc(apiService: ApiService()),
+                          child: TrailScreen(
+                            jalurId: id,
+                            idGunung: idGunung,
+                          ),
+                        ),
+                      ),
+                    );
+                  } else {
+                    final detailBtn = buttons.firstWhere(
+                      (btn) => btn['label']?.toString().toLowerCase().contains('detail') == true,
+                      orElse: () => null,
+                    );
+                    if (detailBtn != null) {
+                      onQuickReply(detailBtn['payload']?.toString() ?? '');
+                    }
+                  }
+                },
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      height: 130.h,
+                      width: double.infinity,
+                      child: Stack(
+                        children: [
+                          Positioned.fill(
+                            child: fullImageUrl.isNotEmpty
+                                ? Image.network(
+                                    fullImageUrl,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => Container(
+                                      color: Colors.grey[100],
+                                      child: Icon(Icons.terrain,
+                                          color: Colors.grey[400], size: 24.h),
+                                    ),
+                                  )
+                                : Container(
+                                    color: Colors.grey[100],
+                                    child: Icon(Icons.terrain,
+                                        color: Colors.grey[400], size: 24.h),
+                                  ),
+                          ),
+                          Positioned(
+                            top: 6.h,
+                            right: 6.h,
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 8.h, vertical: 3.h),
+                              decoration: BoxDecoration(
+                                color: difficultyColor,
+                                borderRadius: BorderRadius.circular(8.h),
+                              ),
+                              child: Text(
+                                difficultyLabel,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 8.fSize,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                           ),
-                        );
-                      } else {
-                        final detailBtn = buttons.firstWhere(
-                          (btn) => btn['label']?.toString().toLowerCase().contains('detail') == true,
-                          orElse: () => null,
-                        );
-                        if (detailBtn != null) {
-                          widget.onQuickReply(detailBtn['payload']?.toString() ?? '');
-                        }
-                      }
-                    },
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(
-                          height: 120.h,
-                          width: double.infinity,
-                          child: Stack(
-                            children: [
-                              Positioned.fill(
-                                child: fullImageUrl.isNotEmpty
-                                    ? Image.network(
-                                        fullImageUrl,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) => Container(
-                                          color: Colors.grey[100],
-                                          child: Icon(Icons.terrain,
-                                              color: Colors.grey[400], size: 32.h),
-                                        ),
-                                      )
-                                    : Container(
-                                        color: Colors.grey[100],
-                                        child: Icon(Icons.terrain,
-                                            color: Colors.grey[400], size: 32.h),
-                                      ),
-                              ),
-                              Positioned(
-                                top: 8.h,
-                                right: 8.h,
-                                child: Container(
-                                  padding: EdgeInsets.symmetric(
-                                      horizontal: 10.h, vertical: 4.h),
-                                  decoration: BoxDecoration(
-                                    color: difficultyColor,
-                                    borderRadius: BorderRadius.circular(12.h),
-                                  ),
-                                  child: Text(
-                                    difficultyLabel,
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 10.fSize,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8.h, vertical: 6.h),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            namaJalur,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12.fSize,
+                              color: appTheme.blueGray900,
+                            ),
                           ),
-                        ),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 12.h, vertical: 8.h),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          SizedBox(height: 2.h),
+                          Row(
                             children: [
-                              Text(
-                                namaJalur,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14.fSize,
-                                  color: appTheme.blueGray900,
-                                ),
-                              ),
-                              SizedBox(height: 4.h),
-                              Row(
-                                children: [
-                                  _routeStatChip(Icons.straighten, '${jarak.toStringAsFixed(1)} km'),
-                                  SizedBox(width: 8.h),
-                                  _routeStatChip(Icons.timer_outlined, estimasi),
-                                  SizedBox(width: 8.h),
-                                  _routeStatChip(Icons.attach_money, biayaStr),
-                                ],
-                              ),
-                              if (basecamp.isNotEmpty) ...[
-                                SizedBox(height: 4.h),
-                                Row(
-                                  children: [
-                                    Icon(Icons.location_on_rounded,
-                                        size: 12.h, color: const Color(0xFF1B8A5A)),
-                                    SizedBox(width: 4.h),
-                                    Expanded(
-                                      child: Text(
-                                        basecamp,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          color: Colors.grey[600],
-                                          fontSize: 11.fSize,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                              if (deskripsi.isNotEmpty) ...[
-                                SizedBox(height: 4.h),
-                                Text(
-                                  deskripsi,
+                              Icon(Icons.location_on_rounded,
+                                  size: 10.h, color: const Color(0xFF1B8A5A)),
+                              SizedBox(width: 2.h),
+                              Expanded(
+                                child: Text(
+                                  provinsi,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
-                                    color: Colors.grey[700],
-                                    fontSize: 11.fSize,
-                                    height: 1.4,
+                                    color: Colors.grey[600],
+                                    fontSize: 10.fSize,
                                   ),
                                 ),
-                              ] else
-                                SizedBox(height: 14.h),
-                              Builder(builder: (context) {
-                                final visibleButtons = buttons.where(
-                                  (btn) => btn['label']?.toString().toLowerCase().contains('detail') != true,
-                                ).toList();
-                                if (visibleButtons.isNotEmpty) {
-                                  return Column(
-                                    children: [
-                                      SizedBox(height: 6.h),
-                                      Column(
-                                        children: visibleButtons.map<Widget>((btn) {
-                                          final b = btn as Map<String, dynamic>;
-                                          return Container(
-                                            width: double.infinity,
-                                            height: 34.h,
-                                            margin: EdgeInsets.only(bottom: 4.h),
-                                            child: ElevatedButton(
-                                              onPressed: () => widget.onQuickReply(
-                                                  b['payload']?.toString() ?? ''),
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: const Color(0xFF1B8A5A),
-                                                shape: RoundedRectangleBorder(
-                                                    borderRadius:
-                                                        BorderRadius.circular(10.h)),
-                                                elevation: 0,
-                                              ),
-                                              child: Text(
-                                                b['label']?.toString() ?? '',
-                                                style: TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 12.fSize,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ),
-                                          );
-                                        }).toList(),
-                                      ),
-                                    ],
-                                  );
-                                }
-                                return const SizedBox.shrink();
-                              }),
+                              ),
                             ],
                           ),
-                        ),
-                      ],
+                          Builder(builder: (context) {
+                            final visibleButtons = buttons.where(
+                              (btn) => btn['label']?.toString().toLowerCase().contains('detail') != true,
+                            ).toList();
+                            if (visibleButtons.isNotEmpty) {
+                              return Column(
+                                children: [
+                                  SizedBox(height: 6.h),
+                                  Column(
+                                    children: visibleButtons.map<Widget>((btn) {
+                                      final b = btn as Map<String, dynamic>;
+                                      return Container(
+                                        width: double.infinity,
+                                        height: 28.h,
+                                        margin: EdgeInsets.only(bottom: 4.h),
+                                        child: ElevatedButton(
+                                          onPressed: () => onQuickReply(
+                                              b['payload']?.toString() ?? ''),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: const Color(0xFF1B8A5A),
+                                            shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8.h)),
+                                            elevation: 0,
+                                            padding: EdgeInsets.zero,
+                                          ),
+                                          child: Text(
+                                            b['label']?.toString() ?? '',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 11.fSize,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ),
+                                ],
+                              );
+                            }
+                            return const SizedBox.shrink();
+                          }),
+                        ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-              );
-            },
-          ),
-        ),
-        if (routes.length > 1) ...[
-          SizedBox(height: 6.h),
-          Center(
-            child: _buildPageIndicator(routes.length, _currentPage),
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _routeStatChip(IconData icon, String label) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8.h, vertical: 4.h),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE8F5E9),
-        borderRadius: BorderRadius.circular(8.h),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 10.h, color: const Color(0xFF1B8A5A)),
-          SizedBox(width: 4.h),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 9.fSize,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF1B8A5A),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPageIndicator(int itemCount, int currentPage) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: List.generate(itemCount, (dotIndex) {
-            final distance = (dotIndex - currentPage).abs();
-            double width = 0;
-            double height = 0;
-            double margin = 0;
-            Color color = Colors.grey[300]!;
-
-            if (distance == 0) {
-              width = 16.h;
-              height = 6.h;
-              margin = 4.h;
-              color = const Color(0xFF1B8A5A);
-            } else if (distance == 1) {
-              width = 6.h;
-              height = 6.h;
-              margin = 4.h;
-              color = Colors.grey[400]!;
-            } else if (distance == 2) {
-              width = 4.h;
-              height = 4.h;
-              margin = 4.h;
-              color = Colors.grey[300]!;
-            } else {
-              width = 0;
-              height = 0;
-              margin = 0;
-            }
-
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              margin: EdgeInsets.symmetric(horizontal: margin),
-              width: width,
-              height: height,
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(3.h),
               ),
-            );
-          }),
-        ),
-        if (itemCount > 5) ...[
-          SizedBox(width: 8.h),
-          Text(
-            '(${currentPage + 1} dari $itemCount)',
-            style: TextStyle(
-              fontSize: 10.fSize,
-              color: Colors.grey[600],
-              fontWeight: FontWeight.w600,
             ),
-          ),
-        ],
-      ],
+          );
+        },
+      ),
     );
   }
 }

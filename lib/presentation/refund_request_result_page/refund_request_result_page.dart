@@ -667,10 +667,13 @@ class _RefundRequestResultPageState extends State<RefundRequestResultPage> {
     final data = _result ?? <String, dynamic>{};
     String? proofUrl = data['proof_url']?.toString();
 
-    // Ganti host agar sesuai dengan konfigurasi server Flutter saat testing lokal
-    if (proofUrl != null && proofUrl.contains('localhost')) {
-      proofUrl =
-          proofUrl.replaceAll('http://localhost', 'http://127.0.0.1:8000');
+    // Ganti host agar sesuai dengan konfigurasi server
+    if (proofUrl != null) {
+      if (proofUrl.contains('localhost')) {
+        proofUrl = proofUrl.replaceAll('http://localhost', 'http://103.93.132.167/api');
+      } else if (proofUrl.contains('127.0.0.1:8000')) {
+        proofUrl = proofUrl.replaceAll('http://127.0.0.1:8000', 'http://103.93.132.167/api');
+      }
     }
 
     return Container(

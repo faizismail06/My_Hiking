@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:myhiking/presentation/profile_screen/profile_screen.dart';
 import '../../core/app_export.dart';
 import '../../widgets/custom_bottom_bar.dart';
@@ -87,8 +88,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) async {
+        if (didPop) return;
+        await SystemNavigator.pop();
+      },
+      child: SafeArea(
+        child: Scaffold(
         resizeToAvoidBottomInset: false,
         backgroundColor:
             theme.colorScheme.onPrimary, // Pastikan background bersih
@@ -120,8 +127,9 @@ class _HomeScreenState extends State<HomeScreen> {
           child: _buildBottomNavigation(context),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   /// Widget untuk Chatbot FAB Modern (Glowing effect)
   Widget _buildChatbotFAB(BuildContext context) {
@@ -151,26 +159,18 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Container(
             width: double.maxFinite,
             height: double.maxFinite,
-            padding: EdgeInsets.all(12.h),
+            padding: EdgeInsets.all(0.h),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  theme.colorScheme.primary.withValues(alpha: 0.9),
-                  const Color(0xFF1B8A5A),
-                ],
-              ),
+              color: Colors.white,
               shape: BoxShape.circle,
               border: Border.all(
-                color: Colors.white.withValues(alpha: 0.2),
+                color: const Color(0xFF1B8A5A).withValues(alpha: 0.15),
                 width: 1.5,
               ),
             ),
-            child: Icon(
-              Icons.smart_toy_outlined,
-              color: Colors.white,
-              size: 26.h,
+            child: Image.asset(
+              'assets/images/chatbot.png',
+              fit: BoxFit.contain,
             ),
           ),
         ),
